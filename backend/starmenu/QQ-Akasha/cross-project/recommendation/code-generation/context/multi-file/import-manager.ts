@@ -1,0 +1,505 @@
+/**
+ * Import manager for managing imports across multiple files
+ */
+
+import { MultiFileContext, Symbol } from './types';
+import { ImportDeclaration } from '../types';
+import { ProgrammingLanguage } from '../../templates/types';
+
+/**
+ * Import management options
+ */
+export interface ImportManagementOptions {
+  /** Whether to optimize imports */
+  optimizeImports?: boolean;
+
+  /** Whether to sort imports */
+  sortImports?: boolean;
+
+  /** Whether to remove unused imports */
+  removeUnusedImports?: boolean;
+
+  /** Whether to add missing imports */
+  addMissingImports?: boolean;
+
+  /** Import style for JavaScript/TypeScript */
+  jsImportStyle?: 'es6' | 'commonjs';
+
+  /** Import grouping style */
+  importGrouping?: 'none' | 'type' | 'source' | 'custom';
+}
+
+/**
+ * Default import management options
+ */
+const DEFAULT_MANAGEMENT_OPTIONS: ImportManagementOptions = {
+  optimizeImports: true,
+  sortImports: true,
+  removeUnusedImports: true,
+  addMissingImports: true,
+  jsImportStyle: 'es6',
+  importGrouping: 'type',
+};
+
+/**
+ * Import management result
+ */
+export interface ImportManagementResult {
+  /** Updated imports */
+  imports: ImportDeclaration[];
+
+  /** Import statements */
+  importStatements: string[];
+
+  /** Management errors */
+  errors: string[];
+
+  /** Management warnings */
+  warnings: string[];
+}
+
+/**
+ * Manage imports for a file
+ */
+export function manageImports(
+  filePath: string,
+  symbols: Symbol[],
+  context: MultiFileContext,
+  options: ImportManagementOptions = DEFAULT_MANAGEMENT_OPTIONS
+): ImportManagementResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  try {
+    // Merge options with defaults
+    const mergedOptions: ImportManagementOptions = {
+      ...DEFAULT_MANAGEMENT_OPTIONS,
+      ...options,
+    };
+
+    // Get file context
+    const fileContext = context.fileContexts.get(filePath);
+
+    if (!fileContext) {
+      errors.push(`No context found for file: ${filePath}`);
+      return { imports: [], importStatements: [], errors, warnings };
+    }
+
+    // Get existing imports
+    let imports = [...(fileContext.imports || [])];
+
+    // Add missing imports
+    if (mergedOptions.addMissingImports) {
+      imports = addMissingImports(imports, symbols, context, filePath);
+    }
+
+    // Remove unused imports
+    if (mergedOptions.removeUnusedImports) {
+      imports = removeUnusedImports(imports, fileContext.content);
+    }
+
+    // Optimize imports
+    if (mergedOptions.optimizeImports) {
+      imports = optimizeImports(imports);
+    }
+
+    // Sort imports
+    if (mergedOptions.sortImports) {
+      imports = sortImports(imports, mergedOptions.importGrouping!);
+    }
+
+    // Generate import statements
+    const importStatements = generateImportStatements(
+      imports,
+      fileContext.language,
+      mergedOptions.jsImportStyle!
+    );
+
+    return { imports, importStatements, errors, warnings };
+  } catch (error) {
+    errors.push(`Failed to manage imports: ${error}`);
+    return { imports: [], importStatements: [], errors, warnings };
+  }
+}
+
+/**
+ * Add missing imports
+ */
+function addMissingImports(
+  imports: ImportDeclaration[],
+  symbols: Symbol[],
+  context: MultiFileContext,
+  currentFilePath: string
+): ImportDeclaration[] {
+  const updatedImports = [...imports];
+
+  // Get symbols that need to be imported
+  for (const symbol of symbols) {
+    // Skip symbols from the current file
+    if (symbol.location.filePath === currentFilePath) {
+      continue;
+    }
+
+    // Skip symbols that are already imported
+    const isAlreadyImported = imports.some(importDecl => {
+      // Check if the symbol is imported as default import
+      if (importDecl.defaultImport === symbol.name) {
+        return true;
+      }
+
+      // Check if the symbol is imported as namespace import
+      if (importDecl.namespaceImport === symbol.name) {
+        return true;
+      }
+
+      // Check if the symbol is imported as named import
+      if (importDecl.elements && importDecl.elements.includes(symbol.name)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (isAlreadyImported) {
+      continue;
+    }
+
+    // Find the source file for the symbol
+    const sourceFilePath = symbol.location.filePath;
+
+    // Convert source file path to import path
+    const importPath = getRelativeImportPath(currentFilePath, sourceFilePath);
+
+    // Check if there's already an import from this source
+    const existingImportIndex = updatedImports.findIndex(
+      importDecl => importDecl.source === importPath
+    );
+
+    if (existingImportIndex >= 0) {
+      // Add symbol to existing import
+      const existingImport = updatedImports[existingImportIndex];
+
+      // Determine how to import the symbol
+      if (isDefaultExport(symbol, context)) {
+        // Import as default import
+        existingImport.defaultImport = symbol.name;
+      } else {
+        // Import as named import
+        if (!existingImport.elements) {
+          existingImport.elements = [];
+        }
+
+        if (!existingImport.elements.includes(symbol.name)) {
+          existingImport.elements.push(symbol.name);
+        }
+      }
+    } else {
+      // Create new import
+      const newImport: ImportDeclaration = {
+        source: importPath,
+        elements: [],
+        startPosition: { line: 0, column: 0 },
+        endPosition: { line: 0, column: 0 },
+      };
+
+      // Determine how to import the symbol
+      if (isDefaultExport(symbol, context)) {
+        // Import as default import
+        newImport.defaultImport = symbol.name;
+      } else {
+        // Import as named import
+        newImport.elements = [symbol.name];
+      }
+
+      updatedImports.push(newImport);
+    }
+  }
+
+  return updatedImports;
+}
+
+/**
+ * Remove unused imports
+ */
+function removeUnusedImports(
+  imports: ImportDeclaration[],
+  fileContent: string
+): ImportDeclaration[] {
+  const updatedImports: ImportDeclaration[] = [];
+
+  for (const importDecl of imports) {
+    const usedElements: string[] = [];
+
+    // Check if default import is used
+    if (importDecl.defaultImport) {
+      const defaultImportRegex = new RegExp(`\\b${importDecl.defaultImport}\\b`, 'g');
+      if (defaultImportRegex.test(fileContent)) {
+        usedElements.push(importDecl.defaultImport);
+      }
+    }
+
+    // Check if namespace import is used
+    if (importDecl.namespaceImport) {
+      const namespaceImportRegex = new RegExp(`\\b${importDecl.namespaceImport}\\b`, 'g');
+      if (namespaceImportRegex.test(fileContent)) {
+        usedElements.push(importDecl.namespaceImport);
+      }
+    }
+
+    // Check if named imports are used
+    if (importDecl.elements) {
+      for (const element of importDecl.elements) {
+        const elementRegex = new RegExp(`\\b${element}\\b`, 'g');
+        if (elementRegex.test(fileContent)) {
+          usedElements.push(element);
+        }
+      }
+    }
+
+    // If any imports are used, add to updated imports
+    if (usedElements.length > 0) {
+      const updatedImport: ImportDeclaration = {
+        source: importDecl.source,
+        startPosition: importDecl.startPosition,
+        endPosition: importDecl.endPosition,
+      };
+
+      // Add used default import
+      if (importDecl.defaultImport && usedElements.includes(importDecl.defaultImport)) {
+        updatedImport.defaultImport = importDecl.defaultImport;
+      }
+
+      // Add used namespace import
+      if (importDecl.namespaceImport && usedElements.includes(importDecl.namespaceImport)) {
+        updatedImport.namespaceImport = importDecl.namespaceImport;
+      }
+
+      // Add used named imports
+      if (importDecl.elements) {
+        updatedImport.elements = importDecl.elements.filter(element =>
+          usedElements.includes(element)
+        );
+      }
+
+      updatedImports.push(updatedImport);
+    }
+  }
+
+  return updatedImports;
+}
+
+/**
+ * Optimize imports
+ */
+function optimizeImports(imports: ImportDeclaration[]): ImportDeclaration[] {
+  // This is a simplified implementation
+  // In a real implementation, this would merge imports from the same source,
+  // convert namespace imports to named imports where appropriate, etc.
+
+  return imports;
+}
+
+/**
+ * Sort imports
+ */
+function sortImports(
+  imports: ImportDeclaration[],
+  groupingStyle: 'none' | 'type' | 'source' | 'custom'
+): ImportDeclaration[] {
+  if (groupingStyle === 'none') {
+    return imports;
+  }
+
+  // Sort imports based on grouping style
+  switch (groupingStyle) {
+    case 'type':
+      // Group by import type (built-in, external, relative)
+      return imports.sort((a, b) => {
+        const typeA = getImportType(a.source);
+        const typeB = getImportType(b.source);
+
+        if (typeA !== typeB) {
+          // Order: built-in, external, relative
+          const typeOrder = { 'built-in': 0, external: 1, relative: 2 };
+          return typeOrder[typeA] - typeOrder[typeB];
+        }
+
+        // If same type, sort alphabetically by source
+        return a.source.localeCompare(b.source);
+      });
+
+    case 'source':
+      // Sort alphabetically by source
+      return imports.sort((a, b) => a.source.localeCompare(b.source));
+
+    case 'custom':
+      // This would implement a custom sorting logic
+      // For now, just sort alphabetically
+      return imports.sort((a, b) => a.source.localeCompare(b.source));
+
+    default:
+      return imports;
+  }
+}
+
+/**
+ * Generate import statements
+ */
+function generateImportStatements(
+  imports: ImportDeclaration[],
+  language: ProgrammingLanguage,
+  jsImportStyle: 'es6' | 'commonjs'
+): string[] {
+  const importStatements: string[] = [];
+
+  // Generate import statements based on language
+  switch (language) {
+    case ProgrammingLanguage.JAVASCRIPT:
+    case ProgrammingLanguage.TYPESCRIPT:
+      if (jsImportStyle === 'es6') {
+        // Generate ES6 import statements
+        for (const importDecl of imports) {
+          let statement = 'import ';
+
+          // Add default import
+          if (importDecl.defaultImport) {
+            statement += importDecl.defaultImport;
+
+            if (
+              importDecl.namespaceImport ||
+              (importDecl.elements && importDecl.elements.length > 0)
+            ) {
+              statement += ', ';
+            }
+          }
+
+          // Add namespace import
+          if (importDecl.namespaceImport) {
+            statement += `* as ${importDecl.namespaceImport}`;
+          } else if (importDecl.elements && importDecl.elements.length > 0) {
+            // Add named imports
+            statement += `{ ${importDecl.elements.join(', ')} }`;
+          }
+
+          // Add source
+          statement += ` from '${importDecl.source}';`;
+
+          importStatements.push(statement);
+        }
+      } else {
+        // Generate CommonJS require statements
+        for (const importDecl of imports) {
+          if (importDecl.defaultImport && !importDecl.elements) {
+            // Default import only
+            importStatements.push(
+              `const ${importDecl.defaultImport} = require('${importDecl.source}');`
+            );
+          } else if (importDecl.namespaceImport) {
+            // Namespace import
+            importStatements.push(
+              `const ${importDecl.namespaceImport} = require('${importDecl.source}');`
+            );
+          } else if (importDecl.elements && importDecl.elements.length > 0) {
+            // Named imports
+            if (importDecl.defaultImport) {
+              // Default and named imports
+              importStatements.push(
+                `const ${importDecl.defaultImport} = require('${importDecl.source}');`,
+                `const { ${importDecl.elements.join(', ')} } = require('${importDecl.source}');`
+              );
+            } else {
+              // Named imports only
+              importStatements.push(
+                `const { ${importDecl.elements.join(', ')} } = require('${importDecl.source}');`
+              );
+            }
+          } else {
+            // Just require the module
+            importStatements.push(`require('${importDecl.source}');`);
+          }
+        }
+      }
+      break;
+
+    case ProgrammingLanguage.PYTHON:
+      // Generate Python import statements
+      for (const importDecl of imports) {
+        if (importDecl.namespaceImport) {
+          // Import as namespace
+          importStatements.push(`import ${importDecl.source} as ${importDecl.namespaceImport}`);
+        } else if (importDecl.elements && importDecl.elements.length > 0) {
+          // Import specific elements
+          importStatements.push(
+            `from ${importDecl.source} import ${importDecl.elements.join(', ')}`
+          );
+        } else {
+          // Import the module
+          importStatements.push(`import ${importDecl.source}`);
+        }
+      }
+      break;
+
+    case ProgrammingLanguage.JAVA:
+      // Generate Java import statements
+      for (const importDecl of imports) {
+        if (importDecl.elements && importDecl.elements.length > 0) {
+          // Import specific elements
+          for (const element of importDecl.elements) {
+            importStatements.push(`import ${importDecl.source}.${element};`);
+          }
+        } else {
+          // Import the entire package
+          importStatements.push(`import ${importDecl.source}.*;`);
+        }
+      }
+      break;
+
+    default:
+      // For unsupported languages, return empty array
+      break;
+  }
+
+  return importStatements;
+}
+
+/**
+ * Get relative import path
+ */
+function getRelativeImportPath(currentFilePath: string, targetFilePath: string): string {
+  // This is a simplified implementation
+  // In a real implementation, this would calculate the relative path
+  // between the current file and the target file
+
+  // For now, just return the target file path
+  return targetFilePath;
+}
+
+/**
+ * Check if a symbol is a default export
+ */
+function isDefaultExport(symbol: Symbol, context: MultiFileContext): boolean {
+  // This is a simplified implementation
+  // In a real implementation, this would check if the symbol is exported as default
+
+  // For now, assume it's not a default export
+  return false;
+}
+
+/**
+ * Get import type
+ */
+function getImportType(source: string): 'built-in' | 'external' | 'relative' {
+  if (source.startsWith('./') || source.startsWith('../') || source.startsWith('/')) {
+    return 'relative';
+  }
+
+  // This is a simplified implementation
+  // In a real implementation, this would check against a list of built-in modules
+  const builtInModules = ['fs', 'path', 'http', 'util', 'events', 'crypto', 'os', 'stream'];
+
+  if (builtInModules.includes(source)) {
+    return 'built-in';
+  }
+
+  return 'external';
+}

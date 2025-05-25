@@ -1,0 +1,317 @@
+/**
+ * Dependency analyzer for analyzing dependencies between files
+ */
+
+import { MultiFileContext, DependencyGraph, Dependency, ProjectFile } from './types';
+
+/**
+ * Dependency analysis options
+ */
+export interface DependencyAnalysisOptions {
+  /** Whether to analyze direct dependencies */
+  analyzeDirectDependencies?: boolean;
+
+  /** Whether to analyze transitive dependencies */
+  analyzeTransitiveDependencies?: boolean;
+
+  /** Whether to analyze reverse dependencies */
+  analyzeReverseDependencies?: boolean;
+
+  /** Maximum depth for transitive dependencies */
+  maxTransitiveDepth?: number;
+
+  /** Whether to calculate dependency strengths */
+  calculateStrengths?: boolean;
+}
+
+/**
+ * Default dependency analysis options
+ */
+const DEFAULT_ANALYSIS_OPTIONS: DependencyAnalysisOptions = {
+  analyzeDirectDependencies: true,
+  analyzeTransitiveDependencies: true,
+  analyzeReverseDependencies: true,
+  maxTransitiveDepth: 3,
+  calculateStrengths: true,
+};
+
+/**
+ * Dependency analysis result
+ */
+export interface DependencyAnalysisResult {
+  /** Dependency graph */
+  graph: DependencyGraph;
+
+  /** Analysis errors */
+  errors: string[];
+
+  /** Analysis warnings */
+  warnings: string[];
+}
+
+/**
+ * Analyze dependencies
+ */
+export function analyzeDependencies(
+  context: MultiFileContext,
+  options: DependencyAnalysisOptions = DEFAULT_ANALYSIS_OPTIONS
+): DependencyAnalysisResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  try {
+    // Merge options with defaults
+    const mergedOptions: DependencyAnalysisOptions = {
+      ...DEFAULT_ANALYSIS_OPTIONS,
+      ...options,
+    };
+
+    // Clone the dependency graph to avoid modifying the original
+    const graph: DependencyGraph = {
+      nodes: [...context.dependencyGraph.nodes],
+      edges: [...context.dependencyGraph.edges],
+    };
+
+    // Analyze direct dependencies
+    if (mergedOptions.analyzeDirectDependencies) {
+      analyzeDirectDependencies(graph, context);
+    }
+
+    // Analyze transitive dependencies
+    if (mergedOptions.analyzeTransitiveDependencies) {
+      analyzeTransitiveDependencies(graph, context, mergedOptions.maxTransitiveDepth!);
+    }
+
+    // Analyze reverse dependencies
+    if (mergedOptions.analyzeReverseDependencies) {
+      analyzeReverseDependencies(graph, context);
+    }
+
+    // Calculate dependency strengths
+    if (mergedOptions.calculateStrengths) {
+      calculateDependencyStrengths(graph, context);
+    }
+
+    return { graph, errors, warnings };
+  } catch (error) {
+    errors.push(`Failed to analyze dependencies: ${error}`);
+
+    // Return original dependency graph
+    return {
+      graph: context.dependencyGraph,
+      errors,
+      warnings,
+    };
+  }
+}
+
+/**
+ * Get direct dependencies for a file
+ */
+export function getDirectDependencies(filePath: string, context: MultiFileContext): Dependency[] {
+  return context.dependencyGraph.edges.filter(edge => edge.source === filePath);
+}
+
+/**
+ * Get reverse dependencies for a file
+ */
+export function getReverseDependencies(filePath: string, context: MultiFileContext): Dependency[] {
+  return context.dependencyGraph.edges.filter(edge => edge.target === filePath);
+}
+
+/**
+ * Get transitive dependencies for a file
+ */
+export function getTransitiveDependencies(
+  filePath: string,
+  context: MultiFileContext,
+  maxDepth: number = 3
+): Dependency[] {
+  const transitiveDependencies: Dependency[] = [];
+  const visitedFiles = new Set<string>();
+
+  // Helper function to recursively find dependencies
+  function findDependencies(currentPath: string, currentDepth: number) {
+    if (currentDepth > maxDepth || visitedFiles.has(currentPath)) {
+      return;
+    }
+
+    visitedFiles.add(currentPath);
+
+    // Get direct dependencies
+    const directDependencies = getDirectDependencies(currentPath, context);
+
+    for (const dependency of directDependencies) {
+      // Add dependency if not already in the list
+      if (
+        !transitiveDependencies.some(
+          d => d.source === dependency.source && d.target === dependency.target
+        )
+      ) {
+        transitiveDependencies.push(dependency);
+      }
+
+      // Recursively find dependencies of the target
+      findDependencies(dependency.target, currentDepth + 1);
+    }
+  }
+
+  // Start from the given file
+  findDependencies(filePath, 0);
+
+  return transitiveDependencies;
+}
+
+/**
+ * Analyze direct dependencies
+ */
+function analyzeDirectDependencies(graph: DependencyGraph, context: MultiFileContext): void {
+  // This is a placeholder implementation
+  // In a real implementation, this would analyze direct dependencies
+  // between files based on imports, references, etc.
+}
+
+/**
+ * Analyze transitive dependencies
+ */
+function analyzeTransitiveDependencies(
+  graph: DependencyGraph,
+  context: MultiFileContext,
+  maxDepth: number
+): void {
+  // This is a placeholder implementation
+  // In a real implementation, this would analyze transitive dependencies
+  // between files up to the specified maximum depth
+}
+
+/**
+ * Analyze reverse dependencies
+ */
+function analyzeReverseDependencies(graph: DependencyGraph, context: MultiFileContext): void {
+  // This is a placeholder implementation
+  // In a real implementation, this would analyze reverse dependencies
+  // (i.e., which files depend on a given file)
+}
+
+/**
+ * Calculate dependency strengths
+ */
+function calculateDependencyStrengths(graph: DependencyGraph, context: MultiFileContext): void {
+  for (const edge of graph.edges) {
+    if (edge.strength !== undefined) {
+      continue; // Skip if strength is already calculated
+    }
+
+    // Get source and target files
+    const sourceFile = context.files.get(edge.source);
+    const targetFile = context.files.get(edge.target);
+
+    if (!sourceFile || !targetFile) {
+      edge.strength = 0.5; // Default strength
+      continue;
+    }
+
+    // Calculate strength based on dependency type
+    switch (edge.type) {
+      case 'import':
+        // Strength based on number of imported symbols
+        const importedSymbols = edge.importedSymbols || [];
+        if (importedSymbols.length === 0) {
+          // Importing everything
+          edge.strength = 1.0;
+        } else {
+          // Strength proportional to number of imported symbols
+          const targetSymbols = context.symbolTable.byFile.get(edge.target) || [];
+          const ratio = Math.min(1.0, importedSymbols.length / Math.max(1, targetSymbols.length));
+          edge.strength = 0.5 + ratio * 0.5; // Between 0.5 and 1.0
+        }
+        break;
+
+      case 'reference':
+        // Strength based on number of referenced symbols
+        const referencedSymbols = edge.referencedSymbols || [];
+        if (referencedSymbols.length === 0) {
+          edge.strength = 0.3; // Default for references
+        } else {
+          // Strength proportional to number of referenced symbols
+          const targetSymbols = context.symbolTable.byFile.get(edge.target) || [];
+          const ratio = Math.min(1.0, referencedSymbols.length / Math.max(1, targetSymbols.length));
+          edge.strength = 0.3 + ratio * 0.5; // Between 0.3 and 0.8
+        }
+        break;
+
+      case 'inheritance':
+        // Inheritance is a strong dependency
+        edge.strength = 0.9;
+        break;
+
+      case 'implementation':
+        // Implementation is a strong dependency
+        edge.strength = 0.8;
+        break;
+
+      default:
+        edge.strength = 0.5; // Default strength
+    }
+  }
+}
+
+/**
+ * Find strongly connected components in the dependency graph
+ */
+export function findStronglyConnectedComponents(graph: DependencyGraph): string[][] {
+  // This is a placeholder implementation
+  // In a real implementation, this would use Tarjan's algorithm
+  // to find strongly connected components in the dependency graph
+
+  return [];
+}
+
+/**
+ * Find cycles in the dependency graph
+ */
+export function findCycles(graph: DependencyGraph): string[][] {
+  // This is a placeholder implementation
+  // In a real implementation, this would find cycles in the dependency graph
+
+  return [];
+}
+
+/**
+ * Calculate dependency metrics
+ */
+export function calculateDependencyMetrics(graph: DependencyGraph): {
+  averageDependencies: number;
+  maxDependencies: number;
+  minDependencies: number;
+  cyclicDependencies: number;
+} {
+  // Calculate average, max, and min dependencies per file
+  const dependenciesCounts = new Map<string, number>();
+
+  for (const node of graph.nodes) {
+    dependenciesCounts.set(node.path, 0);
+  }
+
+  for (const edge of graph.edges) {
+    const count = dependenciesCounts.get(edge.source) || 0;
+    dependenciesCounts.set(edge.source, count + 1);
+  }
+
+  const counts = Array.from(dependenciesCounts.values());
+  const averageDependencies =
+    counts.reduce((sum, count) => sum + count, 0) / Math.max(1, counts.length);
+  const maxDependencies = Math.max(0, ...counts);
+  const minDependencies = Math.min(...counts);
+
+  // Count cyclic dependencies
+  const cycles = findCycles(graph);
+  const cyclicDependencies = cycles.length;
+
+  return {
+    averageDependencies,
+    maxDependencies,
+    minDependencies,
+    cyclicDependencies,
+  };
+}

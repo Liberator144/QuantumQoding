@@ -1,0 +1,464 @@
+/**
+ * Python language processor
+ */
+
+import {
+  LanguageProcessor,
+  LanguageStyle,
+  LanguageStyleGuide,
+  DEFAULT_LANGUAGE_STYLE,
+} from './types';
+import { ProgrammingLanguage } from '../templates/types';
+import { FileContext } from '../context/types';
+
+/**
+ * Python style guide
+ */
+const PYTHON_STYLE_GUIDE: LanguageStyleGuide = {
+  namingConventions: {
+    classes: 'PascalCase',
+    interfaces: 'PascalCase', // Python doesn't have interfaces, but uses abstract classes
+    methods: 'snake_case',
+    functions: 'snake_case',
+    variables: 'snake_case',
+    constants: 'UPPER_CASE',
+    parameters: 'snake_case',
+    properties: 'snake_case',
+    enums: 'PascalCase', // Python uses classes for enums
+    enumMembers: 'UPPER_CASE',
+  },
+  codeOrganization: {
+    importOrder: [
+      'standard library imports',
+      'related third party imports',
+      'local application/library specific imports',
+    ],
+    classMemberOrder: [
+      'class attributes',
+      'constructor',
+      'public methods',
+      'private methods',
+      'static methods',
+      'class methods',
+    ],
+    fileStructure: [
+      'module docstring',
+      'imports',
+      'constants',
+      'exception definitions',
+      'class definitions',
+      'function definitions',
+      'main execution',
+    ],
+  },
+  documentation: {
+    commentStyle: 'docstring',
+    requiredElements: ['description', 'parameters', 'returns', 'raises'],
+    examples: {
+      function: `def calculate_sum(a, b):
+    """
+    Calculate the sum of two numbers.
+    
+    Args:
+        a: First number
+        b: Second number
+        
+    Returns:
+        The sum of a and b
+    """
+    return a + b`,
+      class: `class User:
+    """
+    Represents a user in the system.
+    
+    Attributes:
+        id (str): The user's unique identifier
+        name (str): The user's display name
+    """
+    
+    def __init__(self, id, name):
+        """
+        Initialize a new User.
+        
+        Args:
+            id (str): User identifier
+            name (str): User display name
+        """
+        self.id = id
+        self.name = name`,
+    },
+  },
+  bestPractices: [
+    'Follow PEP 8 style guide',
+    'Use docstrings for documentation',
+    'Use type hints for function signatures',
+    'Use context managers for resource management',
+    'Prefer explicit over implicit',
+    'Use list comprehensions when appropriate',
+    'Use generators for large datasets',
+    'Use virtual environments for dependency management',
+    'Write self-documenting code',
+  ],
+  commonPatterns: {
+    singleton: `class Singleton:
+    """
+    Singleton pattern implementation.
+    """
+    _instance = None
+    
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance`,
+    factory: `class Product:
+    """
+    Abstract product interface.
+    """
+    def operation(self):
+        pass
+
+class ConcreteProductA(Product):
+    """
+    Concrete product implementation A.
+    """
+    def operation(self):
+        return "Result of ConcreteProductA"
+
+class ConcreteProductB(Product):
+    """
+    Concrete product implementation B.
+    """
+    def operation(self):
+        return "Result of ConcreteProductB"
+
+class Factory:
+    """
+    Factory for creating products.
+    """
+    def create_product(self, product_type):
+        """
+        Create a product based on type.
+        
+        Args:
+            product_type: Type of product to create
+            
+        Returns:
+            A Product instance
+            
+        Raises:
+            ValueError: If product_type is unknown
+        """
+        if product_type == "A":
+            return ConcreteProductA()
+        elif product_type == "B":
+            return ConcreteProductB()
+        else:
+            raise ValueError(f"Unknown product type: {product_type}")`,
+  },
+  antiPatterns: [
+    'Using global variables',
+    'Not using virtual environments',
+    'Using wildcard imports',
+    'Using mutable default arguments',
+    'Not handling exceptions properly',
+    'Using exec or eval',
+    'Using type() instead of isinstance()',
+    'Not using context managers for file operations',
+  ],
+};
+
+/**
+ * Python language processor
+ */
+export class PythonProcessor implements LanguageProcessor {
+  language = ProgrammingLanguage.PYTHON;
+
+  /**
+   * Process a template for Python
+   */
+  processTemplate(template: string, context: FileContext): string {
+    // Replace template variables with context-specific values
+    let processedTemplate = template;
+
+    // Add imports if needed
+    if (context.imports && context.imports.length > 0) {
+      const importStatements = this.generateImportStatements(context.imports);
+
+      // Check if the template already has imports
+      if (processedTemplate.includes('import ') || processedTemplate.includes('from ')) {
+        // Find the last import statement
+        const lastImportIndex = Math.max(
+          processedTemplate.lastIndexOf('import '),
+          processedTemplate.lastIndexOf('from ')
+        );
+        const endOfImports = processedTemplate.indexOf('\n', lastImportIndex);
+
+        // Insert imports after the last import statement
+        processedTemplate =
+          processedTemplate.substring(0, endOfImports + 1) +
+          importStatements.join('\n') +
+          '\n' +
+          processedTemplate.substring(endOfImports + 1);
+      } else {
+        // Check if there's a module docstring
+        if (processedTemplate.startsWith('"""') || processedTemplate.startsWith("'''")) {
+          // Find the end of the docstring
+          const docstringEnd = processedTemplate.indexOf(
+            processedTemplate.startsWith('"""') ? '"""' : "'''",
+            3
+          );
+
+          if (docstringEnd !== -1) {
+            const endOfDocstring = processedTemplate.indexOf('\n', docstringEnd);
+
+            // Insert imports after the docstring
+            processedTemplate =
+              processedTemplate.substring(0, endOfDocstring + 1) +
+              '\n' +
+              importStatements.join('\n') +
+              '\n\n' +
+              processedTemplate.substring(endOfDocstring + 1);
+          }
+        } else {
+          // Add imports at the beginning of the file
+          processedTemplate = importStatements.join('\n') + '\n\n' + processedTemplate;
+        }
+      }
+    }
+
+    return processedTemplate;
+  }
+
+  /**
+   * Validate Python syntax
+   */
+  validateSyntax(code: string): { valid: boolean; errors: string[] } {
+    const errors: string[] = [];
+
+    try {
+      // Check for basic syntax errors
+
+      // Check for indentation errors
+      const lines = code.split('\n');
+      let expectedIndent = 0;
+
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        // Skip empty lines and comments
+        if (!line.trim() || line.trim().startsWith('#')) {
+          continue;
+        }
+
+        // Count leading spaces
+        const leadingSpaces = line.match(/^(\s*)/)[0].length;
+
+        // Check if indentation is a multiple of 4
+        if (leadingSpaces % 4 !== 0) {
+          errors.push(
+            `Indentation error at line ${i + 1}: Indentation should be a multiple of 4 spaces`
+          );
+        }
+
+        // Check if indentation matches expected level
+        const currentIndent = leadingSpaces / 4;
+
+        if (currentIndent > expectedIndent + 1) {
+          errors.push(`Indentation error at line ${i + 1}: Unexpected indentation level`);
+        }
+
+        // Update expected indentation for the next line
+        if (line.trim().endsWith(':')) {
+          expectedIndent = currentIndent + 1;
+        } else if (currentIndent < expectedIndent) {
+          expectedIndent = currentIndent;
+        }
+      }
+
+      // Check for unbalanced parentheses
+      const openParens = (code.match(/\(/g) || []).length;
+      const closeParens = (code.match(/\)/g) || []).length;
+
+      if (openParens !== closeParens) {
+        errors.push(
+          `Unbalanced parentheses: ${openParens} opening parentheses, ${closeParens} closing parentheses`
+        );
+      }
+
+      // Check for unbalanced brackets
+      const openBrackets = (code.match(/\[/g) || []).length;
+      const closeBrackets = (code.match(/\]/g) || []).length;
+
+      if (openBrackets !== closeBrackets) {
+        errors.push(
+          `Unbalanced brackets: ${openBrackets} opening brackets, ${closeBrackets} closing brackets`
+        );
+      }
+
+      // Check for unbalanced braces
+      const openBraces = (code.match(/{/g) || []).length;
+      const closeBraces = (code.match(/}/g) || []).length;
+
+      if (openBraces !== closeBraces) {
+        errors.push(
+          `Unbalanced braces: ${openBraces} opening braces, ${closeBraces} closing braces`
+        );
+      }
+    } catch (error) {
+      errors.push(`Syntax error: ${error}`);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+    };
+  }
+
+  /**
+   * Format Python code
+   */
+  formatCode(code: string, style: LanguageStyle = DEFAULT_LANGUAGE_STYLE): string {
+    // This is a simplified formatter
+    // In a real implementation, this would use a proper formatter like Black
+
+    let formattedCode = '';
+    let indentLevel = 0;
+    const lines = code.split('\n');
+
+    // Python uses 4 spaces for indentation by convention
+    const indentSize = 4;
+    const indent = ' '.repeat(indentSize);
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      // Skip empty lines
+      if (!line) {
+        formattedCode += '\n';
+        continue;
+      }
+
+      // Decrease indent level for dedent keywords
+      if (
+        line.startsWith('else:') ||
+        line.startsWith('elif ') ||
+        line.startsWith('except') ||
+        line.startsWith('finally:')
+      ) {
+        indentLevel = Math.max(0, indentLevel - 1);
+      }
+
+      // Add indentation
+      formattedCode += indent.repeat(indentLevel) + line + '\n';
+
+      // Increase indent level for indent keywords
+      if (line.endsWith(':')) {
+        indentLevel++;
+      }
+    }
+
+    return formattedCode.trim();
+  }
+
+  /**
+   * Extract imports from Python code
+   */
+  extractImports(code: string): { imports: string[]; code: string } {
+    const imports: string[] = [];
+    const importLines: number[] = [];
+
+    // Extract import statements
+    const lines = code.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (line.startsWith('import ') || line.startsWith('from ')) {
+        imports.push(line);
+        importLines.push(i);
+      }
+    }
+
+    // Remove import statements from code
+    const codeWithoutImports = lines.filter((_, i) => !importLines.includes(i)).join('\n');
+
+    return {
+      imports,
+      code: codeWithoutImports,
+    };
+  }
+
+  /**
+   * Add imports to Python code
+   */
+  addImports(code: string, imports: string[]): string {
+    if (imports.length === 0) {
+      return code;
+    }
+
+    // Check if the code already has imports
+    if (code.includes('import ') || code.includes('from ')) {
+      // Find the last import statement
+      const lastImportIndex = Math.max(code.lastIndexOf('import '), code.lastIndexOf('from '));
+      const endOfImports = code.indexOf('\n', lastImportIndex);
+
+      // Insert imports after the last import statement
+      return (
+        code.substring(0, endOfImports + 1) +
+        imports.join('\n') +
+        '\n' +
+        code.substring(endOfImports + 1)
+      );
+    }
+
+    // Check if there's a module docstring
+    if (code.startsWith('"""') || code.startsWith("'''")) {
+      // Find the end of the docstring
+      const docstringEnd = code.indexOf(code.startsWith('"""') ? '"""' : "'''", 3);
+
+      if (docstringEnd !== -1) {
+        const endOfDocstring = code.indexOf('\n', docstringEnd);
+
+        // Insert imports after the docstring
+        return (
+          code.substring(0, endOfDocstring + 1) +
+          '\n' +
+          imports.join('\n') +
+          '\n\n' +
+          code.substring(endOfDocstring + 1)
+        );
+      }
+    }
+
+    // Add imports at the beginning of the file
+    return imports.join('\n') + '\n\n' + code;
+  }
+
+  /**
+   * Get Python style guide
+   */
+  getStyleGuide(): LanguageStyleGuide {
+    return PYTHON_STYLE_GUIDE;
+  }
+
+  /**
+   * Generate import statements from import declarations
+   */
+  private generateImportStatements(imports: any[]): string[] {
+    const importStatements: string[] = [];
+
+    for (const importDecl of imports) {
+      if (importDecl.elements && importDecl.elements.length > 0) {
+        // Use 'from ... import ...' syntax
+        importStatements.push(`from ${importDecl.source} import ${importDecl.elements.join(', ')}`);
+      } else if (importDecl.namespaceImport) {
+        // Use 'import ... as ...' syntax
+        importStatements.push(`import ${importDecl.source} as ${importDecl.namespaceImport}`);
+      } else {
+        // Use simple 'import ...' syntax
+        importStatements.push(`import ${importDecl.source}`);
+      }
+    }
+
+    return importStatements;
+  }
+}

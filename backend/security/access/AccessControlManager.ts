@@ -1,0 +1,610 @@
+/**
+ * Access Control Manager
+ *
+ * Manages role-based and attribute-based access control.
+ *
+ * @version 1.0.0
+ */
+
+/**
+ * Access Control Manager
+ *
+ * Manages role-based and attribute-based access control.
+ */
+class AccessControlManager {
+  /**
+   * Create a new AccessControlManager instance
+   * @param {Object} options - Configuration options
+   */
+  constructor(options = {}) {
+    // Configuration
+    this.config = {
+      // Debug mode
+      debugMode: false,
+
+      // Database instance
+      database: null,
+
+      // Role collection name
+      roleCollection: '_roles',
+
+      // Permission collection name
+      permissionCollection: '_permissions',
+
+      // Merge with provided options
+      ...options,
+    };
+
+    // State
+    this.currentUser = null;
+    this.roles = new Map();
+    this.permissions = new Map();
+    this.permissionsByRole = new Map();
+
+    // Initialize
+    this._init();
+  }
+
+  /**
+   * Initialize the manager
+   * @private
+   */
+  _init() {
+    this.log('Initializing Access Control Manager');
+
+    // Set up collections if database is provided
+    if (this.config.database) {
+      this._setupCollections();
+    }
+
+    this.log('Access Control Manager initialized');
+  }
+
+  /**
+   * Set up collections
+   * @private
+   */
+  _setupCollections() {
+    if (!this.config.database) {
+      return;
+    }
+
+    // Get or create role collection
+    const roleCollection =
+      this.config.database.getCollection(this.config.roleCollection) ||
+      this.config.database.createCollection(this.config.roleCollection);
+
+    // Get or create permission collection
+    const permissionCollection =
+      this.config.database.getCollection(this.config.permissionCollection) ||
+      this.config.database.createCollection(this.config.permissionCollection);
+
+    this.log(
+      `Collections set up: ${this.config.roleCollection}, ${this.config.permissionCollection}`
+    );
+
+    // Load roles and permissions
+    this._loadRolesAndPermissions();
+  }
+
+  /**
+   * Load roles and permissions
+   * @private
+   */
+  async _loadRolesAndPermissions() {
+    try {
+      // Load roles
+      const roleCollection = this.config.database.getCollection(this.config.roleCollection);
+
+      if (roleCollection) {
+        const roles = roleCollection.find({});
+
+        for (const role of roles) {
+          this.roles.set(role.name, role);
+        }
+
+        this.log(`Loaded ${roles.length} roles`);
+      }
+
+      // Load permissions
+      const permissionCollection = this.config.database.getCollection(
+        this.config.permissionCollection
+      );
+
+      if (permissionCollection) {
+        const permissions = permissionCollection.find({});
+
+        for (const permission of permissions) {
+          this.permissions.set(permission.name, permission);
+
+          // Index permissions by role
+          for (const role of permission.roles || []) {
+            if (!this.permissionsByRole.has(role)) {
+              this.permissionsByRole.set(role, []);
+            }
+
+            this.permissionsByRole.get(role).push(permission);
+          }
+        }
+
+        this.log(`Loaded ${permissions.length} permissions`);
+      }
+    } catch (error) {
+      this.log(`Error loading roles and permissions: ${error.message}`);
+    }
+  }
+
+  /**
+   * Set database reference
+   * @param {UnifiedQuantumDatabase} database - Database instance
+   * @returns {AccessControlManager} This instance for chaining
+   */
+  setDatabase(database) {
+    this.config.database = database;
+    this._setupCollections();
+    this.log('Database reference set');
+    return this;
+  }
+
+  /**
+   * Set current user
+   * @param {Object} user - User
+   * @returns {AccessControlManager} This instance for chaining
+   */
+  setCurrentUser(user) {
+    this.currentUser = user;
+    this.log(`Current user set: ${user ? user.username : 'null'}`);
+    return this;
+  }
+
+  /**
+   * Define a role
+   * @param {Object} role - Role
+   * @returns {Promise<Object>} Defined role
+   */
+  async defineRole(role) {
+    if (!this.config.database) {
+      throw new Error('Database not set');
+    }
+
+    // Validate role
+    if (!role.name) {
+      throw new Error('Role name is required');
+    }
+
+    // Get role collection
+    const roleCollection = this.config.database.getCollection(this.config.roleCollection);
+
+    if (!roleCollection) {
+      throw new Error(`Role collection not found: ${this.config.roleCollection}`);
+    }
+
+    // Check if role exists
+    const existingRole = roleCollection.findOne({ name: role.name });
+
+    if (existingRole) {
+      // Update existing role
+      const updatedRole = {
+        ...existingRole,
+        description: role.description || existingRole.description,
+        updatedAt: Date.now(),
+      };
+
+      roleCollection.update(existingRole.id, updatedRole);
+
+      // Update cache
+      this.roles.set(updatedRole.name, updatedRole);
+
+      this.log(`Role updated: ${updatedRole.name}`);
+
+      return updatedRole;
+    } else {
+      // Create new role
+      const newRole = {
+        id: `role-${role.name}`,
+        name: role.name,
+        description: role.description || '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      roleCollection.insert(newRole);
+
+      // Update cache
+      this.roles.set(newRole.name, newRole);
+
+      this.log(`Role defined: ${newRole.name}`);
+
+      return newRole;
+    }
+  }
+
+  /**
+   * Define a permission
+   * @param {Object} permission - Permission
+   * @returns {Promise<Object>} Defined permission
+   */
+  async definePermission(permission) {
+    if (!this.config.database) {
+      throw new Error('Database not set');
+    }
+
+    // Validate permission
+    if (!permission.name) {
+      throw new Error('Permission name is required');
+    }
+
+    if (!permission.action) {
+      throw new Error('Permission action is required');
+    }
+
+    if (!permission.resource) {
+      throw new Error('Permission resource is required');
+    }
+
+    // Get permission collection
+    const permissionCollection = this.config.database.getCollection(
+      this.config.permissionCollection
+    );
+
+    if (!permissionCollection) {
+      throw new Error(`Permission collection not found: ${this.config.permissionCollection}`);
+    }
+
+    // Check if permission exists
+    const existingPermission = permissionCollection.findOne({ name: permission.name });
+
+    if (existingPermission) {
+      // Update existing permission
+      const updatedPermission = {
+        ...existingPermission,
+        action: permission.action,
+        resource: permission.resource,
+        roles: permission.roles || existingPermission.roles || [],
+        conditions: permission.conditions || existingPermission.conditions || [],
+        description: permission.description || existingPermission.description,
+        updatedAt: Date.now(),
+      };
+
+      permissionCollection.update(existingPermission.id, updatedPermission);
+
+      // Update cache
+      this.permissions.set(updatedPermission.name, updatedPermission);
+
+      // Update permissions by role
+      this._updatePermissionsByRole(updatedPermission);
+
+      this.log(`Permission updated: ${updatedPermission.name}`);
+
+      return updatedPermission;
+    } else {
+      // Create new permission
+      const newPermission = {
+        id: `permission-${permission.name}`,
+        name: permission.name,
+        action: permission.action,
+        resource: permission.resource,
+        roles: permission.roles || [],
+        conditions: permission.conditions || [],
+        description: permission.description || '',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      permissionCollection.insert(newPermission);
+
+      // Update cache
+      this.permissions.set(newPermission.name, newPermission);
+
+      // Update permissions by role
+      this._updatePermissionsByRole(newPermission);
+
+      this.log(`Permission defined: ${newPermission.name}`);
+
+      return newPermission;
+    }
+  }
+
+  /**
+   * Update permissions by role
+   * @param {Object} permission - Permission
+   * @private
+   */
+  _updatePermissionsByRole(permission) {
+    // Remove permission from all roles
+    for (const [role, permissions] of this.permissionsByRole) {
+      const index = permissions.findIndex(p => p.name === permission.name);
+
+      if (index !== -1) {
+        permissions.splice(index, 1);
+      }
+    }
+
+    // Add permission to roles
+    for (const role of permission.roles || []) {
+      if (!this.permissionsByRole.has(role)) {
+        this.permissionsByRole.set(role, []);
+      }
+
+      this.permissionsByRole.get(role).push(permission);
+    }
+  }
+
+  /**
+   * Check access
+   * @param {Object} user - User
+   * @param {string} resource - Resource
+   * @param {string} action - Action
+   * @param {Object} context - Context
+   * @returns {boolean} Has access
+   */
+  checkAccess(user, resource, action, context = {}) {
+    // If no user, deny access
+    if (!user) {
+      return false;
+    }
+
+    // If user is admin, allow access
+    if (user.roles && user.roles.includes('admin')) {
+      return true;
+    }
+
+    // Get user roles
+    const roles = user.roles || [];
+
+    // Check each role
+    for (const role of roles) {
+      // Get permissions for role
+      const permissions = this.permissionsByRole.get(role) || [];
+
+      // Check each permission
+      for (const permission of permissions) {
+        // Check if permission matches resource and action
+        if (
+          this._matchesResource(permission.resource, resource) &&
+          this._matchesAction(permission.action, action)
+        ) {
+          // Check conditions
+          if (this._checkConditions(permission.conditions, user, context)) {
+            return true;
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if resource matches
+   * @param {string} permissionResource - Permission resource
+   * @param {string} resource - Resource
+   * @returns {boolean} Matches
+   * @private
+   */
+  _matchesResource(permissionResource, resource) {
+    // Exact match
+    if (permissionResource === resource) {
+      return true;
+    }
+
+    // Wildcard match
+    if (permissionResource === '*') {
+      return true;
+    }
+
+    // Pattern match
+    if (permissionResource.endsWith('*')) {
+      const prefix = permissionResource.slice(0, -1);
+      return resource.startsWith(prefix);
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if action matches
+   * @param {string} permissionAction - Permission action
+   * @param {string} action - Action
+   * @returns {boolean} Matches
+   * @private
+   */
+  _matchesAction(permissionAction, action) {
+    // Exact match
+    if (permissionAction === action) {
+      return true;
+    }
+
+    // Wildcard match
+    if (permissionAction === '*') {
+      return true;
+    }
+
+    // Multiple actions
+    if (permissionAction.includes(',')) {
+      const actions = permissionAction.split(',').map(a => a.trim());
+      return actions.includes(action);
+    }
+
+    return false;
+  }
+
+  /**
+   * Check conditions
+   * @param {Array} conditions - Conditions
+   * @param {Object} user - User
+   * @param {Object} context - Context
+   * @returns {boolean} Conditions met
+   * @private
+   */
+  _checkConditions(conditions, user, context) {
+    // If no conditions, allow access
+    if (!conditions || conditions.length === 0) {
+      return true;
+    }
+
+    // Check each condition
+    for (const condition of conditions) {
+      // Get condition type
+      const type = condition.type || 'js';
+
+      // Check condition based on type
+      switch (type) {
+        case 'js':
+          // Evaluate JavaScript condition
+          try {
+            const result = this._evaluateJsCondition(condition.condition, user, context);
+
+            if (!result) {
+              return false;
+            }
+          } catch (error) {
+            this.log(`Error evaluating condition: ${error.message}`);
+            return false;
+          }
+          break;
+
+        case 'ownership':
+          // Check ownership
+          if (!this._checkOwnership(condition, user, context)) {
+            return false;
+          }
+          break;
+
+        case 'field':
+          // Check field value
+          if (!this._checkFieldValue(condition, user, context)) {
+            return false;
+          }
+          break;
+
+        default:
+          this.log(`Unknown condition type: ${type}`);
+          return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Evaluate JavaScript condition
+   * @param {string} condition - Condition
+   * @param {Object} user - User
+   * @param {Object} context - Context
+   * @returns {boolean} Condition met
+   * @private
+   */
+  _evaluateJsCondition(condition, user, context) {
+    // Create function
+    const fn = new Function('user', 'context', `return ${condition};`);
+
+    // Evaluate function
+    return fn(user, context);
+  }
+
+  /**
+   * Check ownership condition
+   * @param {Object} condition - Condition
+   * @param {Object} user - User
+   * @param {Object} context - Context
+   * @returns {boolean} Condition met
+   * @private
+   */
+  _checkOwnership(condition, user, context) {
+    // Get field
+    const field = condition.field || 'userId';
+
+    // Get document
+    const document = context.document || context;
+
+    // Check if document has field
+    if (!document || document[field] === undefined) {
+      return false;
+    }
+
+    // Check if field matches user ID
+    return document[field] === user.id;
+  }
+
+  /**
+   * Check field value condition
+   * @param {Object} condition - Condition
+   * @param {Object} user - User
+   * @param {Object} context - Context
+   * @returns {boolean} Condition met
+   * @private
+   */
+  _checkFieldValue(condition, user, context) {
+    // Get field
+    const field = condition.field;
+
+    if (!field) {
+      return false;
+    }
+
+    // Get document
+    const document = context.document || context;
+
+    // Check if document has field
+    if (!document || document[field] === undefined) {
+      return false;
+    }
+
+    // Get operator
+    const operator = condition.operator || '=';
+
+    // Get value
+    const value = condition.value;
+
+    // Check value based on operator
+    switch (operator) {
+      case '=':
+        return document[field] === value;
+
+      case '!=':
+        return document[field] !== value;
+
+      case '>':
+        return document[field] > value;
+
+      case '>=':
+        return document[field] >= value;
+
+      case '<':
+        return document[field] < value;
+
+      case '<=':
+        return document[field] <= value;
+
+      case 'in':
+        return Array.isArray(value) && value.includes(document[field]);
+
+      case 'not-in':
+        return Array.isArray(value) && !value.includes(document[field]);
+
+      case 'contains':
+        return Array.isArray(document[field]) && document[field].includes(value);
+
+      case 'not-contains':
+        return Array.isArray(document[field]) && !document[field].includes(value);
+
+      default:
+        this.log(`Unknown operator: ${operator}`);
+        return false;
+    }
+  }
+
+  /**
+   * Log message if debug mode is enabled
+   * @param {string} message - Message to log
+   * @private
+   */
+  log(message) {
+    if (this.config.debugMode) {
+      console.log(`[AccessControlManager] ${message}`);
+    }
+  }
+}
+
+module.exports = { AccessControlManager };

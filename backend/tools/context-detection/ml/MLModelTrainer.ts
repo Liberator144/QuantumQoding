@@ -1,0 +1,469 @@
+/**
+ * ML Model Trainer
+ *
+ * Trains machine learning models for context detection.
+ *
+ * @version 1.0.0
+ */
+
+const fs = require('fs');
+const path = require('path');
+const { EventEmitter } = require('events');
+const { FeatureExtractor } = require('../../../ml/features/FeatureExtractor');
+
+/**
+ * ML Model Trainer
+ */
+class MLModelTrainer extends EventEmitter {
+  /**
+   * Create a new MLModelTrainer instance
+   * @param {Object} options - Configuration options
+   */
+  constructor(options = {}) {
+    super();
+
+    // Configuration
+    this.config = {
+      // Debug mode
+      debugMode: options.debugMode || false,
+
+      // Base directory
+      baseDir: options.baseDir || process.cwd(),
+
+      // Training data directory
+      trainingDataDir: options.trainingDataDir || path.join(process.cwd(), 'training-data'),
+
+      // Model output directory
+      modelOutputDir: options.modelOutputDir || path.join(process.cwd(), 'models'),
+
+      // Context definitions
+      contextDefinitions: options.contextDefinitions || {},
+
+      // Model configuration
+      model: options.model || {
+        type: 'naive-bayes',
+        parameters: {},
+      },
+
+      // Training parameters
+      training: options.training || {
+        // Validation split
+        validationSplit: 0.2,
+
+        // Test split
+        testSplit: 0.1,
+
+        // Random seed
+        randomSeed: 42,
+
+        // Number of epochs
+        epochs: 10,
+
+        // Batch size
+        batchSize: 32,
+
+        // Learning rate
+        learningRate: 0.001,
+      },
+
+      // Merge with provided options
+      ...options,
+    };
+
+    // Initialize
+    this._init();
+  }
+
+  /**
+   * Initialize the trainer
+   * @private
+   */
+  _init() {
+    this.log('Initializing ML Model Trainer');
+
+    // Create feature extractor
+    this.featureExtractor = new FeatureExtractor({
+      debugMode: this.config.debugMode,
+    });
+
+    // Create directories if they don't exist
+    this._createDirectories();
+
+    this.log('ML Model Trainer initialized');
+  }
+
+  /**
+   * Create necessary directories
+   * @private
+   */
+  _createDirectories() {
+    // Create training data directory
+    if (!fs.existsSync(this.config.trainingDataDir)) {
+      fs.mkdirSync(this.config.trainingDataDir, { recursive: true });
+      this.log(`Created training data directory: ${this.config.trainingDataDir}`);
+    }
+
+    // Create model output directory
+    if (!fs.existsSync(this.config.modelOutputDir)) {
+      fs.mkdirSync(this.config.modelOutputDir, { recursive: true });
+      this.log(`Created model output directory: ${this.config.modelOutputDir}`);
+    }
+  }
+
+  /**
+   * Train a model
+   * @param {Object} options - Training options
+   * @returns {Promise<Object>} Training result
+   */
+  async trainModel(options = {}) {
+    try {
+      this.log('Training model');
+
+      // Load training data
+      const trainingData = await this._loadTrainingData(options);
+
+      // Split data
+      const { trainData, validationData, testData } = this._splitData(trainingData);
+
+      // Extract features
+      const features = await this._extractFeatures(trainData);
+
+      // Train model
+      const model = await this._trainModel(features, options);
+
+      // Evaluate model
+      const evaluation = await this._evaluateModel(model, testData);
+
+      // Save model
+      const modelPath = await this._saveModel(model, options);
+
+      this.log('Model training complete');
+
+      return {
+        model,
+        evaluation,
+        modelPath,
+      };
+    } catch (error) {
+      this.log(`Error training model: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Load training data
+   * @param {Object} options - Loading options
+   * @returns {Promise<Array>} Training data
+   * @private
+   */
+  async _loadTrainingData(options = {}) {
+    this.log('Loading training data');
+
+    const trainingData = [];
+
+    // Load from training data directory
+    const contextDirs = fs
+      .readdirSync(this.config.trainingDataDir, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+
+    for (const context of contextDirs) {
+      const contextDir = path.join(this.config.trainingDataDir, context);
+      const files = fs
+        .readdirSync(contextDir)
+        .filter(
+          file =>
+            file.endsWith('.js') ||
+            file.endsWith('.jsx') ||
+            file.endsWith('.ts') ||
+            file.endsWith('.tsx') ||
+            file.endsWith('.md')
+        );
+
+      for (const file of files) {
+        const filePath = path.join(contextDir, file);
+        const content = fs.readFileSync(filePath, 'utf8');
+
+        trainingData.push({
+          path: filePath,
+          content,
+          context,
+        });
+      }
+    }
+
+    this.log(`Loaded ${trainingData.length} training samples`);
+
+    return trainingData;
+  }
+
+  /**
+   * Split data into training, validation, and test sets
+   * @param {Array} data - Data to split
+   * @returns {Object} Split data
+   * @private
+   */
+  _splitData(data) {
+    this.log('Splitting data');
+
+    // Shuffle data
+    const shuffledData = [...data].sort(() => Math.random() - 0.5);
+
+    // Calculate split indices
+    const testSize = Math.floor(data.length * this.config.training.testSplit);
+    const validationSize = Math.floor(data.length * this.config.training.validationSplit);
+    const trainSize = data.length - testSize - validationSize;
+
+    // Split data
+    const trainData = shuffledData.slice(0, trainSize);
+    const validationData = shuffledData.slice(trainSize, trainSize + validationSize);
+    const testData = shuffledData.slice(trainSize + validationSize);
+
+    this.log(
+      `Split data: ${trainData.length} train, ${validationData.length} validation, ${testData.length} test`
+    );
+
+    return {
+      trainData,
+      validationData,
+      testData,
+    };
+  }
+
+  /**
+   * Extract features from data
+   * @param {Array} data - Data to extract features from
+   * @returns {Promise<Array>} Extracted features
+   * @private
+   */
+  async _extractFeatures(data) {
+    this.log('Extracting features');
+
+    const features = [];
+
+    for (const sample of data) {
+      const extractedFeatures = this.featureExtractor.extractFeatures({
+        path: sample.path,
+        content: sample.content,
+      });
+
+      features.push({
+        features: extractedFeatures,
+        context: sample.context,
+      });
+    }
+
+    this.log(`Extracted features for ${features.length} samples`);
+
+    return features;
+  }
+
+  /**
+   * Train model
+   * @param {Array} features - Features to train on
+   * @param {Object} options - Training options
+   * @returns {Promise<Object>} Trained model
+   * @private
+   */
+  async _trainModel(features, options = {}) {
+    this.log('Training model');
+
+    // Create model
+    const model = this._createModel();
+
+    // Train model
+    await model.train(features, {
+      epochs: this.config.training.epochs,
+      batchSize: this.config.training.batchSize,
+      learningRate: this.config.training.learningRate,
+      ...options,
+    });
+
+    this.log('Model training complete');
+
+    return model;
+  }
+
+  /**
+   * Create model
+   * @returns {Object} Model
+   * @private
+   */
+  _createModel() {
+    this.log(`Creating ${this.config.model.type} model`);
+
+    // Create model based on type
+    switch (this.config.model.type) {
+      case 'naive-bayes':
+        return this._createNaiveBayesModel();
+      case 'decision-tree':
+        return this._createDecisionTreeModel();
+      case 'random-forest':
+        return this._createRandomForestModel();
+      case 'neural-network':
+        return this._createNeuralNetworkModel();
+      default:
+        throw new Error(`Unsupported model type: ${this.config.model.type}`);
+    }
+  }
+
+  /**
+   * Create Naive Bayes model
+   * @returns {Object} Naive Bayes model
+   * @private
+   */
+  _createNaiveBayesModel() {
+    // This is a simplified implementation
+    return {
+      train: async (features, options) => {
+        // Training logic would go here
+        return true;
+      },
+      predict: features => {
+        // Prediction logic would go here
+        return {
+          context: 'general',
+          confidence: 0.5,
+        };
+      },
+      evaluate: testData => {
+        // Evaluation logic would go here
+        return {
+          accuracy: 0.8,
+          precision: 0.8,
+          recall: 0.8,
+          f1: 0.8,
+        };
+      },
+      save: path => {
+        // Save logic would go here
+        return true;
+      },
+      load: path => {
+        // Load logic would go here
+        return true;
+      },
+    };
+  }
+
+  /**
+   * Create Decision Tree model
+   * @returns {Object} Decision Tree model
+   * @private
+   */
+  _createDecisionTreeModel() {
+    // This is a simplified implementation
+    return this._createNaiveBayesModel();
+  }
+
+  /**
+   * Create Random Forest model
+   * @returns {Object} Random Forest model
+   * @private
+   */
+  _createRandomForestModel() {
+    // This is a simplified implementation
+    return this._createNaiveBayesModel();
+  }
+
+  /**
+   * Create Neural Network model
+   * @returns {Object} Neural Network model
+   * @private
+   */
+  _createNeuralNetworkModel() {
+    // This is a simplified implementation
+    return this._createNaiveBayesModel();
+  }
+
+  /**
+   * Evaluate model
+   * @param {Object} model - Model to evaluate
+   * @param {Array} testData - Test data
+   * @returns {Promise<Object>} Evaluation result
+   * @private
+   */
+  async _evaluateModel(model, testData) {
+    this.log('Evaluating model');
+
+    // Extract features from test data
+    const features = [];
+
+    for (const sample of testData) {
+      const extractedFeatures = this.featureExtractor.extractFeatures({
+        path: sample.path,
+        content: sample.content,
+      });
+
+      features.push({
+        features: extractedFeatures,
+        context: sample.context,
+      });
+    }
+
+    // Evaluate model
+    const evaluation = model.evaluate(features);
+
+    this.log(
+      `Model evaluation: accuracy=${evaluation.accuracy}, precision=${evaluation.precision}, recall=${evaluation.recall}, f1=${evaluation.f1}`
+    );
+
+    return evaluation;
+  }
+
+  /**
+   * Save model
+   * @param {Object} model - Model to save
+   * @param {Object} options - Saving options
+   * @returns {Promise<string>} Model path
+   * @private
+   */
+  async _saveModel(model, options = {}) {
+    const modelName = options.modelName || `model-${Date.now()}`;
+    const modelPath = path.join(this.config.modelOutputDir, `${modelName}.json`);
+
+    this.log(`Saving model to ${modelPath}`);
+
+    // Save model
+    model.save(modelPath);
+
+    return modelPath;
+  }
+
+  /**
+   * Load model
+   * @param {string} modelPath - Path to model
+   * @returns {Promise<Object>} Loaded model
+   */
+  async loadModel(modelPath) {
+    try {
+      this.log(`Loading model from ${modelPath}`);
+
+      // Create model
+      const model = this._createModel();
+
+      // Load model
+      model.load(modelPath);
+
+      this.log('Model loaded');
+
+      return model;
+    } catch (error) {
+      this.log(`Error loading model: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Log message if debug mode is enabled
+   * @param {string} message - Message to log
+   * @private
+   */
+  log(message) {
+    if (this.config.debugMode) {
+      console.log(`[MLModelTrainer] ${message}`);
+    }
+  }
+}
+
+module.exports = { MLModelTrainer };

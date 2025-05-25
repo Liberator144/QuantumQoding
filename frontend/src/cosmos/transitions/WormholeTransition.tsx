@@ -1,0 +1,696 @@
+import React, { useEffect, useState, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { UITransition, UITransitionGroup } from './UITransition';
+import CameraEffects, { TransitionMilestone } from './CameraEffects';
+import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
+
+export type WormholeTransitionProps = {
+  transitionState: 'none' | 'entering' | 'exiting';
+  selectedColor?: string;
+  defaultColor?: string;
+  density?: number;
+  showUITransitions?: boolean;
+  cameraMode?: 'zoom' | 'pan' | 'rotate' | 'swirl' | 'dive' | 'rise' | 'tilt' | 'quantum' | 'custom';
+  cameraIntensity?: number;
+  transitionDuration?: number;
+  useShake?: boolean;
+  onTransitionProgress?: (progress: number) => void;
+  onTransitionMilestone?: (milestone: TransitionMilestone, progress: number) => void;
+  onTransitionComplete?: () => void;
+};
+
+const WormholeTransition: React.FC<WormholeTransitionProps> = ({
+  transitionState,
+  selectedColor = '#4fc3f7',
+  defaultColor = '#4fc3f7',
+  density = 100,
+  showUITransitions = true,
+  cameraMode = 'quantum',
+  cameraIntensity = 1.0,
+  transitionDuration = 1.5,
+  useShake = false,
+  onTransitionProgress,
+  onTransitionMilestone,
+  onTransitionComplete
+}) => {
+  const [progress, setProgress] = useState(0);
+  const audio = useAudio();
+  
+  // Animation progress tracking
+  useEffect(() => {
+    if (transitionState !== 'none') {
+      let startTime = Date.now();
+      const duration = transitionDuration * 1000;
+      
+      const updateProgress = () => {
+        const elapsed = Date.now() - startTime;
+        const newProgress = Math.min(elapsed / duration, 1);
+        setProgress(newProgress);
+        
+        // Notify parent component of progress
+        if (onTransitionProgress) {
+          onTransitionProgress(newProgress);
+        }
+        
+        if (newProgress < 1) {
+          requestAnimationFrame(updateProgress);
+        } else if (onTransitionComplete) {
+          onTransitionComplete();
+        }
+      };
+      
+      const animation = requestAnimationFrame(updateProgress);
+      
+      return () => {
+        cancelAnimationFrame(animation);
+        setProgress(0);
+      };
+    }
+  }, [transitionState, transitionDuration, onTransitionProgress, onTransitionComplete]);
+  
+  // Milestone handler for coordinating UI transitions
+  const handleMilestone = useCallback((milestone: TransitionMilestone, milestoneProgress: number) => {
+    // Pass milestone to parent if requested
+    if (onTransitionMilestone) {
+      onTransitionMilestone(milestone, milestoneProgress);
+    }
+    
+    // Play appropriate sound effects based on milestone
+    switch(milestone) {
+      case 'quarter':
+        audio.play(
+          transitionState === 'entering' ? 'quantum-shift-1' : 'quantum-shift-4',
+          { volume: 0.4 }
+        );
+        break;
+      case 'half':
+        audio.play(
+          transitionState === 'entering' ? 'quantum-shift-2' : 'quantum-shift-3',
+          { volume: 0.5 }
+        );
+        break;
+      case 'three-quarters':
+        audio.play(
+          transitionState === 'entering' ? 'quantum-shift-3' : 'quantum-shift-2',
+          { volume: 0.4 }
+        );
+        break;
+      case 'complete':
+        audio.play(
+          transitionState === 'entering' ? 'quantum-arrival' : 'quantum-departure',
+          { volume: 0.6 }
+        );
+        break;
+    }
+  }, [audio, onTransitionMilestone, transitionState]);
+  
+  // Initialize audio
+  useEffect(() => {
+    if (transitionState !== 'none') {
+      // Play appropriate sound effect
+      audio.play(
+        transitionState === 'entering' ? 'wormhole-enter' : 'wormhole-exit', 
+        { volume: 0.7 }
+      );
+      
+      // Play quantum surge/collapse sound after a slight delay
+      setTimeout(() => {
+        audio.play(
+          transitionState === 'entering' ? 'quantum-surge' : 'quantum-collapse',
+          { volume: 0.6 }
+        );
+      }, 300);
+    }
+  }, [transitionState, audio]);
+  
+  // This means there's no transition happening
+  if (transitionState !== 'entering' && transitionState !== 'exiting') return null;
+
+  // Define the color to use for effects
+  const color = selectedColor || defaultColor;
+  
+  return (
+    <CameraEffects
+      isTransitioning={transitionState === 'entering' || transitionState === 'exiting'}
+      transitionState={transitionState}
+      mode={cameraMode}
+      intensity={cameraIntensity}
+      transitionDuration={transitionDuration}
+      shouldShake={useShake}
+      backfaceVisible={false}
+      zIndexDuringTransition={50}
+      vignetteAmount={40}
+      blurAmount={3}
+      perspective={1200}
+      rotationDegrees={{
+        x: transitionState === 'entering' ? 8 : 5,
+        y: transitionState === 'entering' ? -5 : -3,
+        z: transitionState === 'entering' ? 2 : 0
+      }}
+      translate3d={{
+        x: 0,
+        y: 0,
+        z: transitionState === 'entering' ? 80 : 50
+      }}
+      onTransitionProgress={setProgress}
+      onTransitionMilestone={handleMilestone}
+      onTransitionComplete={onTransitionComplete}
+    >
+      <motion.div 
+        className="absolute inset-0 z-50 pointer-events-none perspective-1200 preserve-3d"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 1.5 }}
+      >
+        {/* Background blur and darkness with enhanced depth effect */}
+        <motion.div
+          className="absolute inset-0 backdrop-blur-sm preserve-3d"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.8 }}
+          exit={{ opacity: 0 }}
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 1
+          }}
+        />
+
+        <div className="absolute inset-0 flex items-center justify-center preserve-3d z-10">
+          {/* Wormhole outer glow - expanding/contracting circle with enhanced depth effect */}
+          <motion.div
+            className="absolute rounded-full preserve-3d"
+            initial={{ 
+              width: transitionState === 'entering' ? 0 : '150vmax',
+              height: transitionState === 'entering' ? 0 : '150vmax',
+              opacity: 0,
+              z: transitionState === 'entering' ? -200 : 0
+            }}
+            animate={{ 
+              width: transitionState === 'entering' ? '150vmax' : 0,
+              height: transitionState === 'entering' ? '150vmax' : 0,
+              opacity: [0, 0.7, 0],
+              z: transitionState === 'entering' ? 0 : -200
+            }}
+            transition={{
+              duration: 1.8,
+              ease: "easeInOut"
+            }}
+            style={{
+              background: `radial-gradient(circle, ${color}40 0%, transparent 70%)`,
+              filter: 'blur(40px)',
+            }}
+          />
+          
+          {/* Main wormhole funnel with enhanced 3D effects */}
+          <motion.div
+            className="relative flex items-center justify-center preserve-3d"
+            initial={{ 
+              scale: transitionState === 'entering' ? 0.1 : 15,
+              opacity: 0,
+              rotateZ: 0,
+              z: transitionState === 'entering' ? -300 : 100
+            }}
+            animate={{ 
+              scale: transitionState === 'entering' ? 15 : 0.1,
+              opacity: [0, 1, 0],
+              rotateZ: transitionState === 'entering' ? 720 : -720,
+              z: transitionState === 'entering' ? 100 : -300
+            }}
+            transition={{
+              duration: 1.5,
+              ease: "easeInOut"
+            }}
+          >
+            {/* Wormhole rings - more rings for better effect */}
+            {[...Array(12)].map((_, i) => (
+              <motion.div
+                key={`ring-${i}`}
+                className="absolute rounded-full border-2 border-opacity-60 preserve-3d backface-hidden"
+                style={{
+                  width: `${(i + 1) * 30}px`,
+                  height: `${(i + 1) * 30}px`,
+                  borderColor: color,
+                  opacity: 1 - (i / 14),
+                  transform: `rotateX(${75 - i * 5}deg)`,
+                  zIndex: 10 - i
+                }}
+                animate={{
+                  rotateZ: 360,
+                  scaleX: [1, 1.1, 1],
+                  scaleY: [1, 0.9, 1],
+                }}
+                transition={{
+                  duration: 2 + i * 0.2,
+                  repeat: Infinity,
+                  ease: "linear",
+                  repeatType: "loop"
+                }}
+              />
+            ))}
+            
+            {/* Inner ringlets for more detail */}
+            {[...Array(8)].map((_, i) => (
+              <motion.div
+                key={`inner-ring-${i}`}
+                className="absolute rounded-full border border-opacity-70 preserve-3d backface-hidden"
+                style={{
+                  width: `${(i + 1) * 10}px`,
+                  height: `${(i + 1) * 10}px`,
+                  borderColor: color,
+                  opacity: 0.8 - (i / 10),
+                  transform: `rotateX(${85 - i * 3}deg) rotateY(${i * 5}deg)`,
+                  zIndex: 20 - i
+                }}
+                animate={{
+                  rotateZ: -360,
+                }}
+                transition={{
+                  duration: 3 + i * 0.3,
+                  repeat: Infinity,
+                  ease: "linear",
+                }}
+              />
+            ))}
+            
+            {/* Wormhole core with enhanced visual effects */}
+            <div className="relative w-40 h-40 preserve-3d z-30">
+              <motion.div
+                className="absolute inset-0 rounded-full preserve-3d"
+                style={{
+                  background: `radial-gradient(circle, ${color} 0%, ${color}80 40%, ${color}30 70%, transparent 100%)`,
+                  boxShadow: `0 0 30px ${color}80`,
+                }}
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.7, 1, 0.7],
+                  z: [0, 20, 0]
+                }}
+                transition={{
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+              />
+              
+              {/* Pulsating inner core for depth effect */}
+              <motion.div
+                className="absolute inset-[15%] rounded-full preserve-3d"
+                style={{
+                  background: `radial-gradient(circle, white 0%, ${color} 50%, ${color}80 100%)`,
+                  boxShadow: `0 0 15px white`,
+                }}
+                animate={{
+                  scale: [1, 1.3, 1],
+                  opacity: [0.8, 1, 0.8],
+                  z: [0, 30, 0]
+                }}
+                transition={{
+                  duration: 1.5,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                  ease: "easeInOut"
+                }}
+              />
+              
+              {/* Energy flares from core */}
+              {[...Array(16)].map((_, i) => (
+                <motion.div
+                  key={`flare-${i}`}
+                  className="absolute preserve-3d"
+                  style={{
+                    width: '150%',
+                    height: '2px',
+                    top: '50%',
+                    left: '50%',
+                    background: `linear-gradient(90deg, transparent, ${color}, transparent)`,
+                    transform: `translateX(-50%) translateY(-50%) rotate(${i * 22.5}deg)`,
+                    opacity: 0.7,
+                    zIndex: Math.floor(Math.random() * 10) + 30
+                  }}
+                  animate={{
+                    opacity: [0.3, 0.7, 0.3],
+                    scaleX: [0.8, 1.2, 0.8],
+                    z: [-5, 15, -5]
+                  }}
+                  transition={{
+                    duration: 3 + i * 0.1,
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                />
+              ))}
+              
+              {/* Rotating energy waves for dynamic effect */}
+              {[...Array(3)].map((_, i) => (
+                <motion.div
+                  key={`wave-${i}`}
+                  className="absolute inset-0 rounded-full overflow-hidden preserve-3d"
+                  animate={{
+                    rotate: 360,
+                    z: [0, 15, 0]
+                  }}
+                  transition={{
+                    duration: 10 + i * 5,
+                    repeat: Infinity,
+                    ease: "linear",
+                    z: {
+                      duration: 3,
+                      repeat: Infinity,
+                      repeatType: "reverse"
+                    }
+                  }}
+                >
+                  <div 
+                    className="absolute w-full h-full"
+                    style={{
+                      background: `conic-gradient(${color}00, ${color}, ${color}00)`,
+                      opacity: 0.3,
+                      filter: 'blur(5px)',
+                    }}
+                  />
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+          
+          {/* Fluid particles - outer to inner (enhanced with more particles and depth) */}
+          {[...Array(density)].map((_, i) => (
+            <motion.div
+              key={`outerparticle-${i}`}
+              className="absolute rounded-full preserve-3d"
+              style={{
+                width: Math.random() * 5 + 2, 
+                height: Math.random() * 5 + 2,
+                backgroundColor: color,
+                top: '50%',
+                left: '50%',
+                opacity: 0,
+                filter: 'blur(1px)',
+                zIndex: Math.floor(Math.random() * 10)
+              }}
+              animate={transitionState === 'entering' ? {
+                opacity: [0, 0.8, 0],
+                x: [
+                  (Math.random() - 0.5) * window.innerWidth * 0.8, 
+                  0
+                ],
+                y: [
+                  (Math.random() - 0.5) * window.innerHeight * 0.8,
+                  0
+                ],
+                z: [
+                  (Math.random() - 0.5) * 500,
+                  0
+                ],
+                scale: [1, 0.2]
+              } : {
+                opacity: [0, 0.8, 0],
+                x: [
+                  0,
+                  (Math.random() - 0.5) * window.innerWidth * 0.8
+                ],
+                y: [
+                  0,
+                  (Math.random() - 0.5) * window.innerHeight * 0.8
+                ],
+                z: [
+                  0,
+                  (Math.random() - 0.5) * 500
+                ],
+                scale: [0.2, 1]
+              }}
+              transition={{
+                duration: 1.2 + Math.random() * 0.5,
+                ease: "easeInOut",
+                delay: Math.random() * 0.7
+              }}
+            />
+          ))}
+          
+          {/* Spiral particles with enhanced 3D paths */}
+          {[...Array(80)].map((_, i) => {
+            const angle = (i / 80) * Math.PI * 15; // More revolutions
+            const radius = transitionState === 'entering' ? 
+              300 - (angle * 8) : // Spiral inward
+              angle * 8; // Spiral outward
+            const x = Math.cos(angle) * radius;
+            const y = Math.sin(angle) * radius;
+            const z = (Math.sin(angle * 2) * 150) - 50; // Enhanced Z dimension for depth
+            
+            return (
+              <motion.div
+                key={`spiral-${i}`}
+                className="absolute rounded-full preserve-3d backface-hidden"
+                style={{
+                  width: 6 - (i / 80) * 4,
+                  height: 6 - (i / 80) * 4,
+                  backgroundColor: color,
+                  top: '50%',
+                  left: '50%',
+                  boxShadow: `0 0 5px ${color}80`,
+                  zIndex: 5 + Math.floor((i / 80) * 20)
+                }}
+                initial={{
+                  opacity: 0,
+                  x: transitionState === 'entering' ? x : 0,
+                  y: transitionState === 'entering' ? y : 0,
+                  z: transitionState === 'entering' ? z : 0,
+                }}
+                animate={{
+                  opacity: [0, 1, 0],
+                  x: transitionState === 'entering' ? 0 : x,
+                  y: transitionState === 'entering' ? 0 : y,
+                  z: transitionState === 'entering' ? 0 : z,
+                }}
+                transition={{
+                  duration: 1.5,
+                  ease: "easeInOut",
+                  delay: (i / 80) * 0.5
+                }}
+              />
+            );
+          })}
+          
+          {/* Fluid dynamics effect - directional energy flows with enhanced depth */}
+          {[...Array(4)].map((_, i) => {
+            const direction = i * (Math.PI / 2); // 4 directions
+            return [...Array(15)].map((_, j) => {
+              const distance = j * 20 + Math.random() * 10;
+              const angle = direction + (Math.random() - 0.5) * 0.3; // Slight variation
+              const startX = Math.cos(angle) * (transitionState === 'entering' ? distance : 0);
+              const startY = Math.sin(angle) * (transitionState === 'entering' ? distance : 0);
+              const startZ = (Math.random() - 0.5) * 150 * (transitionState === 'entering' ? 1 : 0);
+              const endX = Math.cos(angle) * (transitionState === 'entering' ? 0 : distance);
+              const endY = Math.sin(angle) * (transitionState === 'entering' ? 0 : distance);
+              const endZ = (Math.random() - 0.5) * 150 * (transitionState === 'entering' ? 0 : 1);
+              
+              return (
+                <motion.div
+                  key={`flow-${i}-${j}`}
+                  className="absolute rounded-full preserve-3d backface-hidden"
+                  style={{
+                    width: 4 - (j / 15) * 3,
+                    height: 4 - (j / 15) * 3,
+                    backgroundColor: color,
+                    top: '50%',
+                    left: '50%',
+                    opacity: 0,
+                    filter: 'blur(1px)',
+                    zIndex: 10 + j
+                  }}
+                  animate={{
+                    x: [startX, endX],
+                    y: [startY, endY],
+                    z: [startZ, endZ],
+                    opacity: [0, 0.9, 0],
+                  }}
+                  transition={{
+                    duration: 1 + Math.random() * 0.5,
+                    ease: "easeInOut",
+                    delay: j * 0.05 + Math.random() * 0.2,
+                  }}
+                />
+              );
+            });
+          }).flat()}
+          
+          {/* Energy vortex - rotating particle flows with enhanced 3D motion */}
+          <motion.div 
+            className="absolute w-[300px] h-[300px] rounded-full preserve-3d"
+            animate={{
+              rotate: transitionState === 'entering' ? [0, 360] : [360, 0],
+              rotateX: transitionState === 'entering' ? [0, 30] : [30, 0],
+              rotateY: transitionState === 'entering' ? [0, -15] : [-15, 0],
+              z: transitionState === 'entering' ? [0, 50, 100] : [100, 50, 0]
+            }}
+            transition={{
+              duration: 5,
+              ease: "easeInOut",
+              z: {
+                duration: 1.5,
+                ease: "easeInOut"
+              }
+            }}
+          >
+            {[...Array(30)].map((_, i) => {
+              const angle = (i / 30) * Math.PI * 2;
+              const radius = 150;
+              const x = Math.cos(angle) * radius;
+              const y = Math.sin(angle) * radius;
+              const z = Math.sin(angle * 3) * 60;
+              
+              return (
+                <motion.div
+                  key={`vortex-${i}`}
+                  className="absolute rounded-full preserve-3d backface-hidden"
+                  style={{
+                    left: '50%',
+                    top: '50%',
+                    width: 3,
+                    height: 20 + Math.random() * 20,
+                    backgroundColor: color,
+                    filter: 'blur(1px)',
+                    opacity: 0.5,
+                    x,
+                    y,
+                    z,
+                    transformOrigin: 'center center',
+                    transform: `translate(-50%, -50%) rotate(${angle + Math.PI/2}rad) translateZ(${z}px)`,
+                    zIndex: 30 + Math.floor(z)
+                  }}
+                  animate={{
+                    opacity: [0.3, 0.7, 0.3],
+                    height: [20, 40, 20],
+                    z: [z, z + 40, z]
+                  }}
+                  transition={{
+                    duration: 2 + Math.random(),
+                    repeat: Infinity,
+                    repeatType: "reverse"
+                  }}
+                />
+              );
+            })}
+          </motion.div>
+        </div>
+          
+        {/* UI Element Transitions - Enhanced with Physics-based Effects */}
+        {showUITransitions && (
+          <>
+            {/* Top UI Elements */}
+            <UITransition 
+              show={
+                (transitionState === 'entering' && progress > 0.6) || 
+                (transitionState === 'exiting' && progress < 0.4)
+              }
+              preset="quantum"
+              direction="down"
+              delay={0.1}
+              physics={{ mass: 0.8, stiffness: 300, damping: 20 }}
+              className="absolute top-4 left-0 right-0 flex justify-center z-50"
+            >
+              <div className="px-6 py-2.5 bg-black bg-opacity-50 backdrop-blur-md rounded-lg text-white text-lg font-medium border border-[#4fc3f780]">
+                {transitionState === 'entering' ? 'Entering New System' : 'Returning to Hub'}
+              </div>
+            </UITransition>
+            
+            {/* Status Indicators - Enhanced with better staggering */}
+            <UITransitionGroup 
+              show={
+                (transitionState === 'entering' && progress > 0.65) || 
+                (transitionState === 'exiting' && progress < 0.35)
+              }
+              staggerAmount={0.08}
+              physics={{ mass: 0.6, stiffness: 350, damping: 25 }}
+              className="absolute top-16 left-0 right-0 flex justify-center gap-3 z-50"
+            >
+              {['Quantum Alignment', 'Spatial Lock', 'Neural Sync'].map((status, i) => (
+                <UITransition 
+                  key={`status-${i}`}
+                  show={true}
+                  preset="glide"
+                  direction="down"
+                  className="px-3 py-1.5 bg-black bg-opacity-60 backdrop-blur-sm rounded-full text-white text-sm flex items-center border border-[#4fc3f740]"
+                >
+                  <div className="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></div>
+                  {status}
+                </UITransition>
+              ))}
+            </UITransitionGroup>
+            
+            {/* Side Controls - Left */}
+            <UITransition 
+              show={
+                (transitionState === 'entering' && progress > 0.7) || 
+                (transitionState === 'exiting' && progress < 0.3)
+              }
+              preset="glide"
+              direction="left"
+              physics={{ mass: 1.2, stiffness: 200, damping: 25 }}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 z-50"
+            >
+              <div className="flex flex-col gap-4 bg-black bg-opacity-40 backdrop-blur-sm p-2 rounded-lg border border-[#4fc3f740]">
+                {[...Array(3)].map((_, i) => (
+                  <div 
+                    key={`control-left-${i}`} 
+                    className="w-10 h-10 rounded-full bg-white bg-opacity-10 flex items-center justify-center text-white"
+                  >
+                    <div className="w-3 h-3 rounded-full bg-blue-400"></div>
+                  </div>
+                ))}
+              </div>
+            </UITransition>
+            
+            {/* Side Controls - Right */}
+            <UITransition 
+              show={
+                (transitionState === 'entering' && progress > 0.7) || 
+                (transitionState === 'exiting' && progress < 0.3)
+              }
+              preset="glide"
+              direction="right"
+              physics={{ mass: 1.2, stiffness: 200, damping: 25 }}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 z-50"
+            >
+              <div className="flex flex-col gap-4 bg-black bg-opacity-40 backdrop-blur-sm p-2 rounded-lg border border-[#4fc3f740]">
+                {[...Array(3)].map((_, i) => (
+                  <div 
+                    key={`control-right-${i}`} 
+                    className="w-10 h-10 rounded-full bg-white bg-opacity-10 flex items-center justify-center text-white"
+                  >
+                    <div className="w-3 h-3 rounded-full bg-purple-400"></div>
+                  </div>
+                ))}
+              </div>
+            </UITransition>
+            
+            {/* Bottom Data Panel */}
+            <UITransition 
+              show={
+                (transitionState === 'entering' && progress > 0.75) || 
+                (transitionState === 'exiting' && progress < 0.25)
+              }
+              preset="quantum"
+              direction="up"
+              physics={{ mass: 0.8, stiffness: 250, damping: 22 }}
+              className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-50"
+            >
+              <div className="px-6 py-3 bg-black bg-opacity-60 backdrop-blur-md rounded-lg text-white flex items-center gap-4 border border-[#4fc3f740]">
+                <div className="text-xs opacity-70">Quantum Flux</div>
+                <div className="w-32 h-2 bg-white bg-opacity-20 rounded-full overflow-hidden">
+                  <motion.div 
+                    className="h-full bg-blue-400" 
+                    style={{ width: `${progress * 100}%` }}
+                  />
+                </div>
+                <div className="text-xs opacity-70">{Math.round(progress * 100)}%</div>
+              </div>
+            </UITransition>
+          </>
+        )}
+      </motion.div>
+    </CameraEffects>
+  );
+};
+
+export default WormholeTransition;

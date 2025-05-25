@@ -1,0 +1,131 @@
+/**
+ * API Version Middleware
+ * 
+ * This middleware handles API versioning for the QQ-Verse backend server.
+ * 
+ * @version 1.0.0
+ */
+
+import { Request, Response, NextFunction } from 'express';
+import { AppError } from './errorHandler';
+import { logger } from '../utils/logger';
+import { config } from '../config';
+
+/**
+ * Supported API versions
+ */
+export const API_VERSIONS = {
+  V1: '1',
+};
+
+/**
+ * API version status
+ */
+export const API_VERSION_STATUS = {
+  ACTIVE: 'active',
+  MAINTAINED: 'maintained',
+  DEPRECATED: 'deprecated',
+  RETIRED: 'retired',
+};
+
+/**
+ * API version configuration
+ */
+export const API_VERSION_CONFIG = {
+  [API_VERSIONS.V1]: {
+    status: API_VERSION_STATUS.ACTIVE,
+    deprecationDate: null,
+    retirementDate: null,
+  },
+};
+
+/**
+ * Extract API version from request
+ */
+export const extractApiVersion = (req: Request): string => {
+  // Extract version from URL path
+  const urlPathVersion = req.path.split('/')[2]; // /api/v1/... -> v1
+  if (urlPathVersion && urlPathVersion.startsWith('v')) {
+    return urlPathVersion.substring(1); // v1 -> 1
+  }
+  
+  // Extract version from Accept header
+  const acceptHeader = req.get('Accept');
+  if (acceptHeader && acceptHeader.includes('version=')) {
+    const versionMatch = acceptHeader.match(/version=(\d+)/);
+    if (versionMatch && versionMatch[1]) {
+      return versionMatch[1];
+    }
+  }
+  
+  // Default to latest version
+  return API_VERSIONS.V1;
+};
+
+/**
+ * Check if API version is supported
+ */
+export const isVersionSupported = (version: string): boolean => {
+  return Object.values(API_VERSIONS).includes(version) && 
+    API_VERSION_CONFIG[version].status !== API_VERSION_STATUS.RETIRED;
+};
+
+/**
+ * Check if API version is deprecated
+ */
+export const isVersionDeprecated = (version: string): boolean => {
+  return Object.values(API_VERSIONS).includes(version) && 
+    API_VERSION_CONFIG[version].status === API_VERSION_STATUS.DEPRECATED;
+};
+
+/**
+ * API version middleware
+ */
+export const apiVersionMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // Extract API version
+    const version = extractApiVersion(req);
+    
+    // Check if version is supported
+    if (!isVersionSupported(version)) {
+      return next(new AppError(`API version v${version} is not supported`, 406));
+    }
+    
+    // Add version to request
+    req.apiVersion = version;
+    
+    // Add deprecation header if version is deprecated
+    if (isVersionDeprecated(version)) {
+      const deprecationDate = API_VERSION_CONFIG[version].deprecationDate;
+      const retirementDate = API_VERSION_CONFIG[version].retirementDate;
+      
+      res.set('Deprecation', 'true');
+      
+      if (deprecationDate) {
+        res.set('Deprecation', deprecationDate);
+      }
+      
+      if (retirementDate) {
+        res.set('Sunset', retirementDate);
+      }
+      
+      res.set('Link', '<https://docs.qq-verse.com/api/migration>; rel="deprecation"; type="text/html"');
+    }
+    
+    next();
+  } catch (error) {
+    logger.error('API version middleware error:', error);
+    next(error);
+  }
+};
+
+// Extend Express Request interface
+declare global {
+  namespace Express {
+    interface Request {
+      apiVersion: string;
+    }
+  }
+}
+
+export default apiVersionMiddleware;

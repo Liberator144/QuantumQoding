@@ -1,0 +1,214 @@
+/**
+ * Relevance scorer for recommendations
+ */
+
+import { RecommendationScorer } from './types';
+import { Recommendation, RecommendationContext, RecommendationPriority } from '../types';
+
+/**
+ * Relevance scorer
+ */
+export class RelevanceScorer implements RecommendationScorer {
+  name = 'RelevanceScorer';
+  description = 'Scores recommendations based on relevance to context';
+
+  /**
+   * Score recommendations based on relevance to context
+   */
+  score(recommendations: Recommendation[], context: RecommendationContext): Recommendation[] {
+    return recommendations.map(recommendation => {
+      // Calculate base score
+      let score = 0;
+
+      // Score based on language match
+      if (
+        recommendation.language &&
+        context.fileContext.language &&
+        recommendation.language === context.fileContext.language
+      ) {
+        score += 0.3;
+      }
+
+      // Score based on file path match
+      if (recommendation.metadata?.filePath && context.fileContext.filePath) {
+        const pathScore = this.calculatePathMatchScore(
+          recommendation.metadata.filePath as string,
+          context.fileContext.filePath
+        );
+        score += pathScore * 0.2;
+      }
+
+      // Score based on content match
+      if (recommendation.metadata?.contentPattern && context.fileContext.content) {
+        const contentScore = this.calculateContentMatchScore(
+          recommendation.metadata.contentPattern as string,
+          context.fileContext.content
+        );
+        score += contentScore * 0.2;
+      }
+
+      // Score based on priority
+      score += this.getPriorityScore(recommendation.priority) * 0.1;
+
+      // Score based on user preferences
+      if (context.userPreferences) {
+        // Score based on preferred languages
+        if (
+          recommendation.language &&
+          context.userPreferences.preferredLanguages &&
+          context.userPreferences.preferredLanguages.includes(recommendation.language)
+        ) {
+          score += 0.1;
+        }
+
+        // Score based on preferred patterns
+        if (
+          recommendation.pattern &&
+          context.userPreferences.preferredPatterns &&
+          context.userPreferences.preferredPatterns.includes(recommendation.pattern)
+        ) {
+          score += 0.1;
+        }
+
+        // Score based on preferred recommendation types
+        if (
+          context.userPreferences.preferredRecommendationTypes &&
+          context.userPreferences.preferredRecommendationTypes.includes(recommendation.type)
+        ) {
+          score += 0.05;
+        }
+
+        // Score based on preferred recommendation categories
+        if (
+          context.userPreferences.preferredRecommendationCategories &&
+          context.userPreferences.preferredRecommendationCategories.includes(
+            recommendation.category
+          )
+        ) {
+          score += 0.05;
+        }
+
+        // Score based on preferred tags
+        if (context.userPreferences.preferredTags) {
+          const matchingTags = recommendation.tags.filter(tag =>
+            context.userPreferences!.preferredTags!.includes(tag)
+          );
+
+          if (matchingTags.length > 0) {
+            score += (matchingTags.length / context.userPreferences.preferredTags.length) * 0.1;
+          }
+        }
+      }
+
+      // Score based on usage history
+      if (context.usageHistory) {
+        // Score based on recently used recommendations
+        if (
+          context.usageHistory.recentlyUsedRecommendations &&
+          context.usageHistory.recentlyUsedRecommendations.includes(recommendation.id)
+        ) {
+          score -= 0.1; // Penalize recently used recommendations
+        }
+
+        // Score based on usage counts
+        if (
+          context.usageHistory.usageCounts &&
+          context.usageHistory.usageCounts[recommendation.id]
+        ) {
+          const usageCount = context.usageHistory.usageCounts[recommendation.id];
+
+          // Boost score for recommendations with moderate usage
+          if (usageCount > 0 && usageCount < 5) {
+            score += 0.05;
+          } else if (usageCount >= 5) {
+            score -= 0.05; // Penalize heavily used recommendations
+          }
+        }
+      }
+
+      // Ensure score is between 0 and 1
+      score = Math.max(0, Math.min(1, score));
+
+      // Update recommendation with new score
+      return {
+        ...recommendation,
+        relevanceScore: score,
+      };
+    });
+  }
+
+  /**
+   * Calculate path match score
+   */
+  private calculatePathMatchScore(recommendationPath: string, currentPath: string): number {
+    // Exact path match
+    if (recommendationPath === currentPath) {
+      return 1.0;
+    }
+
+    // Same extension
+    const recommendationExt = recommendationPath.split('.').pop();
+    const currentExt = currentPath.split('.').pop();
+
+    if (recommendationExt === currentExt) {
+      return 0.7;
+    }
+
+    // Same directory
+    const recommendationDir = recommendationPath.split('/').slice(0, -1).join('/');
+    const currentDir = currentPath.split('/').slice(0, -1).join('/');
+
+    if (recommendationDir === currentDir) {
+      return 0.5;
+    }
+
+    // Parent directory
+    const recommendationParentDir = recommendationDir.split('/').slice(0, -1).join('/');
+
+    if (recommendationParentDir === currentDir || currentDir.startsWith(recommendationParentDir)) {
+      return 0.3;
+    }
+
+    return 0.1;
+  }
+
+  /**
+   * Calculate content match score
+   */
+  private calculateContentMatchScore(pattern: string, content: string): number {
+    try {
+      const regex = new RegExp(pattern, 'g');
+      const matches = content.match(regex);
+
+      if (matches) {
+        // More matches = higher score
+        return Math.min(1.0, matches.length * 0.2);
+      }
+    } catch (error) {
+      // If regex is invalid, just check if content includes pattern
+      if (content.includes(pattern)) {
+        return 0.5;
+      }
+    }
+
+    return 0;
+  }
+
+  /**
+   * Get score based on priority
+   */
+  private getPriorityScore(priority: RecommendationPriority): number {
+    switch (priority) {
+      case RecommendationPriority.CRITICAL:
+        return 1.0;
+      case RecommendationPriority.HIGH:
+        return 0.75;
+      case RecommendationPriority.MEDIUM:
+        return 0.5;
+      case RecommendationPriority.LOW:
+        return 0.25;
+      default:
+        return 0.5;
+    }
+  }
+}

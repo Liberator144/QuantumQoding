@@ -1,0 +1,287 @@
+/**
+ * Language detector for detecting programming languages
+ */
+
+import { ProgrammingLanguage } from '../templates/types';
+
+/**
+ * Language detection result
+ */
+export interface LanguageDetectionResult {
+  /** Detected language */
+  language: ProgrammingLanguage;
+
+  /** Confidence level (0-1) */
+  confidence: number;
+
+  /** Additional language-specific information */
+  additionalInfo?: Record<string, any>;
+}
+
+/**
+ * Detect language from file path and content
+ */
+export function detectLanguage(filePath: string, content: string): LanguageDetectionResult {
+  // First try to detect from file extension
+  const extensionResult = detectLanguageFromExtension(filePath);
+
+  if (extensionResult.confidence > 0.8) {
+    return extensionResult;
+  }
+
+  // If confidence is low, try to detect from content
+  const contentResult = detectLanguageFromContent(content);
+
+  // Return the result with higher confidence
+  if (contentResult.confidence > extensionResult.confidence) {
+    return contentResult;
+  }
+
+  return extensionResult;
+}
+
+/**
+ * Detect language from file extension
+ */
+function detectLanguageFromExtension(filePath: string): LanguageDetectionResult {
+  const extension = filePath.split('.').pop()?.toLowerCase();
+
+  if (!extension) {
+    return {
+      language: ProgrammingLanguage.UNKNOWN,
+      confidence: 0,
+    };
+  }
+
+  switch (extension) {
+    case 'js':
+      return {
+        language: ProgrammingLanguage.JAVASCRIPT,
+        confidence: 0.9,
+      };
+
+    case 'ts':
+    case 'tsx':
+      return {
+        language: ProgrammingLanguage.TYPESCRIPT,
+        confidence: 0.95,
+      };
+
+    case 'py':
+      return {
+        language: ProgrammingLanguage.PYTHON,
+        confidence: 0.95,
+      };
+
+    case 'java':
+      return {
+        language: ProgrammingLanguage.JAVA,
+        confidence: 0.95,
+      };
+
+    case 'cs':
+      return {
+        language: ProgrammingLanguage.CSHARP,
+        confidence: 0.95,
+      };
+
+    case 'html':
+    case 'htm':
+      return {
+        language: ProgrammingLanguage.HTML,
+        confidence: 0.95,
+      };
+
+    case 'css':
+      return {
+        language: ProgrammingLanguage.CSS,
+        confidence: 0.95,
+      };
+
+    case 'json':
+      return {
+        language: ProgrammingLanguage.JSON,
+        confidence: 0.95,
+      };
+
+    case 'md':
+    case 'markdown':
+      return {
+        language: ProgrammingLanguage.MARKDOWN,
+        confidence: 0.95,
+      };
+
+    case 'xml':
+      return {
+        language: ProgrammingLanguage.XML,
+        confidence: 0.95,
+      };
+
+    case 'sql':
+      return {
+        language: ProgrammingLanguage.SQL,
+        confidence: 0.95,
+      };
+
+    case 'sh':
+    case 'bash':
+      return {
+        language: ProgrammingLanguage.SHELL,
+        confidence: 0.9,
+      };
+
+    case 'rb':
+      return {
+        language: ProgrammingLanguage.RUBY,
+        confidence: 0.95,
+      };
+
+    case 'go':
+      return {
+        language: ProgrammingLanguage.GO,
+        confidence: 0.95,
+      };
+
+    case 'php':
+      return {
+        language: ProgrammingLanguage.PHP,
+        confidence: 0.95,
+      };
+
+    case 'swift':
+      return {
+        language: ProgrammingLanguage.SWIFT,
+        confidence: 0.95,
+      };
+
+    case 'kt':
+    case 'kts':
+      return {
+        language: ProgrammingLanguage.KOTLIN,
+        confidence: 0.95,
+      };
+
+    case 'rs':
+      return {
+        language: ProgrammingLanguage.RUST,
+        confidence: 0.95,
+      };
+
+    default:
+      return {
+        language: ProgrammingLanguage.UNKNOWN,
+        confidence: 0.1,
+      };
+  }
+}
+
+/**
+ * Detect language from content
+ */
+function detectLanguageFromContent(content: string): LanguageDetectionResult {
+  // This is a simplified implementation
+  // In a real implementation, this would use more sophisticated techniques
+
+  // Check for TypeScript-specific syntax
+  if (
+    content.includes('interface ') ||
+    content.includes('type ') ||
+    content.includes(': ') ||
+    content.includes('<T>') ||
+    content.includes('as ')
+  ) {
+    return {
+      language: ProgrammingLanguage.TYPESCRIPT,
+      confidence: 0.8,
+    };
+  }
+
+  // Check for JavaScript-specific syntax
+  if (
+    content.includes('function ') ||
+    content.includes('const ') ||
+    content.includes('let ') ||
+    content.includes('var ') ||
+    content.includes('=> ')
+  ) {
+    return {
+      language: ProgrammingLanguage.JAVASCRIPT,
+      confidence: 0.7,
+    };
+  }
+
+  // Check for Python-specific syntax
+  if (
+    content.includes('def ') ||
+    content.includes('import ') ||
+    content.includes('class ') ||
+    content.includes('if __name__ == ') ||
+    content.includes('    ')
+  ) {
+    return {
+      language: ProgrammingLanguage.PYTHON,
+      confidence: 0.8,
+    };
+  }
+
+  // Check for Java-specific syntax
+  if (
+    content.includes('public class ') ||
+    content.includes('private ') ||
+    content.includes('protected ') ||
+    content.includes('import java.') ||
+    content.includes('@Override')
+  ) {
+    return {
+      language: ProgrammingLanguage.JAVA,
+      confidence: 0.8,
+    };
+  }
+
+  // Check for HTML
+  if (
+    content.includes('<!DOCTYPE html>') ||
+    content.includes('<html>') ||
+    content.includes('</html>') ||
+    content.includes('<body>') ||
+    content.includes('</body>')
+  ) {
+    return {
+      language: ProgrammingLanguage.HTML,
+      confidence: 0.9,
+    };
+  }
+
+  // Check for CSS
+  if (
+    content.includes('{') &&
+    content.includes('}') &&
+    content.includes(':') &&
+    content.includes(';') &&
+    !content.includes('function ')
+  ) {
+    return {
+      language: ProgrammingLanguage.CSS,
+      confidence: 0.7,
+    };
+  }
+
+  // Check for JSON
+  if (
+    content.trim().startsWith('{') &&
+    content.trim().endsWith('}') &&
+    content.includes('"') &&
+    content.includes(':')
+  ) {
+    return {
+      language: ProgrammingLanguage.JSON,
+      confidence: 0.8,
+    };
+  }
+
+  // Default to unknown
+  return {
+    language: ProgrammingLanguage.UNKNOWN,
+    confidence: 0.1,
+  };
+}

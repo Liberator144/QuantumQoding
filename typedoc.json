@@ -1,0 +1,51 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "entryPoints": ["./backend"],
+  "entryPointStrategy": "expand",
+  "out": "docs/api",
+  "name": "QQ-Verse API Documentation",
+  "includeVersion": true,
+  "excludePrivate": false,
+  "excludeProtected": false,
+  "excludeExternals": true,
+  "excludeInternal": true,
+  "excludeNotDocumented": false,
+  "disableSources": false,
+  "plugin": ["typedoc-plugin-markdown"],
+  "theme": "default",
+  "categorizeByGroup": true,
+  "categoryOrder": [
+    "Core",
+    "Quantum",
+    "Consciousness",
+    "Dimensions",
+    "Evolution",
+    "Security",
+    "Utilities",
+    "*"
+  ],
+  "sort": [
+    "source-order",
+    "alphabetical",
+    "visibility"
+  ],
+  "navigationLinks": {
+    "GitHub": "https://github.com/QuantumQoding/QQ-Verse-"
+  },
+  "sidebarLinks": {
+    "API": "https://example.com/api",
+    "Docs": "https://example.com/docs"
+  },
+  "visibilityFilters": {
+    "protected": true,
+    "private": true,
+    "inherited": true,
+    "external": false
+  },
+  "searchInComments": true,
+  "readme": "none",
+  "validation": {
+    "invalidLink": true,
+    "notDocumented": true
+  }
+}

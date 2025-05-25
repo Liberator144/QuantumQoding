@@ -1,0 +1,584 @@
+/**
+ * Context Analyzer for Predictive Knowledge Recommendation
+ * Analyzes developer context to extract relevant information for recommendations
+ */
+
+import { DeveloperContext, RecommendationContext, RecommendationTrigger } from './types';
+import { ProjectContextManager } from '../project-context';
+
+/**
+ * Context analysis result
+ */
+export interface ContextAnalysisResult {
+  /** Extracted keywords from the context */
+  keywords: string[];
+
+  /** Detected programming language */
+  language?: string;
+
+  /** Detected frameworks */
+  frameworks?: string[];
+
+  /** Detected patterns */
+  patterns?: string[];
+
+  /** Detected recommendation context */
+  context: RecommendationContext;
+
+  /** Detected trigger */
+  trigger: RecommendationTrigger;
+
+  /** Confidence in the analysis (0-1) */
+  confidence: number;
+
+  /** Additional analysis information */
+  additionalInfo?: Record<string, any>;
+}
+
+/**
+ * Analyzes developer context to extract relevant information
+ */
+export class ContextAnalyzer {
+  private projectManager: ProjectContextManager;
+  private languageDetectors: Map<string, RegExp>;
+  private frameworkDetectors: Map<string, RegExp>;
+  private patternDetectors: Map<string, RegExp>;
+  private contextDetectors: Map<RecommendationContext, RegExp>;
+
+  constructor(projectManager: ProjectContextManager) {
+    this.projectManager = projectManager;
+
+    // Initialize language detectors
+    this.languageDetectors = new Map([
+      ['javascript', /\b(const|let|var|function|async|await|import|export)\b/],
+      ['typescript', /\b(interface|type|namespace|enum|readonly|as|implements|extends)\b/],
+      ['python', /\b(def|import|from|class|with|as|if __name__ == ['"]__main__['"]:)\b/],
+      ['java', /\b(public|private|protected|class|interface|extends|implements|import|package)\b/],
+      [
+        'csharp',
+        /\b(using|namespace|class|interface|public|private|protected|internal|static|void)\b/,
+      ],
+      ['go', /\b(func|package|import|type|struct|interface|go|chan|defer|goroutine)\b/],
+      ['ruby', /\b(def|class|module|require|include|attr_accessor|attr_reader|attr_writer)\b/],
+      [
+        'php',
+        /\b(\$[a-zA-Z_\x80-\xff][a-zA-Z0-9_\x80-\xff]*|function|class|namespace|use|public|private|protected)\b/,
+      ],
+      ['html', /<(!DOCTYPE|html|head|body|div|span|a|img|script|link|meta)/i],
+      ['css', /(\w+\s*{\s*\w+(-\w+)?:\s*[^;]+;\s*}|\@media|\@keyframes)/],
+      ['sql', /\b(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP|FROM|WHERE|JOIN)\b/i],
+    ]);
+
+    // Initialize framework detectors
+    this.frameworkDetectors = new Map([
+      [
+        'react',
+        /\b(React|useState|useEffect|useContext|useReducer|useRef|Component|render|jsx|tsx)\b/,
+      ],
+      ['angular', /\b(Component|NgModule|Injectable|Input|Output|ViewChild|HostListener|Pipe)\b/],
+      ['vue', /\b(Vue|createApp|defineComponent|ref|reactive|computed|watch|onMounted|setup)\b/],
+      ['express', /\b(express|app\.get|app\.post|app\.use|req|res|next|router)\b/],
+      ['django', /\b(django|models\.Model|views\.View|urls|settings|INSTALLED_APPS)\b/],
+      ['spring', /\b(@Controller|@Service|@Repository|@Autowired|@RequestMapping)\b/],
+      ['flask', /\b(Flask|app\.route|request|jsonify|Blueprint|render_template)\b/],
+      ['laravel', /\b(Eloquent|Artisan|Blade|Route::get|Route::post|Controller)\b/],
+      [
+        'react-native',
+        /\b(StyleSheet|View|Text|TouchableOpacity|ScrollView|FlatList|NavigationContainer)\b/,
+      ],
+      ['tensorflow', /\b(tf\.|tensorflow|keras|Model|Sequential|Dense|Conv2D|Dropout)\b/],
+      ['pytorch', /\b(torch\.|nn\.Module|optim\.|DataLoader|Dataset|backward\(\))\b/],
+    ]);
+
+    // Initialize pattern detectors
+    this.patternDetectors = new Map([
+      [
+        'singleton',
+        /\b(private\s+static\s+\w+\s+instance|static\s+getInstance\(\)|private\s+constructor)\b/,
+      ],
+      ['factory', /\b(createInstance|factory|create\w+Instance|new\s+\w+\(\))\b/],
+      [
+        'observer',
+        /\b(addEventListener|removeEventListener|subscribe|unsubscribe|notify|observer|observable)\b/,
+      ],
+      ['dependency-injection', /\b(@Inject|@Injectable|constructor\s*\([^)]*\)|\w+Provider)\b/],
+      ['mvc', /\b(Model|View|Controller|ViewModel|Presenter)\b/],
+      ['repository', /\b(Repository|findById|findAll|save|delete|update)\b/],
+      ['async-await', /\b(async|await|Promise|then|catch)\b/],
+      ['error-handling', /\b(try|catch|finally|throw|throws|Error|Exception)\b/],
+      ['state-management', /\b(useState|useReducer|createStore|dispatch|action|reducer|state)\b/],
+      ['caching', /\b(cache|memoize|useMemo|useCallback|throttle|debounce)\b/],
+    ]);
+
+    // Initialize context detectors
+    this.contextDetectors = new Map([
+      [
+        RecommendationContext.CODE_EDITING,
+        /\b(function|class|interface|type|const|let|var|def|import|export)\b/,
+      ],
+      [
+        RecommendationContext.DEBUGGING,
+        /\b(console\.log|print|debug|error|exception|try|catch|throw|assert)\b/,
+      ],
+      [
+        RecommendationContext.ARCHITECTURE,
+        /\b(architecture|design|pattern|structure|component|module|service|dependency)\b/,
+      ],
+      [
+        RecommendationContext.TESTING,
+        /\b(test|spec|assert|expect|mock|stub|spy|describe|it|should|beforeEach|afterEach)\b/,
+      ],
+      [
+        RecommendationContext.DOCUMENTATION,
+        /\b(\/\*\*|\*\/|@param|@return|@throws|@author|@since|@see|@link|@deprecated|TODO|FIXME)\b/,
+      ],
+      [
+        RecommendationContext.PERFORMANCE,
+        /\b(performance|optimize|benchmark|profiling|memory|leak|cache|throttle|debounce)\b/,
+      ],
+      [
+        RecommendationContext.SECURITY,
+        /\b(security|auth|authentication|authorization|encrypt|decrypt|hash|token|jwt|oauth|permission)\b/,
+      ],
+    ]);
+  }
+
+  /**
+   * Analyze developer context
+   */
+  analyze(context: DeveloperContext): ContextAnalysisResult {
+    // Extract file content for analysis
+    const content = context.fileContent || context.selection?.text || '';
+
+    // Detect language
+    const language = this.detectLanguage(content, context.filePath);
+
+    // Detect frameworks
+    const frameworks = this.detectFrameworks(content);
+
+    // Detect patterns
+    const patterns = this.detectPatterns(content);
+
+    // Extract keywords
+    const keywords = this.extractKeywords(content, context);
+
+    // Detect recommendation context
+    const recommendationContext = this.detectRecommendationContext(content, context);
+
+    // Determine trigger
+    const trigger = this.determineTrigger(context);
+
+    // Calculate confidence
+    const confidence = this.calculateConfidence(
+      language,
+      frameworks,
+      patterns,
+      keywords,
+      recommendationContext
+    );
+
+    // Collect project files if not already present
+    if (!context.projectFiles) {
+      this.collectProjectFiles(context);
+    }
+
+    return {
+      keywords,
+      language,
+      frameworks,
+      patterns,
+      context: recommendationContext,
+      trigger,
+      confidence,
+      additionalInfo: {
+        projectId: context.projectId,
+        filePath: context.filePath,
+        cursorPosition: context.cursorPosition,
+        hasMultiFileContext: context.projectFiles && context.projectFiles.length > 0,
+      },
+    };
+  }
+
+  /**
+   * Detect programming language from content and file path
+   */
+  private detectLanguage(content: string, filePath?: string): string | undefined {
+    // Try to detect from file extension first
+    if (filePath) {
+      const extension = filePath.split('.').pop()?.toLowerCase();
+
+      if (extension) {
+        const extensionMap: Record<string, string> = {
+          js: 'javascript',
+          ts: 'typescript',
+          jsx: 'javascript',
+          tsx: 'typescript',
+          py: 'python',
+          java: 'java',
+          cs: 'csharp',
+          go: 'go',
+          rb: 'ruby',
+          php: 'php',
+          html: 'html',
+          css: 'css',
+          sql: 'sql',
+        };
+
+        if (extensionMap[extension]) {
+          return extensionMap[extension];
+        }
+      }
+    }
+
+    // Detect from content
+    let bestMatch: string | undefined;
+    let bestScore = 0;
+
+    for (const [language, pattern] of this.languageDetectors.entries()) {
+      const matches = content.match(pattern);
+      const score = matches ? matches.length : 0;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = language;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  /**
+   * Detect frameworks from content
+   */
+  private detectFrameworks(content: string): string[] {
+    const frameworks: string[] = [];
+
+    for (const [framework, pattern] of this.frameworkDetectors.entries()) {
+      if (pattern.test(content)) {
+        frameworks.push(framework);
+      }
+    }
+
+    return frameworks;
+  }
+
+  /**
+   * Detect patterns from content
+   */
+  private detectPatterns(content: string): string[] {
+    const patterns: string[] = [];
+
+    for (const [pattern, regex] of this.patternDetectors.entries()) {
+      if (regex.test(content)) {
+        patterns.push(pattern);
+      }
+    }
+
+    return patterns;
+  }
+
+  /**
+   * Extract keywords from content and context
+   */
+  private extractKeywords(content: string, context: DeveloperContext): string[] {
+    // This is a simplified implementation
+    // A real implementation would use more sophisticated NLP techniques
+
+    const keywords = new Set<string>();
+
+    // Extract from content
+    const contentWords = content
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(word => word.length > 3)
+      .map(word => word.toLowerCase());
+
+    // Count word frequencies
+    const wordCounts: Record<string, number> = {};
+    for (const word of contentWords) {
+      wordCounts[word] = (wordCounts[word] || 0) + 1;
+    }
+
+    // Add top words as keywords
+    const topWords = Object.entries(wordCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([word]) => word);
+
+    for (const word of topWords) {
+      keywords.add(word);
+    }
+
+    // Add keywords from recent searches
+    if (context.recentSearches) {
+      for (const search of context.recentSearches) {
+        const searchWords = search.query
+          .replace(/[^\w\s]/g, ' ')
+          .split(/\s+/)
+          .filter(word => word.length > 3)
+          .map(word => word.toLowerCase());
+
+        for (const word of searchWords) {
+          keywords.add(word);
+        }
+      }
+    }
+
+    // Add keywords from recent errors
+    if (context.recentErrors) {
+      for (const error of context.recentErrors) {
+        const errorWords = error.message
+          .replace(/[^\w\s]/g, ' ')
+          .split(/\s+/)
+          .filter(word => word.length > 3)
+          .map(word => word.toLowerCase());
+
+        for (const word of errorWords) {
+          keywords.add(word);
+        }
+      }
+    }
+
+    return Array.from(keywords);
+  }
+
+  /**
+   * Detect recommendation context
+   */
+  private detectRecommendationContext(
+    content: string,
+    context: DeveloperContext
+  ): RecommendationContext {
+    // Use explicit context if provided
+    if (context.context) {
+      return context.context;
+    }
+
+    // Detect from content
+    let bestMatch: RecommendationContext = RecommendationContext.GENERAL;
+    let bestScore = 0;
+
+    for (const [contextType, pattern] of this.contextDetectors.entries()) {
+      const matches = content.match(pattern);
+      const score = matches ? matches.length : 0;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = contextType;
+      }
+    }
+
+    // If no strong match, use additional context clues
+    if (bestScore === 0) {
+      // Check for error context
+      if (context.recentErrors && context.recentErrors.length > 0) {
+        return RecommendationContext.DEBUGGING;
+      }
+
+      // Default to code editing
+      return RecommendationContext.CODE_EDITING;
+    }
+
+    return bestMatch;
+  }
+
+  /**
+   * Determine trigger for recommendation
+   */
+  private determineTrigger(context: DeveloperContext): RecommendationTrigger {
+    // Check for explicit trigger in additional context
+    if (context.additionalContext?.trigger) {
+      return context.additionalContext.trigger as RecommendationTrigger;
+    }
+
+    // Check for error encounter
+    if (context.recentErrors && context.recentErrors.length > 0) {
+      const mostRecentError = context.recentErrors.sort(
+        (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+      )[0];
+
+      // If error is recent (within last minute)
+      if (Date.now() - mostRecentError.timestamp.getTime() < 60000) {
+        return RecommendationTrigger.ERROR_ENCOUNTER;
+      }
+    }
+
+    // Check for search
+    if (context.recentSearches && context.recentSearches.length > 0) {
+      const mostRecentSearch = context.recentSearches.sort(
+        (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+      )[0];
+
+      // If search is recent (within last minute)
+      if (Date.now() - mostRecentSearch.timestamp.getTime() < 60000) {
+        return RecommendationTrigger.SEARCH;
+      }
+    }
+
+    // Check for file creation
+    if (context.filePath && !context.fileContent) {
+      return RecommendationTrigger.FILE_CREATE;
+    }
+
+    // Default to file edit
+    return RecommendationTrigger.FILE_EDIT;
+  }
+
+  /**
+   * Calculate confidence in the analysis
+   */
+  private calculateConfidence(
+    language?: string,
+    frameworks?: string[],
+    patterns?: string[],
+    keywords?: string[],
+    context?: RecommendationContext
+  ): number {
+    let confidence = 0.5; // Base confidence
+
+    // Adjust based on language detection
+    if (language) {
+      confidence += 0.1;
+    }
+
+    // Adjust based on framework detection
+    if (frameworks && frameworks.length > 0) {
+      confidence += Math.min(0.1, frameworks.length * 0.03);
+    }
+
+    // Adjust based on pattern detection
+    if (patterns && patterns.length > 0) {
+      confidence += Math.min(0.2, patterns.length * 0.05);
+    }
+
+    // Adjust based on keyword extraction
+    if (keywords && keywords.length > 0) {
+      confidence += Math.min(0.1, keywords.length * 0.01);
+    }
+
+    // Adjust based on context detection
+    if (context && context !== RecommendationContext.GENERAL) {
+      confidence += 0.1;
+    }
+
+    // Ensure confidence is between 0 and 1
+    return Math.min(1, confidence);
+  }
+
+  /**
+   * Collect project files for multi-file context
+   */
+  private collectProjectFiles(context: DeveloperContext): void {
+    if (!context.filePath) {
+      return;
+    }
+
+    try {
+      // Get project files from project manager
+      const projectFiles = this.projectManager.getProjectFiles(context.projectId);
+
+      if (!projectFiles || projectFiles.length === 0) {
+        return;
+      }
+
+      // Filter and limit files to include
+      const MAX_FILES = 20; // Limit to 20 files to avoid performance issues
+      const currentFilePath = context.filePath;
+
+      // Start with the current file
+      const collectedFiles: { path: string; content: string }[] = [];
+
+      // Add current file if not already in the list
+      const currentFileContent = context.fileContent ?? '';
+      if (currentFileContent) {
+        collectedFiles.push({
+          path: currentFilePath,
+          content: currentFileContent,
+        });
+      }
+
+      // Add related files
+      const relatedFiles = this.findRelatedFiles(currentFilePath, projectFiles);
+
+      for (const file of relatedFiles) {
+        // Skip if we've reached the maximum number of files
+        if (collectedFiles.length >= MAX_FILES) {
+          break;
+        }
+
+        // Skip if already added
+        if (collectedFiles.some(f => f.path === file.path)) {
+          continue;
+        }
+
+        collectedFiles.push({
+          path: file.path,
+          content: file.content,
+        });
+      }
+
+      // Update context with collected files
+      context.projectFiles = collectedFiles;
+    } catch (error) {
+      console.error('Error collecting project files:', error);
+    }
+  }
+
+  /**
+   * Find files related to the current file
+   */
+  private findRelatedFiles(
+    currentFilePath: string,
+    projectFiles: Array<{ path: string; content: string }>
+  ): Array<{ path: string; content: string }> {
+    // This is a simplified implementation
+    // In a real implementation, this would use more sophisticated techniques
+    // to find related files based on imports, references, etc.
+
+    const relatedFiles: Array<{ path: string; content: string }> = [];
+
+    // Get current file extension and directory
+    const fileExtension = currentFilePath.split('.').pop()?.toLowerCase();
+    const fileDirectory = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
+
+    // Find files with the same extension in the same directory
+    for (const file of projectFiles) {
+      // Skip the current file
+      if (file.path === currentFilePath) {
+        continue;
+      }
+
+      const extension = file.path.split('.').pop()?.toLowerCase();
+      const directory = file.path.substring(0, file.path.lastIndexOf('/'));
+
+      // Add files with the same extension in the same directory
+      if (extension === fileExtension && directory === fileDirectory) {
+        relatedFiles.push(file);
+      }
+    }
+
+    // If we don't have enough related files, add files from the same directory
+    if (relatedFiles.length < 5) {
+      for (const file of projectFiles) {
+        // Skip the current file and already added files
+        if (file.path === currentFilePath || relatedFiles.some(f => f.path === file.path)) {
+          continue;
+        }
+
+        const directory = file.path.substring(0, file.path.lastIndexOf('/'));
+
+        // Add files from the same directory
+        if (directory === fileDirectory) {
+          relatedFiles.push(file);
+
+          // Stop if we have enough files
+          if (relatedFiles.length >= 10) {
+            break;
+          }
+        }
+      }
+    }
+
+    return relatedFiles;
+  }
+}

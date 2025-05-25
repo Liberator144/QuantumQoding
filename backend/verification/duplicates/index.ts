@@ -1,0 +1,13 @@
+/**
+ * Duplicates Module
+ *
+ * This module exports all duplicate detection components.
+ *
+ * @version 1.0.0
+ */
+
+const { DuplicateDetector } = require('./DuplicateDetector');
+
+module.exports = {
+  DuplicateDetector,
+};

@@ -1,0 +1,15 @@
+/**
+ * Context-Specific Linting Module
+ *
+ * Provides context-aware linting capabilities.
+ *
+ * @version 1.0.0
+ */
+
+// Context-specific linter
+const { ContextLinter } = require('./ContextLinter');
+
+// Export all components
+module.exports = {
+  ContextLinter,
+};

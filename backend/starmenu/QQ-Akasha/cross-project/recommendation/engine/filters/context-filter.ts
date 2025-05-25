@@ -1,0 +1,205 @@
+/**
+ * Context-based recommendation filter
+ */
+
+import { RecommendationFilter } from './types';
+import { Recommendation, RecommendationContext } from '../types';
+import { ProgrammingLanguage } from '../../code-generation/templates/types';
+
+/**
+ * Context-based filter
+ */
+export class ContextFilter implements RecommendationFilter {
+  name = 'ContextFilter';
+  description = 'Filters recommendations based on context';
+
+  /**
+   * Filter recommendations based on context
+   */
+  filter(recommendations: Recommendation[], context: RecommendationContext): Recommendation[] {
+    return recommendations.filter(recommendation => {
+      // Filter by language
+      if (
+        recommendation.language &&
+        context.fileContext.language &&
+        recommendation.language !== context.fileContext.language
+      ) {
+        return false;
+      }
+
+      // Filter by file path
+      if (
+        recommendation.metadata?.filePath &&
+        context.fileContext.filePath &&
+        !this.isFilePathRelevant(
+          recommendation.metadata.filePath as string,
+          context.fileContext.filePath
+        )
+      ) {
+        return false;
+      }
+
+      // Filter by file content
+      if (
+        recommendation.metadata?.contentPattern &&
+        context.fileContext.content &&
+        !this.isContentRelevant(
+          recommendation.metadata.contentPattern as string,
+          context.fileContext.content
+        )
+      ) {
+        return false;
+      }
+
+      // Filter by project context
+      if (context.projectContext) {
+        // Filter by project languages
+        if (
+          recommendation.language &&
+          context.projectContext.languages &&
+          !context.projectContext.languages.includes(recommendation.language)
+        ) {
+          return false;
+        }
+
+        // Filter by project dependencies
+        if (recommendation.metadata?.requiredDependencies && context.projectContext.dependencies) {
+          const requiredDependencies = recommendation.metadata.requiredDependencies as Record<
+            string,
+            string
+          >;
+
+          for (const [name, version] of Object.entries(requiredDependencies)) {
+            if (!context.projectContext.dependencies[name]) {
+              return false;
+            }
+          }
+        }
+      }
+
+      // Filter by user preferences
+      if (context.userPreferences) {
+        // Filter by preferred languages
+        if (
+          recommendation.language &&
+          context.userPreferences.preferredLanguages &&
+          context.userPreferences.preferredLanguages.length > 0 &&
+          !context.userPreferences.preferredLanguages.includes(recommendation.language)
+        ) {
+          return false;
+        }
+
+        // Filter by preferred patterns
+        if (
+          recommendation.pattern &&
+          context.userPreferences.preferredPatterns &&
+          context.userPreferences.preferredPatterns.length > 0 &&
+          !context.userPreferences.preferredPatterns.includes(recommendation.pattern)
+        ) {
+          return false;
+        }
+
+        // Filter by preferred recommendation types
+        if (
+          context.userPreferences.preferredRecommendationTypes &&
+          context.userPreferences.preferredRecommendationTypes.length > 0 &&
+          !context.userPreferences.preferredRecommendationTypes.includes(recommendation.type)
+        ) {
+          return false;
+        }
+
+        // Filter by preferred recommendation categories
+        if (
+          context.userPreferences.preferredRecommendationCategories &&
+          context.userPreferences.preferredRecommendationCategories.length > 0 &&
+          !context.userPreferences.preferredRecommendationCategories.includes(
+            recommendation.category
+          )
+        ) {
+          return false;
+        }
+
+        // Filter by preferred tags
+        if (
+          context.userPreferences.preferredTags &&
+          context.userPreferences.preferredTags.length > 0 &&
+          !context.userPreferences.preferredTags.some(tag => recommendation.tags.includes(tag))
+        ) {
+          return false;
+        }
+
+        // Filter by preferred sources
+        if (
+          recommendation.source &&
+          context.userPreferences.preferredSources &&
+          context.userPreferences.preferredSources.length > 0 &&
+          !context.userPreferences.preferredSources.includes(recommendation.source)
+        ) {
+          return false;
+        }
+
+        // Filter by excluded tags
+        if (
+          context.userPreferences.excludedTags &&
+          context.userPreferences.excludedTags.length > 0 &&
+          context.userPreferences.excludedTags.some(tag => recommendation.tags.includes(tag))
+        ) {
+          return false;
+        }
+
+        // Filter by excluded sources
+        if (
+          recommendation.source &&
+          context.userPreferences.excludedSources &&
+          context.userPreferences.excludedSources.length > 0 &&
+          context.userPreferences.excludedSources.includes(recommendation.source)
+        ) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }
+
+  /**
+   * Check if a file path is relevant to the current file
+   */
+  private isFilePathRelevant(recommendationPath: string, currentPath: string): boolean {
+    // Check if paths are exactly the same
+    if (recommendationPath === currentPath) {
+      return true;
+    }
+
+    // Check if paths have the same extension
+    const recommendationExt = recommendationPath.split('.').pop();
+    const currentExt = currentPath.split('.').pop();
+
+    if (recommendationExt === currentExt) {
+      return true;
+    }
+
+    // Check if paths are in the same directory
+    const recommendationDir = recommendationPath.split('/').slice(0, -1).join('/');
+    const currentDir = currentPath.split('/').slice(0, -1).join('/');
+
+    if (recommendationDir === currentDir) {
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Check if content is relevant to the current file
+   */
+  private isContentRelevant(pattern: string, content: string): boolean {
+    try {
+      const regex = new RegExp(pattern);
+      return regex.test(content);
+    } catch (error) {
+      // If regex is invalid, just check if content includes pattern
+      return content.includes(pattern);
+    }
+  }
+}

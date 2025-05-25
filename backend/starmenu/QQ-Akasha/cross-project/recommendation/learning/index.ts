@@ -1,0 +1,10 @@
+/**
+ * Learning Module for Predictive Knowledge Recommendation
+ * Enables the recommendation system to learn from user feedback
+ */
+
+// Feedback analyzer
+export * from './feedback-analyzer';
+
+// Adaptive scoring
+export * from './adaptive-scoring';

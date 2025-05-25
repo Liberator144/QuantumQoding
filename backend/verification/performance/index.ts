@@ -1,0 +1,13 @@
+/**
+ * Performance Module
+ *
+ * This module exports all performance analysis components.
+ *
+ * @version 1.0.0
+ */
+
+const PerformanceAnalyzer = require('./PerformanceAnalyzer');
+
+module.exports = {
+  PerformanceAnalyzer,
+};

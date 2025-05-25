@@ -1,0 +1,699 @@
+/**
+ * Security Engine
+ *
+ * A comprehensive engine for database security and access control.
+ *
+ * @version 1.0.0
+ */
+
+const { EventEmitter } = require('events');
+const { AuthManager } = require('./auth/AuthManager');
+const { AccessControlManager } = require('./access/AccessControlManager');
+const { EncryptionManager } = require('./encryption/EncryptionManager');
+const { AuditLogger } = require('./audit/AuditLogger');
+
+/**
+ * Security Engine
+ *
+ * Manages security and access control for the database.
+ */
+class SecurityEngine extends EventEmitter {
+  /**
+   * Create a new SecurityEngine instance
+   * @param {Object} options - Configuration options
+   */
+  constructor(options = {}) {
+    super();
+
+    // Configuration
+    this.config = {
+      // Debug mode
+      debugMode: false,
+
+      // Database instance
+      database: null,
+
+      // Authentication enabled
+      authEnabled: true,
+
+      // Access control enabled
+      accessControlEnabled: true,
+
+      // Encryption enabled
+      encryptionEnabled: true,
+
+      // Audit logging enabled
+      auditLoggingEnabled: true,
+
+      // User collection name
+      userCollection: '_users',
+
+      // Role collection name
+      roleCollection: '_roles',
+
+      // Permission collection name
+      permissionCollection: '_permissions',
+
+      // Audit log collection name
+      auditLogCollection: '_audit_logs',
+
+      // Default admin user
+      defaultAdmin: {
+        username: 'admin',
+        password: 'admin',
+        roles: ['admin'],
+      },
+
+      // Create default admin
+      createDefaultAdmin: false,
+
+      // Merge with provided options
+      ...options,
+    };
+
+    // State
+    this.currentUser = null;
+
+    // Components
+    this.authManager = null;
+    this.accessControlManager = null;
+    this.encryptionManager = null;
+    this.auditLogger = null;
+
+    // Initialize
+    this._init();
+  }
+
+  /**
+   * Initialize the engine
+   * @private
+   */
+  _init() {
+    this.log('Initializing Security Engine');
+
+    // Create components
+    this.authManager = new AuthManager({
+      debugMode: this.config.debugMode,
+      database: this.config.database,
+      userCollection: this.config.userCollection,
+      defaultAdmin: this.config.defaultAdmin,
+      createDefaultAdmin: this.config.createDefaultAdmin,
+    });
+
+    this.accessControlManager = new AccessControlManager({
+      debugMode: this.config.debugMode,
+      database: this.config.database,
+      roleCollection: this.config.roleCollection,
+      permissionCollection: this.config.permissionCollection,
+    });
+
+    this.encryptionManager = new EncryptionManager({
+      debugMode: this.config.debugMode,
+    });
+
+    this.auditLogger = new AuditLogger({
+      debugMode: this.config.debugMode,
+      database: this.config.database,
+      auditLogCollection: this.config.auditLogCollection,
+    });
+
+    // Set up database listeners if database is provided
+    if (this.config.database) {
+      this._setupDatabaseListeners();
+    }
+
+    this.log('Security Engine initialized');
+  }
+
+  /**
+   * Set up database listeners
+   * @private
+   */
+  _setupDatabaseListeners() {
+    if (!this.config.database) {
+      return;
+    }
+
+    // Listen for document access
+    if (this.config.accessControlEnabled) {
+      this.config.database.on('beforeFind', event => {
+        this._checkAccess(event, 'read');
+      });
+
+      this.config.database.on('beforeFindOne', event => {
+        this._checkAccess(event, 'read');
+      });
+
+      this.config.database.on('beforeInsert', event => {
+        this._checkAccess(event, 'create');
+      });
+
+      this.config.database.on('beforeUpdate', event => {
+        this._checkAccess(event, 'update');
+      });
+
+      this.config.database.on('beforeRemove', event => {
+        this._checkAccess(event, 'delete');
+      });
+    }
+
+    // Listen for document encryption/decryption
+    if (this.config.encryptionEnabled) {
+      this.config.database.on('beforeInsert', event => {
+        this._encryptDocument(event);
+      });
+
+      this.config.database.on('beforeUpdate', event => {
+        this._encryptDocument(event);
+      });
+
+      this.config.database.on('afterFind', event => {
+        this._decryptDocuments(event);
+      });
+
+      this.config.database.on('afterFindOne', event => {
+        this._decryptDocument(event);
+      });
+    }
+
+    // Listen for audit logging
+    if (this.config.auditLoggingEnabled) {
+      this.config.database.on('afterInsert', event => {
+        this._logAuditEvent(event, 'create');
+      });
+
+      this.config.database.on('afterUpdate', event => {
+        this._logAuditEvent(event, 'update');
+      });
+
+      this.config.database.on('afterRemove', event => {
+        this._logAuditEvent(event, 'delete');
+      });
+    }
+
+    this.log('Database listeners set up');
+  }
+
+  /**
+   * Set database reference
+   * @param {UnifiedQuantumDatabase} database - Database instance
+   * @returns {SecurityEngine} This instance for chaining
+   */
+  setDatabase(database) {
+    this.config.database = database;
+
+    // Update components
+    this.authManager.setDatabase(database);
+    this.accessControlManager.setDatabase(database);
+    this.auditLogger.setDatabase(database);
+
+    // Set up database listeners
+    this._setupDatabaseListeners();
+
+    this.log('Database reference set');
+    return this;
+  }
+
+  /**
+   * Set current user
+   * @param {Object} user - User
+   * @returns {SecurityEngine} This instance for chaining
+   */
+  setCurrentUser(user) {
+    this.currentUser = user;
+
+    // Update components
+    this.accessControlManager.setCurrentUser(user);
+    this.auditLogger.setCurrentUser(user);
+
+    this.log(`Current user set: ${user ? user.username : 'null'}`);
+    this.emit('user-changed', { user });
+
+    return this;
+  }
+
+  /**
+   * Check access
+   * @param {Object} event - Event
+   * @param {string} action - Action
+   * @private
+   */
+  _checkAccess(event, action) {
+    // Skip if access control is disabled
+    if (!this.config.accessControlEnabled) {
+      return;
+    }
+
+    // Skip internal collections
+    if (event.collection.startsWith('_')) {
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!this.currentUser && this.config.authEnabled) {
+      event.cancel = true;
+      event.error = new Error('Authentication required');
+      return;
+    }
+
+    try {
+      // Check access
+      const hasAccess = this.accessControlManager.checkAccess(
+        this.currentUser,
+        event.collection,
+        action,
+        event.document || event.criteria
+      );
+
+      if (!hasAccess) {
+        event.cancel = true;
+        event.error = new Error(`Access denied: ${action} on ${event.collection}`);
+
+        // Emit event
+        this.emit('access-denied', {
+          user: this.currentUser,
+          collection: event.collection,
+          action,
+          document: event.document,
+          criteria: event.criteria,
+        });
+      }
+    } catch (error) {
+      this.log(`Error checking access: ${error.message}`);
+      event.cancel = true;
+      event.error = error;
+    }
+  }
+
+  /**
+   * Encrypt document
+   * @param {Object} event - Event
+   * @private
+   */
+  _encryptDocument(event) {
+    // Skip if encryption is disabled
+    if (!this.config.encryptionEnabled) {
+      return;
+    }
+
+    // Skip internal collections
+    if (event.collection.startsWith('_')) {
+      return;
+    }
+
+    try {
+      // Get document
+      const document = event.document;
+
+      if (!document) {
+        return;
+      }
+
+      // Get encryption fields
+      const encryptionFields = this.encryptionManager.getEncryptionFields(event.collection);
+
+      if (!encryptionFields || encryptionFields.length === 0) {
+        return;
+      }
+
+      // Encrypt fields
+      for (const field of encryptionFields) {
+        if (document[field] !== undefined) {
+          document[field] = this.encryptionManager.encrypt(document[field]);
+        }
+      }
+    } catch (error) {
+      this.log(`Error encrypting document: ${error.message}`);
+      event.cancel = true;
+      event.error = error;
+    }
+  }
+
+  /**
+   * Decrypt document
+   * @param {Object} event - Event
+   * @private
+   */
+  _decryptDocument(event) {
+    // Skip if encryption is disabled
+    if (!this.config.encryptionEnabled) {
+      return;
+    }
+
+    // Skip internal collections
+    if (event.collection.startsWith('_')) {
+      return;
+    }
+
+    try {
+      // Get document
+      const document = event.result;
+
+      if (!document) {
+        return;
+      }
+
+      // Get encryption fields
+      const encryptionFields = this.encryptionManager.getEncryptionFields(event.collection);
+
+      if (!encryptionFields || encryptionFields.length === 0) {
+        return;
+      }
+
+      // Decrypt fields
+      for (const field of encryptionFields) {
+        if (document[field] !== undefined) {
+          document[field] = this.encryptionManager.decrypt(document[field]);
+        }
+      }
+    } catch (error) {
+      this.log(`Error decrypting document: ${error.message}`);
+    }
+  }
+
+  /**
+   * Decrypt documents
+   * @param {Object} event - Event
+   * @private
+   */
+  _decryptDocuments(event) {
+    // Skip if encryption is disabled
+    if (!this.config.encryptionEnabled) {
+      return;
+    }
+
+    // Skip internal collections
+    if (event.collection.startsWith('_')) {
+      return;
+    }
+
+    try {
+      // Get documents
+      const documents = event.results;
+
+      if (!documents || !Array.isArray(documents)) {
+        return;
+      }
+
+      // Get encryption fields
+      const encryptionFields = this.encryptionManager.getEncryptionFields(event.collection);
+
+      if (!encryptionFields || encryptionFields.length === 0) {
+        return;
+      }
+
+      // Decrypt fields
+      for (const document of documents) {
+        for (const field of encryptionFields) {
+          if (document[field] !== undefined) {
+            document[field] = this.encryptionManager.decrypt(document[field]);
+          }
+        }
+      }
+    } catch (error) {
+      this.log(`Error decrypting documents: ${error.message}`);
+    }
+  }
+
+  /**
+   * Log audit event
+   * @param {Object} event - Event
+   * @param {string} action - Action
+   * @private
+   */
+  _logAuditEvent(event, action) {
+    // Skip if audit logging is disabled
+    if (!this.config.auditLoggingEnabled) {
+      return;
+    }
+
+    // Skip internal collections
+    if (event.collection.startsWith('_')) {
+      return;
+    }
+
+    try {
+      // Log audit event
+      this.auditLogger.logEvent({
+        collection: event.collection,
+        action,
+        documentId: event.documentId,
+        document: event.document,
+        timestamp: Date.now(),
+        user: this.currentUser
+          ? {
+              id: this.currentUser.id,
+              username: this.currentUser.username,
+            }
+          : null,
+      });
+    } catch (error) {
+      this.log(`Error logging audit event: ${error.message}`);
+    }
+  }
+
+  /**
+   * Register a user
+   * @param {Object} user - User
+   * @returns {Promise<Object>} Registered user
+   */
+  async registerUser(user) {
+    try {
+      // Register user
+      const registeredUser = await this.authManager.registerUser(user);
+
+      // Log audit event
+      this.auditLogger.logEvent({
+        collection: this.config.userCollection,
+        action: 'create',
+        documentId: registeredUser.id,
+        document: { ...registeredUser, password: '******' },
+        timestamp: Date.now(),
+        user: this.currentUser
+          ? {
+              id: this.currentUser.id,
+              username: this.currentUser.username,
+            }
+          : null,
+      });
+
+      this.log(`User registered: ${registeredUser.username}`);
+      this.emit('user-registered', { user: registeredUser });
+
+      return registeredUser;
+    } catch (error) {
+      this.log(`Error registering user: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Login
+   * @param {string} username - Username
+   * @param {string} password - Password
+   * @returns {Promise<Object>} Login result
+   */
+  async login(username, password) {
+    try {
+      // Login
+      const result = await this.authManager.login(username, password);
+
+      if (result.success) {
+        // Set current user
+        this.setCurrentUser(result.user);
+
+        // Log audit event
+        this.auditLogger.logEvent({
+          collection: this.config.userCollection,
+          action: 'login',
+          documentId: result.user.id,
+          timestamp: Date.now(),
+          user: {
+            id: result.user.id,
+            username: result.user.username,
+          },
+        });
+
+        this.log(`User logged in: ${username}`);
+        this.emit('user-login', { user: result.user });
+      } else {
+        // Log audit event
+        this.auditLogger.logEvent({
+          collection: this.config.userCollection,
+          action: 'login-failed',
+          timestamp: Date.now(),
+          metadata: {
+            username,
+            reason: result.message,
+          },
+        });
+
+        this.log(`Login failed: ${username} - ${result.message}`);
+        this.emit('login-failed', { username, message: result.message });
+      }
+
+      return result;
+    } catch (error) {
+      this.log(`Error logging in: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Logout
+   * @returns {Promise<boolean>} Success
+   */
+  async logout() {
+    try {
+      // Get current user
+      const user = this.currentUser;
+
+      if (!user) {
+        return true;
+      }
+
+      // Log audit event
+      this.auditLogger.logEvent({
+        collection: this.config.userCollection,
+        action: 'logout',
+        documentId: user.id,
+        timestamp: Date.now(),
+        user: {
+          id: user.id,
+          username: user.username,
+        },
+      });
+
+      // Clear current user
+      this.setCurrentUser(null);
+
+      this.log(`User logged out: ${user.username}`);
+      this.emit('user-logout', { user });
+
+      return true;
+    } catch (error) {
+      this.log(`Error logging out: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Define a role
+   * @param {Object} role - Role
+   * @returns {Promise<Object>} Defined role
+   */
+  async defineRole(role) {
+    try {
+      // Define role
+      const definedRole = await this.accessControlManager.defineRole(role);
+
+      // Log audit event
+      this.auditLogger.logEvent({
+        collection: this.config.roleCollection,
+        action: 'create',
+        documentId: definedRole.id,
+        document: definedRole,
+        timestamp: Date.now(),
+        user: this.currentUser
+          ? {
+              id: this.currentUser.id,
+              username: this.currentUser.username,
+            }
+          : null,
+      });
+
+      this.log(`Role defined: ${definedRole.name}`);
+      this.emit('role-defined', { role: definedRole });
+
+      return definedRole;
+    } catch (error) {
+      this.log(`Error defining role: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Define a permission
+   * @param {Object} permission - Permission
+   * @returns {Promise<Object>} Defined permission
+   */
+  async definePermission(permission) {
+    try {
+      // Define permission
+      const definedPermission = await this.accessControlManager.definePermission(permission);
+
+      // Log audit event
+      this.auditLogger.logEvent({
+        collection: this.config.permissionCollection,
+        action: 'create',
+        documentId: definedPermission.id,
+        document: definedPermission,
+        timestamp: Date.now(),
+        user: this.currentUser
+          ? {
+              id: this.currentUser.id,
+              username: this.currentUser.username,
+            }
+          : null,
+      });
+
+      this.log(`Permission defined: ${definedPermission.name}`);
+      this.emit('permission-defined', { permission: definedPermission });
+
+      return definedPermission;
+    } catch (error) {
+      this.log(`Error defining permission: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Define encryption fields
+   * @param {string} collectionName - Collection name
+   * @param {Array} fields - Fields to encrypt
+   * @returns {SecurityEngine} This instance for chaining
+   */
+  defineEncryptionFields(collectionName, fields) {
+    try {
+      // Define encryption fields
+      this.encryptionManager.defineEncryptionFields(collectionName, fields);
+
+      // Log audit event
+      this.auditLogger.logEvent({
+        collection: collectionName,
+        action: 'define-encryption',
+        timestamp: Date.now(),
+        metadata: {
+          fields,
+        },
+        user: this.currentUser
+          ? {
+              id: this.currentUser.id,
+              username: this.currentUser.username,
+            }
+          : null,
+      });
+
+      this.log(`Encryption fields defined for ${collectionName}: ${fields.join(', ')}`);
+      this.emit('encryption-fields-defined', { collectionName, fields });
+
+      return this;
+    } catch (error) {
+      this.log(`Error defining encryption fields: ${error.message}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Log message if debug mode is enabled
+   * @param {string} message - Message to log
+   * @private
+   */
+  log(message) {
+    if (this.config.debugMode) {
+      console.log(`[SecurityEngine] ${message}`);
+    }
+  }
+}
+
+module.exports = { SecurityEngine };

@@ -1,0 +1,335 @@
+/**
+ * Graph Converter for Knowledge Graph Visualization
+ * Converts knowledge graphs to visualization-friendly formats
+ */
+
+import { KnowledgeGraph, KnowledgeNode, KnowledgeRelationship } from '../models/knowledge-graph';
+import { VisGraph, VisNode, VisEdge, VisFilter, VisOptions, DEFAULT_VIS_OPTIONS } from './types';
+
+/**
+ * Converts knowledge graphs to visualization-friendly formats
+ */
+export class GraphConverter {
+  /**
+   * Convert a knowledge graph to a visualization graph
+   */
+  convertToVisGraph(
+    graph: KnowledgeGraph,
+    filter?: VisFilter,
+    options?: Partial<VisOptions>
+  ): VisGraph {
+    // Apply filter to get filtered nodes and relationships
+    const { filteredNodes, filteredRelationships } = this.applyFilter(graph, filter);
+
+    // Convert nodes
+    const visNodes = this.convertNodes(filteredNodes, options);
+
+    // Convert relationships
+    const visEdges = this.convertRelationships(filteredRelationships, options);
+
+    return {
+      nodes: visNodes,
+      edges: visEdges,
+      originalGraph: graph,
+    };
+  }
+
+  /**
+   * Apply filter to a knowledge graph
+   */
+  private applyFilter(
+    graph: KnowledgeGraph,
+    filter?: VisFilter
+  ): {
+    filteredNodes: Map<string, KnowledgeNode>;
+    filteredRelationships: Map<string, KnowledgeRelationship>;
+  } {
+    if (!filter) {
+      // No filter, return all nodes and relationships
+      return {
+        filteredNodes: graph.nodes,
+        filteredRelationships: graph.relationships,
+      };
+    }
+
+    // Filter nodes
+    const filteredNodes = new Map<string, KnowledgeNode>();
+
+    for (const [nodeId, node] of graph.nodes.entries()) {
+      // Filter by knowledge type
+      if (
+        filter.knowledgeTypes &&
+        filter.knowledgeTypes.length > 0 &&
+        !filter.knowledgeTypes.includes(node.knowledge.type)
+      ) {
+        continue;
+      }
+
+      // Filter by project
+      if (
+        filter.projects &&
+        filter.projects.length > 0 &&
+        !filter.projects.includes(node.knowledge.sourceProject)
+      ) {
+        continue;
+      }
+
+      // Filter by tag
+      if (filter.tags && filter.tags.length > 0) {
+        const hasTag = filter.tags.some(tag => node.knowledge.tags.includes(tag));
+
+        if (!hasTag) {
+          continue;
+        }
+      }
+
+      // Filter by search term
+      if (filter.searchTerm && filter.searchTerm.length > 0) {
+        const searchTerm = filter.searchTerm.toLowerCase();
+        const matchesSearch =
+          node.knowledge.title.toLowerCase().includes(searchTerm) ||
+          node.knowledge.description.toLowerCase().includes(searchTerm) ||
+          node.knowledge.content.toLowerCase().includes(searchTerm) ||
+          node.knowledge.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+
+        if (!matchesSearch) {
+          continue;
+        }
+      }
+
+      // Node passes all filters
+      filteredNodes.set(nodeId, node);
+    }
+
+    // Filter relationships
+    const filteredRelationships = new Map<string, KnowledgeRelationship>();
+
+    for (const [relationshipId, relationship] of graph.relationships.entries()) {
+      // Filter by relationship type
+      if (
+        filter.relationshipTypes &&
+        filter.relationshipTypes.length > 0 &&
+        !filter.relationshipTypes.includes(relationship.type)
+      ) {
+        continue;
+      }
+
+      // Filter by relationship strength
+      if (
+        filter.minRelationshipStrength !== undefined &&
+        relationship.strength < filter.minRelationshipStrength
+      ) {
+        continue;
+      }
+
+      // Only include relationships between filtered nodes
+      if (!filteredNodes.has(relationship.sourceId) || !filteredNodes.has(relationship.targetId)) {
+        continue;
+      }
+
+      // Relationship passes all filters
+      filteredRelationships.set(relationshipId, relationship);
+    }
+
+    // Remove isolated nodes if requested
+    if (filter.includeIsolatedNodes === false) {
+      const connectedNodeIds = new Set<string>();
+
+      for (const relationship of filteredRelationships.values()) {
+        connectedNodeIds.add(relationship.sourceId);
+        connectedNodeIds.add(relationship.targetId);
+      }
+
+      for (const nodeId of filteredNodes.keys()) {
+        if (!connectedNodeIds.has(nodeId)) {
+          filteredNodes.delete(nodeId);
+        }
+      }
+    }
+
+    // Limit number of nodes if requested
+    if (filter.maxNodes !== undefined && filteredNodes.size > filter.maxNodes) {
+      // Sort nodes by importance
+      const sortedNodes = Array.from(filteredNodes.entries())
+        .sort((a, b) => {
+          const importanceA = a[1].metadata.importance || 0;
+          const importanceB = b[1].metadata.importance || 0;
+          return importanceB - importanceA;
+        })
+        .slice(0, filter.maxNodes);
+
+      // Create new filtered nodes map
+      const limitedNodes = new Map<string, KnowledgeNode>();
+      for (const [nodeId, node] of sortedNodes) {
+        limitedNodes.set(nodeId, node);
+      }
+
+      // Update filtered relationships to only include relationships between limited nodes
+      const limitedRelationships = new Map<string, KnowledgeRelationship>();
+      for (const [relationshipId, relationship] of filteredRelationships.entries()) {
+        if (limitedNodes.has(relationship.sourceId) && limitedNodes.has(relationship.targetId)) {
+          limitedRelationships.set(relationshipId, relationship);
+        }
+      }
+
+      return {
+        filteredNodes: limitedNodes,
+        filteredRelationships: limitedRelationships,
+      };
+    }
+
+    return {
+      filteredNodes,
+      filteredRelationships,
+    };
+  }
+
+  /**
+   * Convert knowledge nodes to visualization nodes
+   */
+  private convertNodes(
+    nodes: Map<string, KnowledgeNode>,
+    options?: Partial<VisOptions>
+  ): VisNode[] {
+    const mergedOptions = {
+      ...DEFAULT_VIS_OPTIONS,
+      ...options,
+    };
+
+    return Array.from(nodes.values()).map(node => {
+      const knowledge = node.knowledge;
+
+      // Determine node group based on knowledge type
+      const group = knowledge.type.toLowerCase();
+
+      // Determine node size based on importance
+      const importance = node.metadata.importance || 0.5;
+      const minSize = mergedOptions.nodes?.scaling?.min || 15;
+      const maxSize = mergedOptions.nodes?.scaling?.max || 40;
+      const size = minSize + (maxSize - minSize) * importance;
+
+      // Create visualization node
+      const visNode: VisNode = {
+        id: node.id,
+        label: this.truncateLabel(knowledge.title),
+        title: `${knowledge.title}\n${knowledge.description}`,
+        group,
+        size,
+        originalNode: node,
+        metadata: {
+          type: knowledge.type,
+          project: knowledge.sourceProject,
+          tags: knowledge.tags,
+          importance,
+        },
+      };
+
+      // Apply group styling if available
+      if (group && mergedOptions.groups && mergedOptions.groups[group]) {
+        const groupStyle = mergedOptions.groups[group];
+
+        if (groupStyle.color) {
+          visNode.color = groupStyle.color;
+        }
+
+        if (groupStyle.shape) {
+          visNode.shape = groupStyle.shape as any;
+        }
+
+        if (groupStyle.borderWidth) {
+          visNode.borderWidth = groupStyle.borderWidth;
+        }
+      }
+
+      return visNode;
+    });
+  }
+
+  /**
+   * Convert knowledge relationships to visualization edges
+   */
+  private convertRelationships(
+    relationships: Map<string, KnowledgeRelationship>,
+    options?: Partial<VisOptions>
+  ): VisEdge[] {
+    const mergedOptions = {
+      ...DEFAULT_VIS_OPTIONS,
+      ...options,
+    };
+
+    return Array.from(relationships.values()).map(relationship => {
+      // Determine edge width based on strength
+      const minWidth = 1;
+      const maxWidth = 10;
+      const width = minWidth + (maxWidth - minWidth) * relationship.strength;
+
+      // Determine arrow direction
+      const arrows = {
+        to: relationship.direction === 'uni' || relationship.direction === 'bi',
+        from: relationship.direction === 'bi',
+      };
+
+      // Create visualization edge
+      const visEdge: VisEdge = {
+        id: relationship.id,
+        from: relationship.sourceId,
+        to: relationship.targetId,
+        label: this.truncateLabel(relationship.type),
+        title: `Type: ${relationship.type}\nStrength: ${relationship.strength.toFixed(2)}`,
+        width,
+        arrows,
+        originalRelationship: relationship,
+        metadata: {
+          type: relationship.type,
+          strength: relationship.strength,
+          direction: relationship.direction,
+        },
+      };
+
+      // Set color based on relationship type
+      switch (relationship.type) {
+        case 'related':
+          visEdge.color = '#848484';
+          break;
+        case 'depends_on':
+          visEdge.color = '#FF0000';
+          break;
+        case 'extends':
+          visEdge.color = '#00FF00';
+          break;
+        case 'implements':
+          visEdge.color = '#0000FF';
+          break;
+        case 'similar_to':
+          visEdge.color = '#FFA500';
+          break;
+        case 'contradicts':
+          visEdge.color = '#800080';
+          break;
+        case 'replaces':
+          visEdge.color = '#008080';
+          break;
+        default:
+          visEdge.color = '#848484';
+      }
+
+      // Set dashed line for weak relationships
+      if (relationship.strength < 0.5) {
+        visEdge.dashed = true;
+      }
+
+      return visEdge;
+    });
+  }
+
+  /**
+   * Truncate a label to a reasonable length
+   */
+  private truncateLabel(label: string, maxLength: number = 20): string {
+    if (label.length <= maxLength) {
+      return label;
+    }
+
+    return label.substring(0, maxLength - 3) + '...';
+  }
+}

@@ -1,0 +1,232 @@
+/**
+ * Projection Model
+ *
+ * Provides data structures and utilities for working with projections.
+ * A projection defines which fields should be included or excluded from query results.
+ *
+ * @version 1.0.0
+ */
+
+/**
+ * Create a projection descriptor
+ * @param {Object|Array|string} projection - Projection specification
+ * @returns {Object} Projection descriptor
+ */
+function createProjectionDescriptor(projection) {
+  // If projection is already a descriptor, return it
+  if (projection && projection._type === 'ProjectionDescriptor') {
+    return projection;
+  }
+
+  // Create a new descriptor
+  const descriptor = {
+    _type: 'ProjectionDescriptor',
+    _version: '1.0.0',
+    fields: {},
+    metadata: {
+      created: Date.now(),
+      type: getProjectionType(projection),
+    },
+  };
+
+  // Process projection based on type
+  if (Array.isArray(projection)) {
+    // Array of field names (inclusion)
+    processInclusionArray(descriptor, projection);
+  } else if (typeof projection === 'object' && projection !== null) {
+    // Object with field specifications
+    processProjectionObject(descriptor, projection);
+  } else if (typeof projection === 'string') {
+    // Single field name
+    descriptor.fields[projection] = { include: true };
+  } else {
+    // Default to include all fields
+    descriptor.metadata.type = 'all';
+  }
+
+  return descriptor;
+}
+
+/**
+ * Get projection type
+ * @param {Object|Array|string} projection - Projection specification
+ * @returns {string} Projection type
+ * @private
+ */
+function getProjectionType(projection) {
+  if (Array.isArray(projection)) {
+    return 'inclusion';
+  } else if (typeof projection === 'object' && projection !== null) {
+    // Check if it's an inclusion or exclusion object
+    let hasInclusion = false;
+    let hasExclusion = false;
+
+    for (const [field, value] of Object.entries(projection)) {
+      if (value === 1 || value === true) {
+        hasInclusion = true;
+      } else if (value === 0 || value === false) {
+        hasExclusion = true;
+      }
+    }
+
+    if (hasInclusion && !hasExclusion) {
+      return 'inclusion';
+    } else if (hasExclusion && !hasInclusion) {
+      return 'exclusion';
+    } else if (hasInclusion && hasExclusion) {
+      return 'mixed';
+    } else {
+      return 'custom';
+    }
+  } else if (typeof projection === 'string') {
+    return 'single';
+  } else {
+    return 'all';
+  }
+}
+
+/**
+ * Process an inclusion array
+ * @param {Object} descriptor - Projection descriptor
+ * @param {Array} fields - Field names
+ * @private
+ */
+function processInclusionArray(descriptor, fields) {
+  for (const field of fields) {
+    if (typeof field === 'string') {
+      descriptor.fields[field] = { include: true };
+    }
+  }
+}
+
+/**
+ * Process a projection object
+ * @param {Object} descriptor - Projection descriptor
+ * @param {Object} projection - Projection object
+ * @private
+ */
+function processProjectionObject(descriptor, projection) {
+  for (const [field, value] of Object.entries(projection)) {
+    if (value === 1 || value === true) {
+      // Include field
+      descriptor.fields[field] = { include: true };
+    } else if (value === 0 || value === false) {
+      // Exclude field
+      descriptor.fields[field] = { include: false };
+    } else if (typeof value === 'object' && value !== null) {
+      // Nested projection
+      descriptor.fields[field] = {
+        include: true,
+        nested: createProjectionDescriptor(value),
+      };
+    }
+  }
+}
+
+/**
+ * Normalize a projection
+ * @param {Object} projection - Projection descriptor
+ * @returns {Object} Normalized projection
+ */
+function normalizeProjection(projection) {
+  const descriptor = createProjectionDescriptor(projection);
+
+  // Create a new normalized descriptor
+  const normalized = {
+    _type: 'ProjectionDescriptor',
+    _version: '1.0.0',
+    fields: {},
+    metadata: {
+      ...descriptor.metadata,
+      normalized: true,
+      normalizedAt: Date.now(),
+    },
+  };
+
+  // Normalize fields
+  for (const [field, spec] of Object.entries(descriptor.fields)) {
+    if (spec.nested) {
+      normalized.fields[field] = {
+        include: spec.include,
+        nested: normalizeProjection(spec.nested),
+      };
+    } else {
+      normalized.fields[field] = { include: spec.include };
+    }
+  }
+
+  return normalized;
+}
+
+/**
+ * Transform a projection
+ * @param {Object} projection - Projection descriptor
+ * @param {Function} transformFn - Transformation function
+ * @returns {Object} Transformed projection
+ */
+function transformProjection(projection, transformFn) {
+  const descriptor = createProjectionDescriptor(projection);
+
+  // Create a new transformed descriptor
+  const transformed = {
+    _type: 'ProjectionDescriptor',
+    _version: '1.0.0',
+    fields: {},
+    metadata: {
+      ...descriptor.metadata,
+      transformed: true,
+      transformedAt: Date.now(),
+    },
+  };
+
+  // Transform fields
+  for (const [field, spec] of Object.entries(descriptor.fields)) {
+    const result = transformFn(field, spec);
+
+    if (result) {
+      if (typeof result === 'object' && result.field) {
+        // Transform returned a field specification
+        transformed.fields[result.field] = result.value;
+      } else {
+        // Transform returned a value
+        transformed.fields[field] = result;
+      }
+    } else {
+      // Transform returned nothing, keep original
+      transformed.fields[field] = spec;
+    }
+  }
+
+  return transformed;
+}
+
+/**
+ * Convert a projection descriptor to a MongoDB-style projection
+ * @param {Object} projection - Projection descriptor
+ * @returns {Object} MongoDB-style projection
+ */
+function toMongoProjection(projection) {
+  const descriptor = createProjectionDescriptor(projection);
+  const result = {};
+
+  for (const [field, spec] of Object.entries(descriptor.fields)) {
+    if (spec.nested) {
+      const nestedProjection = toMongoProjection(spec.nested);
+
+      for (const [nestedField, nestedValue] of Object.entries(nestedProjection)) {
+        result[`${field}.${nestedField}`] = nestedValue;
+      }
+    } else {
+      result[field] = spec.include ? 1 : 0;
+    }
+  }
+
+  return result;
+}
+
+module.exports = {
+  createProjectionDescriptor,
+  normalizeProjection,
+  transformProjection,
+  toMongoProjection,
+};

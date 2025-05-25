@@ -1,0 +1,8 @@
+/**
+ * Neural Fabric Module
+ * 
+ * This module exports the neural fabric functionality for the QQ-Verse project,
+ * ensuring thought continuity across component boundaries.
+ */
+
+export * from './neural-fabric';

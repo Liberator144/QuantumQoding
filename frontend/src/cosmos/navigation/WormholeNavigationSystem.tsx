@@ -1,0 +1,552 @@
+/**
+ * Wormhole Navigation System
+ *
+ * This component manages transitions between different visualization levels
+ * using wormhole-like animations and effects.
+ *
+ * @version 1.0.0
+ */
+
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { WormholeTransition } from '../transitions/WormholeTransition';
+import { UITransition, UITransitionGroup } from '../transitions/UITransition';
+import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
+
+/**
+ * Visualization level
+ */
+export enum VisualizationLevel {
+  /** Universe level */
+  UNIVERSE = 'universe',
+  
+  /** Galaxy level */
+  GALAXY = 'galaxy',
+  
+  /** Star system level */
+  STAR_SYSTEM = 'star_system',
+  
+  /** Planetary system level */
+  PLANETARY_SYSTEM = 'planetary_system',
+  
+  /** Planet level */
+  PLANET = 'planet',
+}
+
+/**
+ * Navigation history item
+ */
+export interface NavigationHistoryItem {
+  /** Level */
+  level: VisualizationLevel;
+  
+  /** Entity ID */
+  entityId: string;
+  
+  /** Entity name */
+  entityName: string;
+  
+  /** Entity color */
+  entityColor?: string;
+  
+  /** Timestamp */
+  timestamp: number;
+  
+  /** Custom data */
+  data?: any;
+}
+
+/**
+ * Wormhole Navigation System Props
+ */
+export interface WormholeNavigationSystemProps {
+  /** Current level */
+  currentLevel: VisualizationLevel;
+  
+  /** Current entity ID */
+  currentEntityId: string;
+  
+  /** Current entity name */
+  currentEntityName: string;
+  
+  /** Current entity color */
+  currentEntityColor?: string;
+  
+  /** Children */
+  children: React.ReactNode;
+  
+  /** Whether to show navigation controls */
+  showControls?: boolean;
+  
+  /** Whether to show path visualization */
+  showPath?: boolean;
+  
+  /** Whether to show history */
+  showHistory?: boolean;
+  
+  /** Maximum history items */
+  maxHistoryItems?: number;
+  
+  /** Navigation change handler */
+  onNavigationChange?: (level: VisualizationLevel, entityId: string, data?: any) => void;
+  
+  /** Custom data */
+  data?: any;
+}/**
+ * Wormhole Navigation System Component
+ */
+const WormholeNavigationSystem: React.FC<WormholeNavigationSystemProps> = ({
+  currentLevel,
+  currentEntityId,
+  currentEntityName,
+  currentEntityColor = '#4fc3f7',
+  children,
+  showControls = true,
+  showPath = true,
+  showHistory = true,
+  maxHistoryItems = 10,
+  onNavigationChange,
+  data,
+}) => {
+  // Audio hooks
+  const audio = useAudio();
+  
+  // State
+  const [transitionState, setTransitionState] = useState<'none' | 'entering' | 'exiting'>('none');
+  const [transitionProgress, setTransitionProgress] = useState(0);
+  const [navigationHistory, setNavigationHistory] = useState<NavigationHistoryItem[]>([]);
+  const [targetLevel, setTargetLevel] = useState<VisualizationLevel | null>(null);
+  const [targetEntityId, setTargetEntityId] = useState<string | null>(null);
+  const [targetEntityName, setTargetEntityName] = useState<string | null>(null);
+  const [targetEntityColor, setTargetEntityColor] = useState<string | null>(null);
+  const [targetData, setTargetData] = useState<any | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
+  const [showNavigationUI, setShowNavigationUI] = useState(false);
+  
+  // Refs
+  const previousLevelRef = useRef<VisualizationLevel | null>(null);
+  const previousEntityIdRef = useRef<string | null>(null);
+  
+  // Add current location to history on mount
+  useEffect(() => {
+    if (navigationHistory.length === 0) {
+      setNavigationHistory([
+        {
+          level: currentLevel,
+          entityId: currentEntityId,
+          entityName: currentEntityName,
+          entityColor: currentEntityColor,
+          timestamp: Date.now(),
+          data,
+        },
+      ]);
+    }
+  }, []);
+  
+  // Update history when location changes without transition
+  useEffect(() => {
+    if (
+      !isNavigating &&
+      (previousLevelRef.current !== currentLevel || previousEntityIdRef.current !== currentEntityId)
+    ) {
+      // Add to history
+      addToHistory(currentLevel, currentEntityId, currentEntityName, currentEntityColor, data);
+      
+      // Update refs
+      previousLevelRef.current = currentLevel;
+      previousEntityIdRef.current = currentEntityId;
+    }
+  }, [currentLevel, currentEntityId, currentEntityName, currentEntityColor, isNavigating, data]);  
+  /**
+   * Add to navigation history
+   */
+  const addToHistory = useCallback(
+    (
+      level: VisualizationLevel,
+      entityId: string,
+      entityName: string,
+      entityColor?: string,
+      customData?: any
+    ) => {
+      setNavigationHistory((prevHistory) => {
+        // Create new history item
+        const newItem: NavigationHistoryItem = {
+          level,
+          entityId,
+          entityName,
+          entityColor,
+          timestamp: Date.now(),
+          data: customData,
+        };
+        
+        // Check if this is the same as the last item
+        const lastItem = prevHistory[prevHistory.length - 1];
+        if (lastItem && lastItem.level === level && lastItem.entityId === entityId) {
+          return prevHistory;
+        }
+        
+        // Add to history and limit size
+        const newHistory = [...prevHistory, newItem];
+        if (newHistory.length > maxHistoryItems) {
+          return newHistory.slice(newHistory.length - maxHistoryItems);
+        }
+        
+        return newHistory;
+      });
+    },
+    [maxHistoryItems]
+  );
+  
+  /**
+   * Navigate to a specific level and entity
+   */
+  const navigateTo = useCallback(
+    (
+      level: VisualizationLevel,
+      entityId: string,
+      entityName: string,
+      entityColor?: string,
+      customData?: any
+    ) => {
+      // Don't navigate if already navigating
+      if (isNavigating) return;
+      
+      // Don't navigate if already at the target
+      if (level === currentLevel && entityId === currentEntityId) return;
+      
+      // Set target
+      setTargetLevel(level);
+      setTargetEntityId(entityId);
+      setTargetEntityName(entityName);
+      setTargetEntityColor(entityColor || '#4fc3f7');
+      setTargetData(customData);
+      
+      // Start transition
+      setIsNavigating(true);
+      setTransitionState('exiting');
+      
+      // Play sound
+      audio.play('navigation-start', { volume: 0.5 });
+    },
+    [isNavigating, currentLevel, currentEntityId, audio]
+  );  
+  /**
+   * Navigate back in history
+   */
+  const navigateBack = useCallback(() => {
+    // Don't navigate if already navigating
+    if (isNavigating) return;
+    
+    // Don't navigate if history is empty
+    if (navigationHistory.length <= 1) return;
+    
+    // Get previous item
+    const previousItem = navigationHistory[navigationHistory.length - 2];
+    
+    // Navigate to previous item
+    navigateTo(
+      previousItem.level,
+      previousItem.entityId,
+      previousItem.entityName,
+      previousItem.entityColor,
+      previousItem.data
+    );
+    
+    // Remove current item from history
+    setNavigationHistory((prevHistory) => prevHistory.slice(0, prevHistory.length - 1));
+    
+    // Play sound
+    audio.play('navigation-back', { volume: 0.5 });
+  }, [isNavigating, navigationHistory, navigateTo, audio]);
+  
+  /**
+   * Handle transition progress
+   */
+  const handleTransitionProgress = useCallback((progress: number) => {
+    setTransitionProgress(progress);
+    
+    // Show navigation UI when transition is halfway complete
+    if (progress > 0.5 && transitionState === 'exiting' && !showNavigationUI) {
+      setShowNavigationUI(true);
+    } else if (progress > 0.5 && transitionState === 'entering' && showNavigationUI) {
+      setShowNavigationUI(false);
+    }
+  }, [transitionState, showNavigationUI]);
+  
+  /**
+   * Handle transition complete
+   */
+  const handleTransitionComplete = useCallback(() => {
+    if (transitionState === 'exiting') {
+      // Switch to entering state
+      setTransitionState('entering');
+      
+      // Notify parent of navigation change
+      if (onNavigationChange && targetLevel && targetEntityId) {
+        onNavigationChange(targetLevel, targetEntityId, targetData);
+      }
+      
+      // Add to history
+      if (targetLevel && targetEntityId && targetEntityName) {
+        addToHistory(targetLevel, targetEntityId, targetEntityName, targetEntityColor || undefined, targetData);
+      }
+      
+      // Update refs
+      previousLevelRef.current = targetLevel;
+      previousEntityIdRef.current = targetEntityId;    } else if (transitionState === 'entering') {
+      // Reset transition state
+      setTransitionState('none');
+      setIsNavigating(false);
+      setShowNavigationUI(false);
+      
+      // Clear targets
+      setTargetLevel(null);
+      setTargetEntityId(null);
+      setTargetEntityName(null);
+      setTargetEntityColor(null);
+      setTargetData(null);
+      
+      // Play sound
+      audio.play('navigation-complete', { volume: 0.5 });
+    }
+  }, [
+    transitionState,
+    onNavigationChange,
+    targetLevel,
+    targetEntityId,
+    targetEntityName,
+    targetEntityColor,
+    targetData,
+    addToHistory,
+    audio,
+  ]);
+  
+  /**
+   * Get level name
+   */
+  const getLevelName = useCallback((level: VisualizationLevel): string => {
+    switch (level) {
+      case VisualizationLevel.UNIVERSE:
+        return 'Universe';
+      case VisualizationLevel.GALAXY:
+        return 'Galaxy';
+      case VisualizationLevel.STAR_SYSTEM:
+        return 'Star System';
+      case VisualizationLevel.PLANETARY_SYSTEM:
+        return 'Planetary System';
+      case VisualizationLevel.PLANET:
+        return 'Planet';
+      default:
+        return 'Unknown';
+    }
+  }, []);
+  
+  /**
+   * Get level color
+   */
+  const getLevelColor = useCallback((level: VisualizationLevel): string => {
+    switch (level) {
+      case VisualizationLevel.UNIVERSE:
+        return '#9c27b0'; // Purple
+      case VisualizationLevel.GALAXY:
+        return '#673ab7'; // Deep Purple
+      case VisualizationLevel.STAR_SYSTEM:
+        return '#3f51b5'; // Indigo
+      case VisualizationLevel.PLANETARY_SYSTEM:
+        return '#2196f3'; // Blue
+      case VisualizationLevel.PLANET:
+        return '#03a9f4'; // Light Blue
+      default:
+        return '#4fc3f7';
+    }
+  }, []);  
+  /**
+   * Render navigation controls
+   */
+  const renderNavigationControls = () => {
+    if (!showControls) return null;
+    
+    return (
+      <div className="absolute bottom-4 left-4 z-50">
+        <UITransition
+          show={!isNavigating || showNavigationUI}
+          preset="glide"
+          direction="left"
+          className="flex items-center space-x-2"
+        >
+          {/* Back button */}
+          <button
+            className="p-2 rounded-full bg-black bg-opacity-50 backdrop-blur-sm text-white hover:bg-opacity-70 transition-colors"
+            onClick={navigateBack}
+            disabled={navigationHistory.length <= 1 || isNavigating}
+            title="Navigate Back"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </button>
+          
+          {/* Current location */}
+          <div className="px-3 py-1.5 rounded-lg bg-black bg-opacity-50 backdrop-blur-sm text-white">
+            <div className="text-xs opacity-70">
+              {getLevelName(currentLevel)}
+            </div>
+            <div className="text-sm font-medium">
+              {currentEntityName}
+            </div>
+          </div>
+        </UITransition>
+      </div>
+    );
+  };
+  
+  /**
+   * Render path visualization
+   */
+  const renderPathVisualization = () => {
+    if (!showPath || navigationHistory.length <= 1) return null;
+    
+    return (
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-50">
+        <UITransition
+          show={!isNavigating || showNavigationUI}
+          preset="glide"
+          direction="down"
+          className="px-4 py-2 rounded-lg bg-black bg-opacity-50 backdrop-blur-sm text-white"
+        >          <div className="flex items-center space-x-2">
+            {navigationHistory.map((item, index) => (
+              <React.Fragment key={`${item.level}-${item.entityId}-${item.timestamp}`}>
+                {/* Entity */}
+                <div
+                  className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    if (index < navigationHistory.length - 1) {
+                      navigateTo(
+                        item.level,
+                        item.entityId,
+                        item.entityName,
+                        item.entityColor,
+                        item.data
+                      );
+                    }
+                  }}
+                >
+                  {/* Level indicator */}
+                  <div
+                    className="w-3 h-3 rounded-full mr-1"
+                    style={{ backgroundColor: item.entityColor || getLevelColor(item.level) }}
+                  />
+                  
+                  {/* Entity name */}
+                  <div
+                    className={`text-xs ${
+                      index === navigationHistory.length - 1 ? 'font-medium' : ''
+                    }`}
+                  >
+                    {item.entityName}
+                  </div>
+                </div>
+                
+                {/* Connector */}
+                {index < navigationHistory.length - 1 && (
+                  <div className="text-white opacity-50">→</div>
+                )}
+              </React.Fragment>
+            ))}
+          </div>
+        </UITransition>
+      </div>
+    );
+  };
+  
+  /**
+   * Render history
+   */
+  const renderHistory = () => {
+    if (!showHistory) return null;
+    
+    return (
+      <div className="absolute top-4 right-4 z-50">
+        <UITransition
+          show={!isNavigating || showNavigationUI}
+          preset="glide"
+          direction="right"
+          className="p-2 rounded-lg bg-black bg-opacity-50 backdrop-blur-sm text-white"
+        >
+          <div className="text-xs font-medium mb-1">Navigation History</div>
+          <div className="space-y-1 max-h-40 overflow-y-auto">{
+            navigationHistory.map((item, index) => (
+              <div
+                key={`history-${item.level}-${item.entityId}-${item.timestamp}`}
+                className="flex items-center text-xs cursor-pointer hover:bg-white hover:bg-opacity-10 rounded px-1 py-0.5 transition-colors"
+                onClick={() => {
+                  if (index < navigationHistory.length - 1) {
+                    navigateTo(
+                      item.level,
+                      item.entityId,
+                      item.entityName,
+                      item.entityColor,
+                      item.data
+                    );
+                  }
+                }}
+              >                {/* Level indicator */}
+                <div
+                  className="w-2 h-2 rounded-full mr-1 flex-shrink-0"
+                  style={{ backgroundColor: item.entityColor || getLevelColor(item.level) }}
+                />
+                
+                {/* Level and entity name */}
+                <div className="flex flex-col">
+                  <div className="opacity-70">{getLevelName(item.level)}</div>
+                  <div className={index === navigationHistory.length - 1 ? 'font-medium' : ''}>
+                    {item.entityName}
+                  </div>
+                </div>
+              </div>
+            ))
+          }</div>
+        </UITransition>
+      </div>
+    );
+  };
+  
+  return (
+    <div className="relative w-full h-full">
+      {/* Main content */}
+      <div className="w-full h-full">{children}</div>
+      
+      {/* Wormhole transition */}
+      <WormholeTransition
+        transitionState={transitionState}
+        selectedColor={
+          transitionState === 'exiting'
+            ? currentEntityColor
+            : targetEntityColor || currentEntityColor
+        }
+        showUITransitions={true}
+        cameraMode="quantum"
+        transitionDuration={1.5}
+        useShake={true}
+        onTransitionProgress={handleTransitionProgress}
+        onTransitionComplete={handleTransitionComplete}
+      />
+      
+      {/* Navigation UI */}
+      {renderNavigationControls()}
+      {renderPathVisualization()}
+      {renderHistory()}
+    </div>
+  );
+};
+
+export default WormholeNavigationSystem;

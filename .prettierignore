@@ -1,0 +1,30 @@
+# Build artifacts
+dist/
+build/
+coverage/
+.next/
+out/
+
+# Package files
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.min.js
+*.min.css
+*.bundle.js
+*.generated.*
+
+# Markdown files (to preserve line breaks)
+*.md
+
+# Configuration files
+.github/
+.vscode/
+
+# Other files
+.DS_Store
+.env*
+*.log

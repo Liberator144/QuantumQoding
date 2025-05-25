@@ -1,0 +1,287 @@
+/**
+ * Pattern-based code generator for generating code based on design patterns
+ */
+
+import {
+  DesignPatternType,
+  PatternAdaptationOptions,
+  PatternCompositionOptions,
+  DEFAULT_PATTERN_ADAPTATION_OPTIONS,
+} from '../patterns/types';
+import { adaptPattern } from '../patterns/pattern-adapter';
+import { composePatterns } from '../patterns/pattern-composer';
+import { detectPatterns } from '../patterns/pattern-detector';
+import {
+  CodeGenerationOptions,
+  CodeGenerationResult,
+  DEFAULT_CODE_GENERATION_OPTIONS,
+} from './types';
+import { FileContext } from '../context/types';
+import { MultiFileContextExtractionResult } from '../context/multi-file/types';
+import { formatCode } from './code-formatter';
+import { validateCode } from './code-validator';
+
+/**
+ * Pattern-based code generation options
+ */
+export interface PatternCodeGenerationOptions
+  extends CodeGenerationOptions,
+    PatternAdaptationOptions {
+  /** Whether to use pattern composition */
+  usePatternComposition?: boolean;
+
+  /** Pattern composition options */
+  compositionOptions?: Partial<PatternCompositionOptions>;
+
+  /** Whether to detect patterns automatically */
+  detectPatternsAutomatically?: boolean;
+
+  /** Minimum confidence threshold for pattern detection */
+  minPatternConfidence?: number;
+
+  /** Maximum number of patterns to consider */
+  maxPatterns?: number;
+
+  /** Specific patterns to use */
+  patterns?: DesignPatternType[];
+}
+
+/**
+ * Default pattern-based code generation options
+ */
+export const DEFAULT_PATTERN_CODE_GENERATION_OPTIONS: PatternCodeGenerationOptions = {
+  ...DEFAULT_CODE_GENERATION_OPTIONS,
+  ...DEFAULT_PATTERN_ADAPTATION_OPTIONS,
+  usePatternComposition: true,
+  compositionOptions: {},
+  detectPatternsAutomatically: true,
+  minPatternConfidence: 0.6,
+  maxPatterns: 3,
+  patterns: [],
+};
+
+/**
+ * Generate code based on design patterns
+ */
+export async function generatePatternCode(
+  fileContext: FileContext,
+  options: Partial<PatternCodeGenerationOptions> = {}
+): Promise<CodeGenerationResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  try {
+    // Merge options with defaults
+    const mergedOptions: PatternCodeGenerationOptions = {
+      ...DEFAULT_PATTERN_CODE_GENERATION_OPTIONS,
+      ...options,
+    };
+
+    // Determine patterns to use
+    let patterns: DesignPatternType[] = [];
+
+    if (mergedOptions.patterns && mergedOptions.patterns.length > 0) {
+      // Use specified patterns
+      patterns = mergedOptions.patterns;
+    } else if (mergedOptions.detectPatternsAutomatically) {
+      // Detect patterns automatically
+      const detectedPatterns = detectPatterns(fileContext);
+
+      // Filter patterns by confidence threshold
+      const filteredPatterns = detectedPatterns
+        .filter(pattern => pattern.confidence >= mergedOptions.minPatternConfidence!)
+        .map(pattern => pattern.pattern);
+
+      // Limit number of patterns
+      patterns = filteredPatterns.slice(0, mergedOptions.maxPatterns);
+
+      if (patterns.length === 0) {
+        warnings.push(
+          `No patterns detected with confidence >= ${mergedOptions.minPatternConfidence}`
+        );
+      }
+    }
+
+    // If no patterns, return empty result
+    if (patterns.length === 0) {
+      errors.push('No patterns to generate code from');
+
+      return {
+        success: false,
+        generatedCode: '',
+        template: null as any,
+        substitutionResult: null as any,
+        context: {
+          fileContext,
+          errors: [],
+          warnings: [],
+        },
+        errors,
+        warnings,
+      };
+    }
+
+    // Generate code based on patterns
+    let generatedCode = '';
+
+    if (patterns.length === 1 || !mergedOptions.usePatternComposition) {
+      // Use single pattern
+      const pattern = patterns[0];
+      const result = adaptPattern(pattern, fileContext, mergedOptions);
+
+      if (result.errors.length > 0) {
+        errors.push(...result.errors);
+      }
+
+      if (result.warnings.length > 0) {
+        warnings.push(...result.warnings);
+      }
+
+      generatedCode = result.code;
+    } else {
+      // Use pattern composition
+      const compositionResult = composePatterns(patterns, fileContext, {
+        ...mergedOptions,
+        ...mergedOptions.compositionOptions,
+      });
+
+      if (compositionResult.errors.length > 0) {
+        errors.push(...compositionResult.errors);
+      }
+
+      if (compositionResult.warnings.length > 0) {
+        warnings.push(...compositionResult.warnings);
+      }
+
+      generatedCode = compositionResult.code;
+    }
+
+    // Format code if requested
+    if (mergedOptions.formatCode) {
+      generatedCode = formatCode(generatedCode, mergedOptions.language, mergedOptions.formatter);
+    }
+
+    // Validate code if requested
+    if (mergedOptions.validateCode) {
+      const validationResult = validateCode(
+        generatedCode,
+        mergedOptions.language,
+        mergedOptions.validator
+      );
+
+      if (!validationResult.valid) {
+        errors.push(...validationResult.errors);
+      }
+    }
+
+    return {
+      success: errors.length === 0,
+      generatedCode,
+      template: null as any,
+      substitutionResult: null as any,
+      context: {
+        fileContext,
+        errors: [],
+        warnings: [],
+      },
+      errors,
+      warnings,
+    };
+  } catch (error) {
+    errors.push(`Failed to generate pattern code: ${error}`);
+
+    return {
+      success: false,
+      generatedCode: '',
+      template: null as any,
+      substitutionResult: null as any,
+      context: {
+        fileContext,
+        errors: [],
+        warnings: [],
+      },
+      errors,
+      warnings,
+    };
+  }
+}
+
+/**
+ * Generate code based on design patterns with multi-file context
+ */
+export async function generatePatternCodeWithMultiFileContext(
+  context: MultiFileContextExtractionResult,
+  options: Partial<PatternCodeGenerationOptions> = {}
+): Promise<CodeGenerationResult> {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  try {
+    // Get current file context
+    const currentFilePath = context.context.currentFilePath;
+
+    if (!currentFilePath) {
+      errors.push('No current file path specified');
+
+      return {
+        success: false,
+        generatedCode: '',
+        template: null as any,
+        substitutionResult: null as any,
+        context,
+        errors,
+        warnings,
+      };
+    }
+
+    const fileContext = context.context.fileContexts.get(currentFilePath);
+
+    if (!fileContext) {
+      errors.push(`No context found for current file: ${currentFilePath}`);
+
+      return {
+        success: false,
+        generatedCode: '',
+        template: null as any,
+        substitutionResult: null as any,
+        context,
+        errors,
+        warnings,
+      };
+    }
+
+    // Generate code using the file context
+    const result = await generatePatternCode(fileContext, options);
+
+    // Update errors and warnings
+    if (result.errors.length > 0) {
+      errors.push(...result.errors);
+    }
+
+    if (result.warnings.length > 0) {
+      warnings.push(...result.warnings);
+    }
+
+    return {
+      success: result.success,
+      generatedCode: result.generatedCode,
+      template: result.template,
+      substitutionResult: result.substitutionResult,
+      context,
+      errors,
+      warnings,
+    };
+  } catch (error) {
+    errors.push(`Failed to generate pattern code with multi-file context: ${error}`);
+
+    return {
+      success: false,
+      generatedCode: '',
+      template: null as any,
+      substitutionResult: null as any,
+      context,
+      errors,
+      warnings,
+    };
+  }
+}

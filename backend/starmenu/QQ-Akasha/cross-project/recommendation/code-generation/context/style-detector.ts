@@ -1,0 +1,211 @@
+/**
+ * Style detector for detecting code style
+ */
+
+import { CodeStyle } from './types';
+
+/**
+ * Default code style
+ */
+const DEFAULT_CODE_STYLE: CodeStyle = {
+  indentationType: 'space',
+  indentationSize: 2,
+  lineEnding: 'lf',
+  maxLineLength: 80,
+  useSemicolons: true,
+  useTrailingCommas: false,
+  quoteStyle: 'single',
+  bracketStyle: 'same-line',
+};
+
+/**
+ * Detect code style from content
+ */
+export function detectCodeStyle(content: string): CodeStyle {
+  const style: CodeStyle = { ...DEFAULT_CODE_STYLE };
+
+  // Detect indentation type and size
+  const indentationResult = detectIndentation(content);
+  style.indentationType = indentationResult.type;
+  style.indentationSize = indentationResult.size;
+
+  // Detect line ending
+  style.lineEnding = detectLineEnding(content);
+
+  // Detect max line length
+  style.maxLineLength = detectMaxLineLength(content);
+
+  // Detect semicolon usage
+  style.useSemicolons = detectSemicolonUsage(content);
+
+  // Detect trailing comma usage
+  style.useTrailingCommas = detectTrailingCommaUsage(content);
+
+  // Detect quote style
+  style.quoteStyle = detectQuoteStyle(content);
+
+  // Detect bracket style
+  style.bracketStyle = detectBracketStyle(content);
+
+  return style;
+}
+
+/**
+ * Detect indentation type and size
+ */
+function detectIndentation(content: string): { type: 'space' | 'tab'; size: number } {
+  const lines = content.split(/\r?\n/);
+
+  // Count indentation types
+  let spaceCount = 0;
+  let tabCount = 0;
+
+  // Track indentation sizes for spaces
+  const indentSizes: Record<number, number> = {};
+
+  for (const line of lines) {
+    // Skip empty lines
+    if (!line.trim()) {
+      continue;
+    }
+
+    // Check if line starts with spaces or tabs
+    const spacesMatch = line.match(/^( +)/);
+    const tabsMatch = line.match(/^(\t+)/);
+
+    if (spacesMatch) {
+      spaceCount++;
+      const spaces = spacesMatch[1].length;
+      indentSizes[spaces] = (indentSizes[spaces] || 0) + 1;
+    } else if (tabsMatch) {
+      tabCount++;
+    }
+  }
+
+  // Determine indentation type
+  const type = spaceCount >= tabCount ? 'space' : 'tab';
+
+  // Determine indentation size for spaces
+  let size = 2; // Default
+
+  if (type === 'space' && Object.keys(indentSizes).length > 0) {
+    // Find the most common indentation size
+    let maxCount = 0;
+    let maxSize = 2;
+
+    for (const [sizeStr, count] of Object.entries(indentSizes)) {
+      const sizeNum = parseInt(sizeStr, 10);
+
+      // Only consider common indentation sizes
+      if (sizeNum === 2 || sizeNum === 4 || sizeNum === 8) {
+        if (count > maxCount) {
+          maxCount = count;
+          maxSize = sizeNum;
+        }
+      }
+    }
+
+    size = maxSize;
+  }
+
+  return { type, size };
+}
+
+/**
+ * Detect line ending
+ */
+function detectLineEnding(content: string): 'lf' | 'crlf' {
+  // Count line endings
+  const crlfCount = (content.match(/\r\n/g) || []).length;
+  const lfCount = (content.match(/[^\r]\n/g) || []).length;
+
+  return crlfCount > lfCount ? 'crlf' : 'lf';
+}
+
+/**
+ * Detect maximum line length
+ */
+function detectMaxLineLength(content: string): number {
+  const lines = content.split(/\r?\n/);
+
+  // Calculate average of non-empty lines
+  let totalLength = 0;
+  let lineCount = 0;
+  let maxLength = 0;
+
+  for (const line of lines) {
+    // Skip empty lines
+    if (!line.trim()) {
+      continue;
+    }
+
+    const length = line.length;
+    totalLength += length;
+    lineCount++;
+
+    // Track maximum line length
+    if (length > maxLength) {
+      maxLength = length;
+    }
+  }
+
+  // Calculate average
+  const avgLength = lineCount > 0 ? Math.round(totalLength / lineCount) : 0;
+
+  // Common max line lengths
+  const commonLengths = [80, 100, 120, 140];
+
+  // Find the closest common length that is greater than the average
+  for (const length of commonLengths) {
+    if (length >= avgLength) {
+      return length;
+    }
+  }
+
+  // Default to 80 if no common length is found
+  return 80;
+}
+
+/**
+ * Detect semicolon usage
+ */
+function detectSemicolonUsage(content: string): boolean {
+  // Count statements with and without semicolons
+  const withSemicolons = (content.match(/;\s*(\r?\n|$)/g) || []).length;
+  const withoutSemicolons = (content.match(/[^;{}]\s*(\r?\n|$)/g) || []).length;
+
+  return withSemicolons > withoutSemicolons;
+}
+
+/**
+ * Detect trailing comma usage
+ */
+function detectTrailingCommaUsage(content: string): boolean {
+  // Count arrays and objects with and without trailing commas
+  const withTrailingCommas = (content.match(/,\s*[\]}]/g) || []).length;
+  const withoutTrailingCommas = (content.match(/[^,]\s*[\]}]/g) || []).length;
+
+  return withTrailingCommas > withoutTrailingCommas / 2; // Threshold of 50%
+}
+
+/**
+ * Detect quote style
+ */
+function detectQuoteStyle(content: string): 'single' | 'double' {
+  // Count single and double quotes
+  const singleQuotes = (content.match(/'/g) || []).length;
+  const doubleQuotes = (content.match(/"/g) || []).length;
+
+  return singleQuotes >= doubleQuotes ? 'single' : 'double';
+}
+
+/**
+ * Detect bracket style
+ */
+function detectBracketStyle(content: string): 'same-line' | 'new-line' {
+  // Count opening brackets on same line and new line
+  const sameLine = (content.match(/\)\s*{/g) || []).length;
+  const newLine = (content.match(/\)\s*(\r?\n)+\s*{/g) || []).length;
+
+  return sameLine >= newLine ? 'same-line' : 'new-line';
+}

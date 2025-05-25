@@ -1,0 +1,107 @@
+/**
+ * Route Transition Component
+ * 
+ * This component provides quantum-coherent transitions between routes,
+ * maintaining consciousness continuity during navigation.
+ * 
+ * @version 1.0.0
+ */
+
+import React, { ReactNode } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useLocation } from 'react-router-dom';
+import { useAudio } from '../utils/CoherenceHelpers/useAudio';
+
+// Props interface
+interface RouteTransitionProps {
+  children: ReactNode;
+  transitionType?: 'fade' | 'slide' | 'scale' | 'wormhole';
+  duration?: number;
+}
+
+/**
+ * Route transition component
+ */
+export const RouteTransition: React.FC<RouteTransitionProps> = ({
+  children,
+  transitionType = 'fade',
+  duration = 0.5,
+}) => {
+  // Get location and audio
+  const location = useLocation();
+  const audio = useAudio();
+  
+  // Define transition variants
+  const variants = {
+    fade: {
+      initial: { opacity: 0 },
+      animate: { opacity: 1 },
+      exit: { opacity: 0 },
+    },
+    slide: {
+      initial: { x: '100%', opacity: 0 },
+      animate: { x: 0, opacity: 1 },
+      exit: { x: '-100%', opacity: 0 },
+    },
+    scale: {
+      initial: { scale: 0.8, opacity: 0 },
+      animate: { scale: 1, opacity: 1 },
+      exit: { scale: 0.8, opacity: 0 },
+    },
+    wormhole: {
+      initial: { 
+        opacity: 0,
+        scale: 0.5,
+        rotateZ: 0,
+        filter: 'blur(10px)'
+      },
+      animate: { 
+        opacity: 1,
+        scale: 1,
+        rotateZ: 0,
+        filter: 'blur(0px)'
+      },
+      exit: { 
+        opacity: 0,
+        scale: 1.5,
+        rotateZ: 90,
+        filter: 'blur(10px)'
+      },
+    },
+  };
+  
+  // Play transition sound
+  const handleTransitionStart = () => {
+    switch (transitionType) {
+      case 'wormhole':
+        audio.play('dimensional-shift', { volume: 0.5 });
+        break;
+      case 'slide':
+        audio.play('quantum-pulse', { volume: 0.3 });
+        break;
+      default:
+        audio.play('hover', { volume: 0.2 });
+        break;
+    }
+  };
+  
+  return (
+    <AnimatePresence mode="wait" onExitComplete={handleTransitionStart}>
+      <motion.div
+        key={location.pathname}
+        initial={variants[transitionType].initial}
+        animate={variants[transitionType].animate}
+        exit={variants[transitionType].exit}
+        transition={{ 
+          duration,
+          ease: transitionType === 'wormhole' ? 'easeInOut' : 'easeOut'
+        }}
+        className="w-full h-full"
+      >
+        {children}
+      </motion.div>
+    </AnimatePresence>
+  );
+};
+
+export default RouteTransition;

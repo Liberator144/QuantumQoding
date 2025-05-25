@@ -1,0 +1,201 @@
+/**
+ * Priority Calculator for Memory Bank
+ * Calculates priority scores for memories based on various factors
+ */
+
+import { Memory } from '../core';
+import { DEFAULT_PRIORITY_CONFIG, PriorityConfig, PriorityContext, PriorityFactors } from './types';
+
+export class PriorityCalculator {
+  private config: PriorityConfig;
+
+  constructor(config: Partial<PriorityConfig> = {}) {
+    this.config = {
+      ...DEFAULT_PRIORITY_CONFIG,
+      ...config,
+    };
+  }
+
+  /**
+   * Calculate priority score for a memory
+   */
+  calculatePriority(memory: Memory, context?: PriorityContext): number {
+    const factors = this.calculateFactors(memory, context);
+    return factors.finalScore;
+  }
+
+  /**
+   * Calculate detailed priority factors
+   */
+  calculateFactors(memory: Memory, context?: PriorityContext): PriorityFactors {
+    // Calculate recency factor (how recently the memory was accessed)
+    const recency = this.calculateRecencyFactor(memory);
+
+    // Calculate frequency factor (how often the memory is accessed)
+    const frequency = this.calculateFrequencyFactor(memory);
+
+    // Calculate relevance factor (how relevant the memory is to current context)
+    const relevance = this.calculateRelevanceFactor(memory, context);
+
+    // Calculate importance factor (explicit or derived importance)
+    const importance = this.calculateImportanceFactor(memory);
+
+    // Calculate final score as weighted average
+    const finalScore =
+      recency * this.config.recencyWeight +
+      frequency * this.config.frequencyWeight +
+      relevance * this.config.relevanceWeight +
+      importance * this.config.importanceWeight;
+
+    return {
+      recency,
+      frequency,
+      relevance,
+      importance,
+      finalScore,
+    };
+  }
+
+  /**
+   * Calculate recency factor based on last access time
+   * Returns a value between 0 and 1, where 1 is most recent
+   */
+  private calculateRecencyFactor(memory: Memory): number {
+    const now = new Date().getTime();
+    const lastAccessed = memory.lastAccessedAt.getTime();
+    const age = now - lastAccessed;
+
+    // If older than max age, return 0
+    if (age > this.config.maxRecencyAge) {
+      return 0;
+    }
+
+    // Calculate decay factor using half-life formula
+    const decayFactor = Math.pow(0.5, age / this.config.recencyHalfLife);
+    return decayFactor;
+  }
+
+  /**
+   * Calculate frequency factor based on access count
+   * Returns a value between 0 and 1, where 1 is most frequent
+   */
+  private calculateFrequencyFactor(memory: Memory): number {
+    // Simple sigmoid function to normalize access count
+    return 1 / (1 + Math.exp(-memory.accessCount / this.config.frequencyThreshold));
+  }
+
+  /**
+   * Calculate relevance factor based on current context
+   * Returns a value between 0 and 1, where 1 is most relevant
+   */
+  private calculateRelevanceFactor(memory: Memory, context?: PriorityContext): number {
+    if (!context) {
+      return 0.5; // Default middle value when no context is provided
+    }
+
+    let relevanceScore = 0;
+    let factorsConsidered = 0;
+
+    // Check project context match
+    if (context.projectContext && memory.projectContext) {
+      factorsConsidered++;
+      if (context.projectContext === memory.projectContext) {
+        relevanceScore += 1;
+      }
+    }
+
+    // Check file path match or proximity
+    if (context.filePath && memory.filePath) {
+      factorsConsidered++;
+      if (context.filePath === memory.filePath) {
+        relevanceScore += 1;
+      } else if (this.areFilePathsRelated(context.filePath, memory.filePath)) {
+        relevanceScore += 0.5;
+      }
+    }
+
+    // Check content relevance to current query
+    if (context.currentQuery && memory.content) {
+      factorsConsidered++;
+      const queryRelevance = this.calculateContentRelevance(context.currentQuery, memory.content);
+      relevanceScore += queryRelevance;
+    }
+
+    // If no factors were considered, return default value
+    if (factorsConsidered === 0) {
+      return 0.5;
+    }
+
+    // Return average relevance score
+    return relevanceScore / factorsConsidered;
+  }
+
+  /**
+   * Calculate importance factor based on explicit marking or derived importance
+   * Returns a value between 0 and 1, where 1 is most important
+   */
+  private calculateImportanceFactor(memory: Memory): number {
+    // Check if memory has explicit importance in metadata
+    if (memory.metadata && memory.metadata.importance !== undefined) {
+      return Math.min(1, memory.metadata.importance * this.config.importanceBoostFactor);
+    }
+
+    // Derive importance from other factors
+    let importanceScore = 0;
+
+    // Consider tag-based importance
+    if (memory.tags.includes('important')) {
+      importanceScore += 0.5;
+    }
+
+    if (memory.tags.includes('critical')) {
+      importanceScore += 0.8;
+    }
+
+    // Consider type-based importance
+    switch (memory.type) {
+      case 'decision':
+        importanceScore += 0.3;
+        break;
+      case 'pattern':
+        importanceScore += 0.2;
+        break;
+    }
+
+    // Consider related memories count as a factor
+    if (memory.relatedMemories && memory.relatedMemories.length > 0) {
+      importanceScore += Math.min(0.3, memory.relatedMemories.length * 0.05);
+    }
+
+    return Math.min(1, importanceScore);
+  }
+
+  /**
+   * Helper method to check if two file paths are related
+   */
+  private areFilePathsRelated(path1: string, path2: string): boolean {
+    // Check if paths are in the same directory
+    const dir1 = path1.substring(0, path1.lastIndexOf('/'));
+    const dir2 = path2.substring(0, path2.lastIndexOf('/'));
+    return dir1 === dir2;
+  }
+
+  /**
+   * Helper method to calculate content relevance
+   * This is a simple implementation that could be replaced with more sophisticated NLP
+   */
+  private calculateContentRelevance(query: string, content: string): number {
+    // Simple word overlap calculation
+    const queryWords = new Set(query.toLowerCase().split(/\s+/));
+    const contentWords = new Set(content.toLowerCase().split(/\s+/));
+
+    let matchCount = 0;
+    for (const word of queryWords) {
+      if (contentWords.has(word)) {
+        matchCount++;
+      }
+    }
+
+    return queryWords.size > 0 ? matchCount / queryWords.size : 0;
+  }
+}

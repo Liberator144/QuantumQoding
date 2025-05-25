@@ -1,0 +1,13 @@
+/**
+ * Integration Module
+ *
+ * This module exports all verification integration components.
+ *
+ * @version 1.0.0
+ */
+
+const { DatabaseIntegration } = require('./DatabaseIntegration');
+
+module.exports = {
+  DatabaseIntegration,
+};

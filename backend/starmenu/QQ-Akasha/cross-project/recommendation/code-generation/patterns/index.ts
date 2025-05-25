@@ -1,0 +1,18 @@
+/**
+ * Pattern-based code generation module
+ */
+
+// Types
+export * from './types';
+
+// Pattern registry
+export * from './pattern-registry';
+
+// Pattern detector
+export * from './pattern-detector';
+
+// Pattern adapter
+export * from './pattern-adapter';
+
+// Pattern composer
+export * from './pattern-composer';

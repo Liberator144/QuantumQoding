@@ -1,0 +1,133 @@
+/**
+ * Quantum API Integration Tests
+ * 
+ * This module contains integration tests for the quantum state API endpoints.
+ * 
+ * @version 1.0.0
+ */
+
+import request from 'supertest';
+import { app } from '../../index';
+import { QuantumStateManager } from '../../../interdimensional/quantum/QuantumStateManager';
+
+// Mock dependencies
+jest.mock('../../../interdimensional/quantum/QuantumStateManager');
+jest.mock('../../middleware/auth', () => ({
+  protect: jest.fn().mockImplementation((req, res, next) => {
+    req.user = {
+      id: '1',
+      email: 'test@example.com',
+      role: 'user',
+    };
+    next();
+  }),
+  restrictTo: jest.fn().mockImplementation(() => (req, res, next) => next()),
+}));
+
+describe('Quantum API', () => {
+  let mockQuantumStateManager: jest.Mocked<QuantumStateManager>;
+  
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Setup mock quantum state manager
+    mockQuantumStateManager = new QuantumStateManager() as jest.Mocked<QuantumStateManager>;
+    (QuantumStateManager as jest.Mock).mockImplementation(() => mockQuantumStateManager);
+  });
+  
+  describe('GET /api/v1/quantum/states', () => {
+    it('should return all quantum states', async () => {
+      // Arrange
+      const mockStates = [
+        { id: '1', properties: { name: 'State 1' } },
+        { id: '2', properties: { name: 'State 2' } },
+      ];
+      
+      mockQuantumStateManager.getAllStates = jest.fn().mockReturnValue(mockStates);
+      
+      // Act
+      const response = await request(app)
+        .get('/api/v1/quantum/states')
+        .set('Authorization', 'Bearer mock-token');
+      
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        status: 'success',
+        results: mockStates.length,
+        data: {
+          states: mockStates,
+        },
+      });
+      expect(mockQuantumStateManager.getAllStates).toHaveBeenCalled();
+    });
+  });
+  
+  describe('GET /api/v1/quantum/states/:id', () => {
+    it('should return quantum state by ID', async () => {
+      // Arrange
+      const mockState = { id: '1', properties: { name: 'State 1' } };
+      
+      mockQuantumStateManager.getState = jest.fn().mockReturnValue(mockState);
+      
+      // Act
+      const response = await request(app)
+        .get('/api/v1/quantum/states/1')
+        .set('Authorization', 'Bearer mock-token');
+      
+      // Assert
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        status: 'success',
+        data: {
+          state: mockState,
+        },
+      });
+      expect(mockQuantumStateManager.getState).toHaveBeenCalledWith('1');
+    });
+    
+    it('should return 404 if state not found', async () => {
+      // Arrange
+      mockQuantumStateManager.getState = jest.fn().mockReturnValue(null);
+      
+      // Act
+      const response = await request(app)
+        .get('/api/v1/quantum/states/999')
+        .set('Authorization', 'Bearer mock-token');
+      
+      // Assert
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        status: 'fail',
+        message: 'Quantum state with ID 999 not found',
+      });
+      expect(mockQuantumStateManager.getState).toHaveBeenCalledWith('999');
+    });
+  });
+  
+  describe('POST /api/v1/quantum/states', () => {
+    it('should create a new quantum state', async () => {
+      // Arrange
+      const mockProperties = { name: 'New State', type: 'quantum' };
+      const mockState = { id: '1', properties: mockProperties };
+      
+      mockQuantumStateManager.createState = jest.fn().mockReturnValue(mockState);
+      
+      // Act
+      const response = await request(app)
+        .post('/api/v1/quantum/states')
+        .set('Authorization', 'Bearer mock-token')
+        .send({ properties: mockProperties });
+      
+      // Assert
+      expect(response.status).toBe(201);
+      expect(response.body).toEqual({
+        status: 'success',
+        data: {
+          state: mockState,
+        },
+      });
+      expect(mockQuantumStateManager.createState).toHaveBeenCalledWith(mockProperties);
+    });
+  });
+});

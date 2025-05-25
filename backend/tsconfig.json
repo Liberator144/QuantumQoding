@@ -1,0 +1,50 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "rootDir": "./",
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "moduleResolution": "node",
+
+    /* Enhanced Type Checking */
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "downlevelIteration": true,
+
+    /* Additional Libraries */
+    "lib": [
+      "es2020",
+      "ES2015.Collection",
+      "ES2015.Iterable",
+      "ES2015.Promise",
+      "ES2015.Symbol",
+      "ES2018.AsyncIterable"
+    ],
+
+    /* Path Aliases for Quantum-Coherent Architecture */
+    "baseUrl": "./",
+    "paths": {
+      "@/*": ["./*"],
+      "@core/*": ["./core/*"],
+      "@api/*": ["./api/*"],
+      "@models/*": ["./models/*"],
+      "@services/*": ["./services/*"],
+      "@utils/*": ["./utils/*"],
+      "@consciousness/*": ["./core/consciousness/*"],
+      "@neural-fabric/*": ["./core/dimensional-gateway/*"],
+      "@quantum-state/*": ["./core/evolution-engine/*"],
+      "@verification/*": ["./verification/*"]
+    }
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}

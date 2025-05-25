@@ -1,0 +1,958 @@
+/**
+ * DimensionalGateway
+ *
+ * The DimensionalGateway provides a way to manage interfaces between different
+ * operational dimensions.
+ *
+ * @version 1.0.0
+ */
+
+const { EventEmitter } = require('events');
+
+/**
+ * DimensionalGateway class
+ *
+ * Provides a way to manage interfaces between different operational dimensions.
+ */
+class DimensionalGateway extends EventEmitter {
+  /**
+   * Create a new DimensionalGateway instance
+   * @param {Object} options - Configuration options
+   */
+  constructor(options = {}) {
+    super();
+
+    // Configuration
+    this.config = {
+      // Debug mode
+      debugMode: options.debugMode || false,
+
+      // Default dimension
+      defaultDimension: options.defaultDimension || 'standard',
+
+      // Available dimensions
+      dimensions: options.dimensions || ['standard', 'quantum', 'hyper-quantum'],
+
+      // Dimension access control
+      accessControl: options.accessControl || {},
+    };
+
+    // State
+    this.state = {
+      // Registered interfaces
+      interfaces: new Map(),
+
+      // Interface capabilities
+      capabilities: new Map(),
+
+      // Dimension mappings
+      mappings: new Map(),
+
+      // Active connections
+      connections: new Map(),
+
+      // Statistics
+      stats: {
+        // Total interfaces registered
+        interfacesRegistered: 0,
+
+        // Total interfaces unregistered
+        interfacesUnregistered: 0,
+
+        // Total connections established
+        connectionsEstablished: 0,
+
+        // Total connections closed
+        connectionsClosed: 0,
+
+        // Total data transfers
+        dataTransfers: 0,
+
+        // Total data transfer errors
+        dataTransferErrors: 0,
+      },
+    };
+
+    // Initialize
+    this._initialize();
+  }
+
+  /**
+   * Initialize the dimensional gateway
+   * @private
+   */
+  _initialize() {
+    // Initialize dimension mappings
+    for (const dimension of this.config.dimensions) {
+      this.state.mappings.set(dimension, new Map());
+    }
+
+    // Log initialization
+    this.log(
+      `Dimensional gateway initialized with dimensions: ${this.config.dimensions.join(', ')}`
+    );
+
+    // Emit initialized event
+    this.emit('initialized', {
+      dimensions: this.config.dimensions,
+      defaultDimension: this.config.defaultDimension,
+    });
+  }
+
+  /**
+   * Register an interface
+   * @param {string} interfaceId - Interface ID
+   * @param {string} dimension - Dimension
+   * @param {string[]} capabilities - Interface capabilities
+   * @returns {boolean} Whether the interface was registered
+   */
+  registerInterface(interfaceId, dimension, capabilities = []) {
+    // Handle the case where dimension is actually capabilities (for backward compatibility)
+    if (Array.isArray(dimension) && capabilities.length === 0) {
+      capabilities = dimension;
+      dimension = this.config.defaultDimension;
+    }
+
+    // Validate interface ID
+    if (!interfaceId) {
+      this.log('Invalid interface ID');
+      return false;
+    }
+
+    // Validate dimension
+    if (!this.config.dimensions.includes(dimension)) {
+      this.log(`Invalid dimension: ${dimension}`);
+      return false;
+    }
+
+    // Check if interface already exists
+    const exists = this.state.interfaces.has(interfaceId);
+
+    // Register interface
+    this.state.interfaces.set(interfaceId, {
+      id: interfaceId,
+      dimension,
+      registeredAt: Date.now(),
+      status: 'active',
+      capabilities: capabilities,
+    });
+
+    // Register capabilities
+    this.state.capabilities.set(interfaceId, new Set(capabilities));
+
+    // Update statistics
+    if (!exists) {
+      this.state.stats.interfacesRegistered++;
+    }
+
+    // Log registration
+    this.log(`Registered interface ${interfaceId} in dimension ${dimension}`);
+
+    // Emit registered event
+    this.emit('interface:registered', {
+      interfaceId,
+      dimension,
+      capabilities,
+    });
+
+    return true;
+  }
+
+  /**
+   * Unregister an interface
+   * @param {string} interfaceId - Interface ID
+   * @returns {boolean} Whether the interface was unregistered
+   */
+  unregisterInterface(interfaceId) {
+    // Validate interface ID
+    if (!interfaceId) {
+      this.log('Invalid interface ID');
+      return false;
+    }
+
+    // Check if interface exists
+    if (!this.state.interfaces.has(interfaceId)) {
+      this.log(`Interface not registered: ${interfaceId}`);
+      return false;
+    }
+
+    // Get interface data
+    const interfaceData = this.state.interfaces.get(interfaceId);
+
+    // Close all connections
+    this._closeInterfaceConnections(interfaceId);
+
+    // Remove from dimension mappings
+    for (const mappings of this.state.mappings.values()) {
+      for (const [sourceId, targetId] of mappings.entries()) {
+        if (sourceId === interfaceId || targetId === interfaceId) {
+          mappings.delete(sourceId);
+        }
+      }
+    }
+
+    // Unregister capabilities
+    this.state.capabilities.delete(interfaceId);
+
+    // Unregister interface
+    this.state.interfaces.delete(interfaceId);
+
+    // Update statistics
+    this.state.stats.interfacesUnregistered++;
+
+    // Log unregistration
+    this.log(`Unregistered interface ${interfaceId}`);
+
+    // Emit unregistered event
+    this.emit('interface:unregistered', {
+      interfaceId,
+      dimension: interfaceData.dimension,
+    });
+
+    return true;
+  }
+
+  /**
+   * Map an interface to another dimension
+   * @param {string} sourceId - Source interface ID
+   * @param {string} targetId - Target interface ID
+   * @returns {boolean} Whether the mapping was created
+   */
+  mapInterface(sourceId, targetId) {
+    // Validate interface IDs
+    if (!sourceId || !targetId) {
+      this.log('Invalid source or target ID');
+      return false;
+    }
+
+    // Check if interfaces exist
+    if (!this.state.interfaces.has(sourceId)) {
+      this.log(`Source interface not registered: ${sourceId}`);
+      return false;
+    }
+
+    if (!this.state.interfaces.has(targetId)) {
+      this.log(`Target interface not registered: ${targetId}`);
+      return false;
+    }
+
+    // Get interface dimensions
+    const sourceDimension = this.state.interfaces.get(sourceId).dimension;
+    const targetDimension = this.state.interfaces.get(targetId).dimension;
+
+    // Check if dimensions are different
+    if (sourceDimension === targetDimension) {
+      this.log(`Interfaces are in the same dimension: ${sourceDimension}`);
+      return false;
+    }
+
+    // Create mapping
+    this.state.mappings.get(sourceDimension).set(sourceId, targetId);
+
+    // Update statistics
+    if (!this.state.stats.interfacesMapped) {
+      this.state.stats.interfacesMapped = 0;
+    }
+    this.state.stats.interfacesMapped++;
+
+    // Log mapping
+    this.log(
+      `Mapped interface ${sourceId} (${sourceDimension}) to ${targetId} (${targetDimension})`
+    );
+
+    // Emit mapped event
+    this.emit('interface:mapped', {
+      sourceId,
+      targetId,
+      sourceDimension,
+      targetDimension,
+    });
+
+    return true;
+  }
+
+  /**
+   * Map multiple interfaces at once
+   * @param {string} sourceId - Source interface ID
+   * @param {string} targetId - Target interface ID
+   * @returns {boolean} Whether the mapping was created
+   */
+  mapInterfaces(sourceId, targetId) {
+    return this.mapInterface(sourceId, targetId);
+  }
+
+  /**
+   * Get the current state of the gateway
+   * @returns {Object} Current state
+   */
+  getState() {
+    // Calculate the total number of mappings
+    const mappingCount = Array.from(this.state.mappings.values()).reduce(
+      (count, map) => count + map.size,
+      0
+    );
+
+    // Add interfacesMapped to stats if it doesn't exist
+    if (this.state.stats.interfacesMapped === undefined) {
+      this.state.stats.interfacesMapped = mappingCount;
+    }
+
+    return {
+      status: 'active',
+      interfaceCount: this.state.interfaces.size,
+      connectionCount: this.state.connections.size,
+      mappingCount: mappingCount,
+      dimensions: this.config.dimensions,
+      defaultDimension: this.config.defaultDimension,
+      stats: { ...this.state.stats },
+    };
+  }
+
+  /**
+   * Dispose of the gateway and clean up resources
+   */
+  dispose() {
+    // Close all connections
+    for (const connectionId of this.state.connections.keys()) {
+      this.disconnect(connectionId);
+    }
+
+    // Clear all interfaces
+    this.state.interfaces.clear();
+
+    // Clear all capabilities
+    this.state.capabilities.clear();
+
+    // Clear all mappings
+    for (const mappings of this.state.mappings.values()) {
+      mappings.clear();
+    }
+
+    // Log disposal
+    this.log('Dimensional gateway disposed');
+
+    // Emit disposed event
+    this.emit('disposed');
+
+    // Remove all listeners
+    this.removeAllListeners();
+  }
+
+  /**
+   * Unmap an interface
+   * @param {string} sourceId - Source interface ID
+   * @returns {boolean} Whether the mapping was removed
+   */
+  unmapInterface(sourceId) {
+    // Validate interface ID
+    if (!sourceId) {
+      this.log('Invalid source ID');
+      return false;
+    }
+
+    // Check if interface exists
+    if (!this.state.interfaces.has(sourceId)) {
+      this.log(`Source interface not registered: ${sourceId}`);
+      return false;
+    }
+
+    // Get interface dimension
+    const sourceDimension = this.state.interfaces.get(sourceId).dimension;
+
+    // Check if mapping exists
+    if (!this.state.mappings.get(sourceDimension).has(sourceId)) {
+      this.log(`Interface not mapped: ${sourceId}`);
+      return false;
+    }
+
+    // Get target interface
+    const targetId = this.state.mappings.get(sourceDimension).get(sourceId);
+
+    // Remove mapping
+    this.state.mappings.get(sourceDimension).delete(sourceId);
+
+    // Log unmapping
+    this.log(`Unmapped interface ${sourceId}`);
+
+    // Emit unmapped event
+    this.emit('interface:unmapped', {
+      sourceId,
+      targetId,
+      sourceDimension,
+    });
+
+    return true;
+  }
+
+  /**
+   * Connect to an interface
+   * @param {string} sourceId - Source interface ID
+   * @param {string} targetId - Target interface ID
+   * @returns {string} Connection ID or null if connection failed
+   */
+  connect(sourceId, targetId) {
+    // Validate interface IDs
+    if (!sourceId || !targetId) {
+      this.log('Invalid source or target ID');
+      return null;
+    }
+
+    // Check if interfaces exist
+    if (!this.state.interfaces.has(sourceId)) {
+      this.log(`Source interface not registered: ${sourceId}`);
+      return null;
+    }
+
+    if (!this.state.interfaces.has(targetId)) {
+      this.log(`Target interface not registered: ${targetId}`);
+      return null;
+    }
+
+    // Get interface dimensions
+    const sourceDimension = this.state.interfaces.get(sourceId).dimension;
+    const targetDimension = this.state.interfaces.get(targetId).dimension;
+
+    // Check access control
+    if (!this._checkAccessControl(sourceId, targetId)) {
+      this.log(`Access denied: ${sourceId} to ${targetId}`);
+      return null;
+    }
+
+    // Generate connection ID
+    const connectionId = this._generateConnectionId(sourceId, targetId);
+
+    // Create connection
+    this.state.connections.set(connectionId, {
+      sourceId,
+      targetId,
+      sourceDimension,
+      targetDimension,
+      established: Date.now(),
+      lastActivity: Date.now(),
+      status: 'active',
+    });
+
+    // Update statistics
+    this.state.stats.connectionsEstablished++;
+
+    // Log connection
+    this.log(`Connected ${sourceId} (${sourceDimension}) to ${targetId} (${targetDimension})`);
+
+    // Emit connected event
+    this.emit('connection:established', {
+      connectionId,
+      sourceId,
+      targetId,
+      sourceDimension,
+      targetDimension,
+    });
+
+    return connectionId;
+  }
+
+  /**
+   * Disconnect from an interface
+   * @param {string} connectionId - Connection ID
+   * @returns {boolean} Whether the connection was closed
+   */
+  disconnect(connectionId) {
+    // Validate connection ID
+    if (!connectionId) {
+      this.log('Invalid connection ID');
+      return false;
+    }
+
+    // Check if connection exists
+    if (!this.state.connections.has(connectionId)) {
+      this.log(`Connection not found: ${connectionId}`);
+      return false;
+    }
+
+    // Get connection data
+    const connection = this.state.connections.get(connectionId);
+
+    // Close connection
+    this.state.connections.delete(connectionId);
+
+    // Update statistics
+    this.state.stats.connectionsClosed++;
+
+    // Log disconnection
+    this.log(`Disconnected ${connection.sourceId} from ${connection.targetId}`);
+
+    // Emit disconnected event
+    this.emit('connection:closed', {
+      connectionId,
+      sourceId: connection.sourceId,
+      targetId: connection.targetId,
+    });
+
+    return true;
+  }
+
+  /**
+   * Transfer data through a connection
+   * @param {string} connectionId - Connection ID
+   * @param {any} data - Data to transfer
+   * @param {Object} options - Transfer options
+   * @returns {Promise<any>} Transferred data
+   */
+  async transfer(connectionId, data, options = {}) {
+    // Validate connection ID
+    if (!connectionId) {
+      this.log('Invalid connection ID');
+      throw new Error('Invalid connection ID');
+    }
+
+    // Check if connection exists
+    if (!this.state.connections.has(connectionId)) {
+      this.log(`Connection not found: ${connectionId}`);
+      throw new Error(`Connection not found: ${connectionId}`);
+    }
+
+    // Get connection data
+    const connection = this.state.connections.get(connectionId);
+
+    // Check connection status
+    if (connection.status !== 'active') {
+      this.log(`Connection not active: ${connectionId}`);
+      throw new Error(`Connection not active: ${connectionId}`);
+    }
+
+    try {
+      // Transform data for target dimension
+      const transformedData = await this._transformData(
+        data,
+        connection.sourceDimension,
+        connection.targetDimension,
+        options
+      );
+
+      // Update connection last activity
+      connection.lastActivity = Date.now();
+
+      // Update statistics
+      this.state.stats.dataTransfers++;
+
+      // Log transfer
+      this.log(`Transferred data from ${connection.sourceId} to ${connection.targetId}`);
+
+      // Emit transferred event
+      this.emit('data:transferred', {
+        connectionId,
+        sourceId: connection.sourceId,
+        targetId: connection.targetId,
+        sourceDimension: connection.sourceDimension,
+        targetDimension: connection.targetDimension,
+      });
+
+      return transformedData;
+    } catch (error) {
+      // Update statistics
+      this.state.stats.dataTransferErrors++;
+
+      // Log error
+      this.log(`Transfer error: ${error.message}`);
+
+      // Emit error event
+      this.emit('data:error', {
+        connectionId,
+        sourceId: connection.sourceId,
+        targetId: connection.targetId,
+        error,
+      });
+
+      // Rethrow error
+      throw error;
+    }
+  }
+
+  /**
+   * Find a mapped interface in another dimension
+   * @param {string} interfaceId - Interface ID
+   * @param {string} targetDimension - Target dimension
+   * @returns {string} Mapped interface ID or null if not found
+   */
+  findMappedInterface(interfaceId, targetDimension) {
+    // Validate interface ID
+    if (!interfaceId) {
+      this.log('Invalid interface ID');
+      return null;
+    }
+
+    // Validate dimension
+    if (!this.config.dimensions.includes(targetDimension)) {
+      this.log(`Invalid dimension: ${targetDimension}`);
+      return null;
+    }
+
+    // Check if interface exists
+    if (!this.state.interfaces.has(interfaceId)) {
+      this.log(`Interface not registered: ${interfaceId}`);
+      return null;
+    }
+
+    // Get interface dimension
+    const sourceDimension = this.state.interfaces.get(interfaceId).dimension;
+
+    // Check if dimensions are different
+    if (sourceDimension === targetDimension) {
+      return interfaceId;
+    }
+
+    // Check if mapping exists
+    if (!this.state.mappings.get(sourceDimension).has(interfaceId)) {
+      return null;
+    }
+
+    // Get mapped interface
+    const mappedId = this.state.mappings.get(sourceDimension).get(interfaceId);
+
+    // Check if mapped interface is in target dimension
+    if (
+      this.state.interfaces.has(mappedId) &&
+      this.state.interfaces.get(mappedId).dimension === targetDimension
+    ) {
+      return mappedId;
+    }
+
+    // Try to find a path to the target dimension
+    return this._findMappingPath(interfaceId, targetDimension);
+  }
+
+  /**
+   * Find a path to a target dimension
+   * @param {string} interfaceId - Interface ID
+   * @param {string} targetDimension - Target dimension
+   * @param {Set<string>} visited - Visited interfaces
+   * @returns {string} Mapped interface ID or null if not found
+   * @private
+   */
+  _findMappingPath(interfaceId, targetDimension, visited = new Set()) {
+    // Prevent infinite recursion
+    if (visited.has(interfaceId)) {
+      return null;
+    }
+
+    // Add to visited
+    visited.add(interfaceId);
+
+    // Get interface dimension
+    const sourceDimension = this.state.interfaces.get(interfaceId).dimension;
+
+    // Get mapped interface
+    const mappedId = this.state.mappings.get(sourceDimension).get(interfaceId);
+
+    if (!mappedId) {
+      return null;
+    }
+
+    // Check if mapped interface exists
+    if (!this.state.interfaces.has(mappedId)) {
+      return null;
+    }
+
+    // Get mapped interface dimension
+    const mappedDimension = this.state.interfaces.get(mappedId).dimension;
+
+    // Check if mapped interface is in target dimension
+    if (mappedDimension === targetDimension) {
+      return mappedId;
+    }
+
+    // Recursively find path
+    return this._findMappingPath(mappedId, targetDimension, visited);
+  }
+
+  /**
+   * Transform data between dimensions
+   * @param {any} data - Data to transform
+   * @param {string} sourceDimension - Source dimension
+   * @param {string} targetDimension - Target dimension
+   * @param {Object} options - Transform options
+   * @returns {Promise<any>} Transformed data
+   * @private
+   */
+  async _transformData(data, sourceDimension, targetDimension, options = {}) {
+    // No transformation needed if dimensions are the same
+    if (sourceDimension === targetDimension) {
+      return data;
+    }
+
+    // Apply dimension-specific transformations
+    let transformedData = data;
+
+    // Standard to quantum
+    if (sourceDimension === 'standard' && targetDimension === 'quantum') {
+      transformedData = this._transformStandardToQuantum(data, options);
+    }
+
+    // Quantum to standard
+    else if (sourceDimension === 'quantum' && targetDimension === 'standard') {
+      transformedData = this._transformQuantumToStandard(data, options);
+    }
+
+    // Standard to hyper-quantum
+    else if (sourceDimension === 'standard' && targetDimension === 'hyper-quantum') {
+      transformedData = this._transformStandardToHyperQuantum(data, options);
+    }
+
+    // Hyper-quantum to standard
+    else if (sourceDimension === 'hyper-quantum' && targetDimension === 'standard') {
+      transformedData = this._transformHyperQuantumToStandard(data, options);
+    }
+
+    // Quantum to hyper-quantum
+    else if (sourceDimension === 'quantum' && targetDimension === 'hyper-quantum') {
+      transformedData = this._transformQuantumToHyperQuantum(data, options);
+    }
+
+    // Hyper-quantum to quantum
+    else if (sourceDimension === 'hyper-quantum' && targetDimension === 'quantum') {
+      transformedData = this._transformHyperQuantumToQuantum(data, options);
+    }
+
+    return transformedData;
+  }
+
+  /**
+   * Transform data from standard to quantum dimension
+   * @param {any} data - Data to transform
+   * @param {Object} options - Transform options
+   * @returns {any} Transformed data
+   * @private
+   */
+  _transformStandardToQuantum(data, options = {}) {
+    // Add quantum properties
+    return {
+      data,
+      quantum: true,
+      entangled: options.entangled || false,
+      superposed: options.superposed || false,
+      quantumTimestamp: Date.now(),
+    };
+  }
+
+  /**
+   * Transform data from quantum to standard dimension
+   * @param {any} data - Data to transform
+   * @param {Object} options - Transform options
+   * @returns {any} Transformed data
+   * @private
+   */
+  _transformQuantumToStandard(data, options = {}) {
+    // Extract original data
+    if (data && typeof data === 'object' && data.quantum) {
+      return data.data;
+    }
+
+    return data;
+  }
+
+  /**
+   * Transform data from standard to hyper-quantum dimension
+   * @param {any} data - Data to transform
+   * @param {Object} options - Transform options
+   * @returns {any} Transformed data
+   * @private
+   */
+  _transformStandardToHyperQuantum(data, options = {}) {
+    // Add hyper-quantum properties
+    return {
+      data,
+      hyperQuantum: true,
+      dimensionallyFolded: options.dimensionallyFolded || false,
+      consciousnessIntegrated: options.consciousnessIntegrated || false,
+      hyperQuantumTimestamp: Date.now(),
+    };
+  }
+
+  /**
+   * Transform data from hyper-quantum to standard dimension
+   * @param {any} data - Data to transform
+   * @param {Object} options - Transform options
+   * @returns {any} Transformed data
+   * @private
+   */
+  _transformHyperQuantumToStandard(data, options = {}) {
+    // Extract original data
+    if (data && typeof data === 'object' && data.hyperQuantum) {
+      return data.data;
+    }
+
+    return data;
+  }
+
+  /**
+   * Transform data from quantum to hyper-quantum dimension
+   * @param {any} data - Data to transform
+   * @param {Object} options - Transform options
+   * @returns {any} Transformed data
+   * @private
+   */
+  _transformQuantumToHyperQuantum(data, options = {}) {
+    // Extract original data
+    let originalData = data;
+
+    if (data && typeof data === 'object' && data.quantum) {
+      originalData = data.data;
+    }
+
+    // Add hyper-quantum properties
+    return {
+      data: originalData,
+      hyperQuantum: true,
+      quantum: true,
+      entangled: data.entangled || false,
+      superposed: data.superposed || false,
+      dimensionallyFolded: options.dimensionallyFolded || false,
+      consciousnessIntegrated: options.consciousnessIntegrated || false,
+      hyperQuantumTimestamp: Date.now(),
+      quantumTimestamp: data.quantumTimestamp || Date.now(),
+    };
+  }
+
+  /**
+   * Transform data from hyper-quantum to quantum dimension
+   * @param {any} data - Data to transform
+   * @param {Object} options - Transform options
+   * @returns {any} Transformed data
+   * @private
+   */
+  _transformHyperQuantumToQuantum(data, options = {}) {
+    // Extract original data
+    let originalData = data;
+
+    if (data && typeof data === 'object' && data.hyperQuantum) {
+      originalData = data.data;
+    }
+
+    // Add quantum properties
+    return {
+      data: originalData,
+      quantum: true,
+      entangled: data.entangled || false,
+      superposed: data.superposed || false,
+      quantumTimestamp: data.quantumTimestamp || Date.now(),
+    };
+  }
+
+  /**
+   * Check access control
+   * @param {string} sourceId - Source interface ID
+   * @param {string} targetId - Target interface ID
+   * @returns {boolean} Whether access is allowed
+   * @private
+   */
+  _checkAccessControl(sourceId, targetId) {
+    // Get interface dimensions
+    const sourceDimension = this.state.interfaces.get(sourceId).dimension;
+    const targetDimension = this.state.interfaces.get(targetId).dimension;
+
+    // Check dimension access control
+    if (this.config.accessControl[sourceDimension]) {
+      // If it's an array, check if target dimension is in the allowed list
+      if (Array.isArray(this.config.accessControl[sourceDimension])) {
+        if (!this.config.accessControl[sourceDimension].includes(targetDimension)) {
+          return false;
+        }
+      }
+      // If it's an object, check if target dimension is explicitly forbidden
+      else if (
+        typeof this.config.accessControl[sourceDimension] === 'object' &&
+        this.config.accessControl[sourceDimension][targetDimension] === false
+      ) {
+        return false;
+      }
+    }
+
+    // Check interface access control
+    if (this.config.accessControl[sourceId]) {
+      // If it's an array, check if target interface is in the allowed list
+      if (Array.isArray(this.config.accessControl[sourceId])) {
+        if (!this.config.accessControl[sourceId].includes(targetId)) {
+          return false;
+        }
+      }
+      // If it's an object, check if target interface is explicitly forbidden
+      else if (
+        typeof this.config.accessControl[sourceId] === 'object' &&
+        this.config.accessControl[sourceId][targetId] === false
+      ) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Close all connections for an interface
+   * @param {string} interfaceId - Interface ID
+   * @private
+   */
+  _closeInterfaceConnections(interfaceId) {
+    for (const [connectionId, connection] of this.state.connections.entries()) {
+      if (connection.sourceId === interfaceId || connection.targetId === interfaceId) {
+        this.disconnect(connectionId);
+      }
+    }
+  }
+
+  /**
+   * Generate a connection ID
+   * @param {string} sourceId - Source interface ID
+   * @param {string} targetId - Target interface ID
+   * @returns {string} Connection ID
+   * @private
+   */
+  _generateConnectionId(sourceId, targetId) {
+    return `conn-${sourceId}-${targetId}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+  }
+
+  /**
+   * Get all registered interfaces
+   * @returns {Object[]} Array of interface data
+   */
+  getInterfaces() {
+    return Array.from(this.state.interfaces.entries()).map(([id, data]) => ({
+      id,
+      dimension: data.dimension,
+      status: data.status,
+      registeredAt: data.registeredAt,
+      capabilities: this.state.capabilities.has(id)
+        ? Array.from(this.state.capabilities.get(id))
+        : [],
+    }));
+  }
+
+  /**
+   * Get all active connections
+   * @returns {Object[]} Array of connection data
+   */
+  getConnections() {
+    return Array.from(this.state.connections.entries()).map(([id, data]) => ({
+      id,
+      sourceId: data.sourceId,
+      targetId: data.targetId,
+      sourceDimension: data.sourceDimension,
+      targetDimension: data.targetDimension,
+      established: data.established,
+      lastActivity: data.lastActivity,
+      status: data.status,
+    }));
+  }
+
+  /**
+   * Log message if debug mode is enabled
+   * @param {string} message - Message to log
+   * @private
+   */
+  log(message) {
+    if (this.config.debugMode) {
+      console.log(`[DimensionalGateway] ${message}`);
+    }
+  }
+}
+
+module.exports = { DimensionalGateway };

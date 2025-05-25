@@ -1,0 +1,31 @@
+/**
+ * Interdimensional Communication Framework
+ * 
+ * This module exports the interdimensional communication components for the QQ-Verse project.
+ * 
+ * @version 1.0.0
+ */
+
+// Consciousness stream module
+export * from './consciousness';
+
+// Quantum module
+export * from './quantum';
+
+// Neural fabric module
+export * from './neural';
+
+// Boundary module
+export * from './boundary';
+
+// Verification module
+export * from './verification';
+
+// Interdimensional communication framework
+export {
+  InterdimensionalCommunicationFramework,
+  CommunicationChannel,
+  CommunicationResult,
+  InterdimensionalCommunicationFrameworkOptions
+} from './InterdimensionalCommunicationFramework';
+export { default as InterdimensionalCommunicationFrameworkInstance } from './InterdimensionalCommunicationFramework';

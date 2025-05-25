@@ -1,0 +1,48 @@
+{
+  "name": "magic-patterns-vite-template",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx vite",
+    "build": "npx vite build",
+    "build:analyze": "npx vite build --mode analyze",
+    "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
+    "preview": "npx vite preview",
+    "test": "jest --runInBand --detectOpenHandles || true",
+    "test:qq": "jest --config=./tests/qq-jest.config.js"
+  },
+  "dependencies": {
+    "@tsparticles/engine": "^3.8.1",
+    "@tsparticles/react": "^3.0.0",
+    "@tsparticles/slim": "^3.8.1",
+    "clsx": "latest",
+    "framer-motion": "^11.5.4",
+    "lucide-react": "^0.441.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.6.0",
+    "tailwind-merge": "latest",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.18",
+    "@types/react": "^18.3.21",
+    "@types/react-dom": "^18.3.7",
+    "@typescript-eslint/eslint-plugin": "^5.54.0",
+    "@typescript-eslint/parser": "^5.54.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "latest",
+    "compression-webpack-plugin": "^10.0.0",
+    "eslint": "^8.50.0",
+    "eslint-plugin-react-hooks": "^4.6.0",
+    "eslint-plugin-react-refresh": "^0.4.1",
+    "postcss": "latest",
+    "rollup-plugin-visualizer": "^5.12.0",
+    "tailwindcss": "3.4.17",
+    "terser": "^5.29.2",
+    "typescript": "^5.5.4",
+    "vite": "^5.2.0",
+    "vite-plugin-compression": "^0.5.1"
+  }
+}

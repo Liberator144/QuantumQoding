@@ -1,0 +1,13 @@
+/**
+ * Bridge Module
+ *
+ * This module exports all bridge components for context transfer and cross-system communication.
+ *
+ * @version 1.0.0
+ */
+
+const { MessageBridge } = require('./MessageBridge');
+
+module.exports = {
+  MessageBridge,
+};

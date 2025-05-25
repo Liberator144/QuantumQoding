@@ -1,0 +1,27 @@
+/**
+ * Personalization module exports
+ */
+
+// Core types and interfaces
+export * from './types';
+
+// Profile storage
+export * from './profile-storage';
+
+// Interaction tracking
+export * from './interaction-tracker';
+
+// Preference learning
+export * from './preference-learner';
+
+// Personalization manager
+export * from './personalization-manager';
+
+// Models
+export * from './models/persona';
+export * from './models/analytics';
+
+// Adapters
+export * from './adapters/ai-adapter';
+export * from './adapters/augment-adapter';
+export * from './adapters/copilot-adapter';

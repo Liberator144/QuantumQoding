@@ -1,0 +1,211 @@
+/**
+ * Naming convention detector for detecting naming conventions in code
+ */
+
+import { CodeElement, CodeElementType, CodeElementVisibility, NamingConvention } from './types';
+
+/**
+ * Default naming conventions
+ */
+const DEFAULT_NAMING_CONVENTIONS: NamingConvention = {
+  variables: 'camelCase',
+  functions: 'camelCase',
+  classes: 'PascalCase',
+  interfaces: 'PascalCase',
+  enums: 'PascalCase',
+  constants: 'UPPER_CASE',
+  privateMembers: 'camelCase',
+};
+
+/**
+ * Naming convention type
+ */
+type NamingConventionType =
+  | 'camelCase'
+  | 'snake_case'
+  | 'PascalCase'
+  | 'UPPER_CASE'
+  | '_prefixed'
+  | 'other';
+
+/**
+ * Detect naming conventions from code elements
+ */
+export function detectNamingConventions(elements: CodeElement[]): NamingConvention {
+  const conventions: NamingConvention = { ...DEFAULT_NAMING_CONVENTIONS };
+
+  // Group elements by type
+  const variables: string[] = [];
+  const functions: string[] = [];
+  const classes: string[] = [];
+  const interfaces: string[] = [];
+  const enums: string[] = [];
+  const constants: string[] = [];
+  const privateMembers: string[] = [];
+
+  for (const element of elements) {
+    const name = element.name;
+
+    // Skip elements with invalid names
+    if (!name || name.includes(' ') || name.startsWith('$')) {
+      continue;
+    }
+
+    switch (element.type) {
+      case CodeElementType.VARIABLE:
+        // Check if it's a constant
+        if (name.toUpperCase() === name && name.length > 1) {
+          constants.push(name);
+        } else {
+          variables.push(name);
+        }
+
+        // Check if it's a private member
+        if (element.visibility === CodeElementVisibility.PRIVATE) {
+          privateMembers.push(name);
+        }
+        break;
+
+      case CodeElementType.FUNCTION:
+      case CodeElementType.METHOD:
+        functions.push(name);
+
+        // Check if it's a private member
+        if (element.visibility === CodeElementVisibility.PRIVATE) {
+          privateMembers.push(name);
+        }
+        break;
+
+      case CodeElementType.CLASS:
+        classes.push(name);
+        break;
+
+      case CodeElementType.INTERFACE:
+        interfaces.push(name);
+        break;
+
+      case CodeElementType.ENUM:
+        enums.push(name);
+        break;
+
+      case CodeElementType.PROPERTY:
+        // Check if it's a constant
+        if (name.toUpperCase() === name && name.length > 1) {
+          constants.push(name);
+        } else {
+          variables.push(name);
+        }
+
+        // Check if it's a private member
+        if (element.visibility === CodeElementVisibility.PRIVATE) {
+          privateMembers.push(name);
+        }
+        break;
+    }
+  }
+
+  // Detect conventions for each group
+  if (variables.length > 0) {
+    conventions.variables = detectNamingConvention(variables);
+  }
+
+  if (functions.length > 0) {
+    conventions.functions = detectNamingConvention(functions);
+  }
+
+  if (classes.length > 0) {
+    conventions.classes = detectNamingConvention(classes);
+  }
+
+  if (interfaces.length > 0) {
+    conventions.interfaces = detectNamingConvention(interfaces);
+  }
+
+  if (enums.length > 0) {
+    conventions.enums = detectNamingConvention(enums);
+  }
+
+  if (constants.length > 0) {
+    conventions.constants = detectNamingConvention(constants);
+  }
+
+  if (privateMembers.length > 0) {
+    // Check for underscore prefix first
+    if (privateMembers.filter(name => name.startsWith('_')).length > privateMembers.length / 2) {
+      conventions.privateMembers = '_prefixed';
+    } else {
+      conventions.privateMembers = detectNamingConvention(privateMembers);
+    }
+  }
+
+  return conventions;
+}
+
+/**
+ * Detect naming convention from a list of names
+ */
+function detectNamingConvention(names: string[]): NamingConventionType {
+  // Count occurrences of each convention
+  let camelCaseCount = 0;
+  let snakeCaseCount = 0;
+  let pascalCaseCount = 0;
+  let upperCaseCount = 0;
+
+  for (const name of names) {
+    if (isCamelCase(name)) {
+      camelCaseCount++;
+    } else if (isSnakeCase(name)) {
+      snakeCaseCount++;
+    } else if (isPascalCase(name)) {
+      pascalCaseCount++;
+    } else if (isUpperCase(name)) {
+      upperCaseCount++;
+    }
+  }
+
+  // Find the most common convention
+  const counts = [
+    { convention: 'camelCase', count: camelCaseCount },
+    { convention: 'snake_case', count: snakeCaseCount },
+    { convention: 'PascalCase', count: pascalCaseCount },
+    { convention: 'UPPER_CASE', count: upperCaseCount },
+  ];
+
+  counts.sort((a, b) => b.count - a.count);
+
+  // Return the most common convention if it's used for at least 50% of names
+  if (counts[0].count > 0 && counts[0].count >= names.length / 2) {
+    return counts[0].convention as NamingConventionType;
+  }
+
+  // Default to 'other' if no clear convention is found
+  return 'other';
+}
+
+/**
+ * Check if a name is camelCase
+ */
+function isCamelCase(name: string): boolean {
+  return /^[a-z][a-zA-Z0-9]*$/.test(name) && name.includes(/[A-Z]/) && !name.startsWith('_');
+}
+
+/**
+ * Check if a name is snake_case
+ */
+function isSnakeCase(name: string): boolean {
+  return /^[a-z][a-z0-9_]*$/.test(name) && name.includes('_') && !name.startsWith('_');
+}
+
+/**
+ * Check if a name is PascalCase
+ */
+function isPascalCase(name: string): boolean {
+  return /^[A-Z][a-zA-Z0-9]*$/.test(name) && !name.startsWith('_');
+}
+
+/**
+ * Check if a name is UPPER_CASE
+ */
+function isUpperCase(name: string): boolean {
+  return /^[A-Z][A-Z0-9_]*$/.test(name) && name.includes('_') && !name.startsWith('_');
+}

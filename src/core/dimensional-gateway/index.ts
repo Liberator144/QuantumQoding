@@ -1,0 +1,8 @@
+/**
+ * Dimensional Gateway Module
+ * 
+ * This module exports the dimensional gateway functionality for the QQ-Verse project,
+ * enabling communication between dimensions.
+ */
+
+export * from './dimensional-gateway';

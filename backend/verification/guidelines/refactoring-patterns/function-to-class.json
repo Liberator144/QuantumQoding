@@ -1,0 +1,15 @@
+{
+  "id": "function-to-class",
+  "name": "Convert Function to Class",
+  "description": "Convert a function with internal state to a class",
+  "detector": "function\\s+([A-Z][a-zA-Z0-9]*)\\s*\\(\\s*\\)\\s*{\\s*(?:let|var|const)\\s+([a-zA-Z0-9_]+)\\s*=",
+  "category": "structure",
+  "confidence": 0.8,
+  "before": "function Calculator() {\n  let result = 0;\n  \n  function add(a) {\n    result += a;\n    return result;\n  }\n  \n  function subtract(a) {\n    result -= a;\n    return result;\n  }\n  \n  return {\n    add,\n    subtract\n  };\n}",
+  "after": "class Calculator {\n  constructor() {\n    this.result = 0;\n  }\n  \n  add(a) {\n    this.result += a;\n    return this.result;\n  }\n  \n  subtract(a) {\n    this.result -= a;\n    return this.result;\n  }\n}",
+  "guidelines": ["structure.classOrganization", "codeStyle.objectOrientation"],
+  "transformation": {
+    "type": "template",
+    "template": "class ${1} {\n  constructor() {\n    this.${2} = ${initialValue};\n  }\n\n  ${methods}\n}"
+  }
+}

@@ -1,0 +1,288 @@
+/**
+ * Auth Controller Tests
+ * 
+ * This module contains unit tests for the authentication controller.
+ * 
+ * @version 1.0.0
+ */
+
+import { Request, Response } from 'express';
+import * as authController from '../../controllers/auth.controller';
+import { AppError } from '../../middleware/errorHandler';
+import { generateToken } from '../../middleware/auth';
+
+// Mock dependencies
+jest.mock('../../middleware/auth', () => ({
+  generateToken: jest.fn().mockReturnValue('mock-token'),
+}));
+
+jest.mock('../../utils/logger', () => ({
+  logger: {
+    info: jest.fn(),
+    error: jest.fn(),
+  },
+}));
+
+describe('Auth Controller', () => {
+  let req: Partial<Request>;
+  let res: Partial<Response>;
+  let next: jest.Mock;
+  
+  beforeEach(() => {
+    req = {
+      body: {},
+      params: {},
+      user: {
+        id: '1',
+        email: 'test@example.com',
+        role: 'user',
+      },
+    };
+    
+    res = {
+      status: jest.fn().mockReturnThis(),
+      json: jest.fn(),
+    };
+    
+    next = jest.fn();
+  });
+  
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+  
+  describe('register', () => {
+    it('should register a new user and return token', async () => {
+      // Arrange
+      req.body = {
+        email: 'user@example.com',
+        password: 'password123',
+        name: 'John Doe',
+      };
+      
+      // Act
+      await authController.register(req as Request, res as Response, next);
+      
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        token: 'mock-token',
+        data: {
+          user: expect.objectContaining({
+            email: 'user@example.com',
+            name: 'John Doe',
+            role: 'user',
+          }),
+        },
+      });
+      expect(generateToken).toHaveBeenCalled();
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should return 400 if required fields are missing', async () => {
+      // Arrange
+      req.body = {
+        email: 'user@example.com',
+        // Missing password and name
+      };
+      
+      // Act
+      await authController.register(req as Request, res as Response, next);
+      
+      // Assert
+      expect(next).toHaveBeenCalledWith(expect.any(AppError));
+      expect(next.mock.calls[0][0].statusCode).toBe(400);
+      expect(next.mock.calls[0][0].message).toBe('Please provide email, password and name');
+    });
+  });
+  
+  describe('login', () => {
+    it('should login user and return token', async () => {
+      // Arrange
+      req.body = {
+        email: 'user@example.com',
+        password: 'password123',
+      };
+      
+      // Act
+      await authController.login(req as Request, res as Response, next);
+      
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        token: 'mock-token',
+        data: {
+          user: expect.objectContaining({
+            email: 'user@example.com',
+            role: 'user',
+          }),
+        },
+      });
+      expect(generateToken).toHaveBeenCalled();
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should return 400 if required fields are missing', async () => {
+      // Arrange
+      req.body = {
+        // Missing email and password
+      };
+      
+      // Act
+      await authController.login(req as Request, res as Response, next);
+      
+      // Assert
+      expect(next).toHaveBeenCalledWith(expect.any(AppError));
+      expect(next.mock.calls[0][0].statusCode).toBe(400);
+      expect(next.mock.calls[0][0].message).toBe('Please provide email and password');
+    });
+  });
+  
+  describe('logout', () => {
+    it('should logout user', async () => {
+      // Act
+      await authController.logout(req as Request, res as Response, next);
+      
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'Logged out successfully',
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+  
+  describe('getMe', () => {
+    it('should return current user', async () => {
+      // Act
+      await authController.getMe(req as Request, res as Response, next);
+      
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        data: {
+          user: req.user,
+        },
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+  
+  describe('updatePassword', () => {
+    it('should update password and return new token', async () => {
+      // Arrange
+      req.body = {
+        currentPassword: 'oldPassword',
+        newPassword: 'newPassword',
+      };
+      
+      // Act
+      await authController.updatePassword(req as Request, res as Response, next);
+      
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        token: 'mock-token',
+        message: 'Password updated successfully',
+      });
+      expect(generateToken).toHaveBeenCalled();
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should return 400 if required fields are missing', async () => {
+      // Arrange
+      req.body = {
+        // Missing currentPassword and newPassword
+      };
+      
+      // Act
+      await authController.updatePassword(req as Request, res as Response, next);
+      
+      // Assert
+      expect(next).toHaveBeenCalledWith(expect.any(AppError));
+      expect(next.mock.calls[0][0].statusCode).toBe(400);
+      expect(next.mock.calls[0][0].message).toBe('Please provide current password and new password');
+    });
+  });
+  
+  describe('forgotPassword', () => {
+    it('should send password reset token', async () => {
+      // Arrange
+      req.body = {
+        email: 'user@example.com',
+      };
+      
+      // Act
+      await authController.forgotPassword(req as Request, res as Response, next);
+      
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'Password reset token sent to email',
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should return 400 if email is missing', async () => {
+      // Arrange
+      req.body = {
+        // Missing email
+      };
+      
+      // Act
+      await authController.forgotPassword(req as Request, res as Response, next);
+      
+      // Assert
+      expect(next).toHaveBeenCalledWith(expect.any(AppError));
+      expect(next.mock.calls[0][0].statusCode).toBe(400);
+      expect(next.mock.calls[0][0].message).toBe('Please provide email');
+    });
+  });
+  
+  describe('resetPassword', () => {
+    it('should reset password', async () => {
+      // Arrange
+      req.params = {
+        token: 'reset-token',
+      };
+      req.body = {
+        password: 'newPassword',
+      };
+      
+      // Act
+      await authController.resetPassword(req as Request, res as Response, next);
+      
+      // Assert
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        status: 'success',
+        message: 'Password reset successfully',
+      });
+      expect(next).not.toHaveBeenCalled();
+    });
+    
+    it('should return 400 if password is missing', async () => {
+      // Arrange
+      req.params = {
+        token: 'reset-token',
+      };
+      req.body = {
+        // Missing password
+      };
+      
+      // Act
+      await authController.resetPassword(req as Request, res as Response, next);
+      
+      // Assert
+      expect(next).toHaveBeenCalledWith(expect.any(AppError));
+      expect(next.mock.calls[0][0].statusCode).toBe(400);
+      expect(next.mock.calls[0][0].message).toBe('Please provide password');
+    });
+  });
+});

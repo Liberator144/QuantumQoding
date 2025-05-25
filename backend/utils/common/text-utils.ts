@@ -1,0 +1,171 @@
+/**
+ * Text Utilities
+ * 
+ * This module provides utility functions for text processing.
+ * 
+ * @version 1.0.0
+ */
+
+/**
+ * Calculate Jaccard similarity between two strings
+ * @param text1 - First text
+ * @param text2 - Second text
+ * @param minTokenLength - Minimum token length to consider (default: 3)
+ * @returns Similarity score between 0 and 1
+ */
+export function calculateTextSimilarity(
+  text1: string,
+  text2: string,
+  minTokenLength: number = 3
+): number {
+  // Handle edge cases
+  if (!text1 || !text2) {
+    return 0;
+  }
+  
+  if (text1 === text2) {
+    return 1;
+  }
+  
+  // Tokenize texts
+  const tokens1 = new Set(
+    text1
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(token => token.length > minTokenLength)
+  );
+  
+  const tokens2 = new Set(
+    text2
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(token => token.length > minTokenLength)
+  );
+  
+  // Calculate Jaccard similarity
+  const intersection = new Set([...tokens1].filter(token => tokens2.has(token)));
+  const union = new Set([...tokens1, ...tokens2]);
+  
+  return union.size > 0 ? intersection.size / union.size : 0;
+}
+
+/**
+ * Split a name into words
+ * @param name - Name to split
+ * @returns Array of words
+ */
+export function splitIntoWords(name: string): string[] {
+  if (!name) {
+    return [];
+  }
+  
+  // Handle snake_case and kebab-case
+  if (name.includes('_')) {
+    return name.split('_').filter(Boolean);
+  }
+  
+  if (name.includes('-')) {
+    return name.split('-').filter(Boolean);
+  }
+  
+  // Handle camelCase and PascalCase
+  return name
+    .replace(/([A-Z])/g, ' $1')
+    .trim()
+    .split(' ')
+    .filter(Boolean);
+}
+
+/**
+ * Convert string to camelCase
+ * @param text - Text to convert
+ * @returns camelCase string
+ */
+export function toCamelCase(text: string): string {
+  const words = splitIntoWords(text);
+  
+  if (words.length === 0) {
+    return '';
+  }
+  
+  return words
+    .map((word, index) => {
+      const lowerWord = word.toLowerCase();
+      return index === 0 ? lowerWord : lowerWord.charAt(0).toUpperCase() + lowerWord.slice(1);
+    })
+    .join('');
+}
+
+/**
+ * Convert string to PascalCase
+ * @param text - Text to convert
+ * @returns PascalCase string
+ */
+export function toPascalCase(text: string): string {
+  const words = splitIntoWords(text);
+  
+  if (words.length === 0) {
+    return '';
+  }
+  
+  return words
+    .map(word => {
+      const lowerWord = word.toLowerCase();
+      return lowerWord.charAt(0).toUpperCase() + lowerWord.slice(1);
+    })
+    .join('');
+}
+
+/**
+ * Convert string to snake_case
+ * @param text - Text to convert
+ * @returns snake_case string
+ */
+export function toSnakeCase(text: string): string {
+  const words = splitIntoWords(text);
+  
+  if (words.length === 0) {
+    return '';
+  }
+  
+  return words.map(word => word.toLowerCase()).join('_');
+}
+
+/**
+ * Convert string to kebab-case
+ * @param text - Text to convert
+ * @returns kebab-case string
+ */
+export function toKebabCase(text: string): string {
+  const words = splitIntoWords(text);
+  
+  if (words.length === 0) {
+    return '';
+  }
+  
+  return words.map(word => word.toLowerCase()).join('-');
+}
+
+/**
+ * Apply template parameters to a string
+ * @param template - Template string with {{param}} placeholders
+ * @param params - Parameters object
+ * @returns Processed string with replaced placeholders
+ */
+export function applyTemplate(template: string, params: Record<string, any>): string {
+  if (!template) {
+    return '';
+  }
+  
+  let result = template;
+  
+  // Replace placeholders with parameters
+  for (const [key, value] of Object.entries(params)) {
+    const placeholder = new RegExp(`\\{\\{\\s*${key}\\s*\\}\\}`, 'g');
+    result = result.replace(placeholder, String(value));
+  }
+  
+  return result;
+}
