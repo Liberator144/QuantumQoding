@@ -15,7 +15,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { colors } from '../../design-system';
-import { BoundaryState, BoundaryType } from '../../../backend/interdimensional/boundary/BoundaryManager';
+import { BoundaryState, BoundaryType } from '../../types/backend-types';
 /**
  * Dimensional portal interface component
  */

@@ -22,6 +22,7 @@ const HelpScreen = lazy(() => import('../screens/help/HelpScreen'));
 const NotFoundScreen = lazy(() => import('../screens/NotFoundScreen'));
 const StarSystemScreen = lazy(() => import('../screens/star-systems/StarSystemScreen'));
 const FeatureScreen = lazy(() => import('../screens/star-systems/FeatureScreen'));
+const QuantumVisualizationTestScreen = lazy(() => import('../screens/test/QuantumVisualizationTestScreen'));
 
 // Loading component
 const QuantumLoading: React.FC = () => (
@@ -68,6 +69,7 @@ export const QuantumRouter: React.FC = () => {
                 <Route path="/profile" element={<TransitionWrapper requiresAuth><ProfileScreen /></TransitionWrapper>} />
                 <Route path="/settings" element={<TransitionWrapper requiresAuth><SettingsScreen /></TransitionWrapper>} />
                 <Route path="/help" element={<TransitionWrapper><HelpScreen /></TransitionWrapper>} />
+                <Route path="/test/quantum-visualization" element={<TransitionWrapper><QuantumVisualizationTestScreen /></TransitionWrapper>} />
                 
                 {/* Star system routes */}
                 {routes
