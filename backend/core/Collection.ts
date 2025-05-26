@@ -7,6 +7,14 @@
  */
 
 class Collection {
+  // Explicit TypeScript property declarations for quantum coherence
+  public name: string;
+  public db: any;
+  public config: any;
+  public data: any[];
+  public schema: any;
+  public adapter: any;
+
   /**
    * Create a new Collection instance
    * @param {string} name - Collection name

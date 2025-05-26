@@ -9,6 +9,8 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "downlevelIteration": true,
+    "jsx": "react-jsx",
+    "allowSyntheticDefaultImports": true,
 
     /* Enhanced Type Checking */
     "noImplicitAny": true,
@@ -25,7 +27,10 @@
       "ES2015.Iterable",
       "ES2015.Promise",
       "ES2015.Symbol",
-      "ES2018.AsyncIterable"
+      "ES2018.AsyncIterable",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker"
     ]
   },
   "include": [

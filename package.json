@@ -17,8 +17,10 @@
     "docs:generate": "typedoc --out docs/api --entryPointStrategy expand ./backend"
   },
   "devDependencies": {
+    "@types/d3": "^7.4.3",
     "@types/jest": "^29.5.12",
     "@types/node": "^22.15.21",
+    "@types/three": "^0.176.0",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "eslint": "^8.57.0",
@@ -40,13 +42,12 @@
   },
   "dependencies": {
     "@types/uuid": "^10.0.0",
-    "uuid": "^11.1.0",
-    "zod": "^3.22.4",
     "immer": "^10.0.3",
+    "nanoid": "^5.0.6",
     "rxjs": "^7.8.1",
-    "nanoid": "^5.0.6"
+    "uuid": "^11.1.0",
+    "zod": "^3.22.4"
   },
-
   "lint-staged": {
     "*.{js,ts,tsx}": [
       "eslint --fix",

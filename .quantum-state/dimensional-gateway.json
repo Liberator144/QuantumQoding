@@ -1,16 +1,11 @@
 {
   "version": "1.0.0",
-  "gateway_id": "5ED62711-8620-43C9-AB5F-2F62616BACC0",
-  "initialized": "2025-05-25T21:13:52.3NZ",
+  "gateway_id": "gateway-1748241137",
+  "initialized": "2025-05-26T06:32:17.3NZ",
   "status": "online",
   "dimensions": {
     "accessible": ["primary", "development", "testing"],
     "active": "development",
     "stability": "optimal"
-  },
-  "quantum_tunnels": {
-    "count": 3,
-    "bandwidth": "unlimited",
-    "latency": "0ms"
   }
 }

@@ -31,6 +31,10 @@ const { EventEmitter } = require('events');
  * context between different modes and systems.
  */
 class MessageBridge extends EventEmitter {
+  // Explicit TypeScript property declarations for quantum coherence
+  public config: any;
+  public state: any;
+
   /**
    * Create a new MessageBridge instance
    * @param {Object} options - Configuration options

@@ -15,6 +15,10 @@ const { EventEmitter } = require('events');
  * Provides a quantum-aware network for connecting components.
  */
 class NeuralFabric extends EventEmitter {
+  // Explicit TypeScript property declarations for quantum coherence
+  public config: any;
+  public state: any;
+
   /**
    * Create a new NeuralFabric instance
    * @param {Object} options - Configuration options

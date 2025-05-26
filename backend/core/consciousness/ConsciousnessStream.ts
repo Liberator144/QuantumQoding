@@ -15,6 +15,10 @@ const { EventEmitter } = require('events');
  * Manages data flows that maintain quantum coherence.
  */
 class ConsciousnessStream extends EventEmitter {
+  // Explicit TypeScript property declarations for quantum coherence
+  public config: any;
+  public state: any;
+
   /**
    * Create a new ConsciousnessStream instance
    * @param {Object} options - Configuration options

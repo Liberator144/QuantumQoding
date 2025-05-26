@@ -173,15 +173,6 @@ export function createSpatialAudio(src: string, options: AudioOptions = {}): Spa
     } catch (error) {
       console.warn('Spatial audio not supported:', error);
     }
-      (audio as any).setOrientation = (x: number, y: number, z: number) => {
-        panner.orientationX.setValueAtTime(x, audioContext.currentTime);
-        panner.orientationY.setValueAtTime(y, audioContext.currentTime);
-        panner.orientationZ.setValueAtTime(z, audioContext.currentTime);
-      };
-
-    } catch (error) {
-      console.warn('Spatial audio not supported:', error);
-    }
   }
 
   return audio;

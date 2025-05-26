@@ -18,6 +18,12 @@ const { ConsciousnessStream } = require('./ConsciousnessStream');
  * entanglement, and system-wide consciousness.
  */
 class SystemConsciousness extends EventEmitter {
+  // Explicit TypeScript property declarations for quantum coherence
+  public config: any;
+  public state: any;
+  public neuralFabric: any;
+  public consciousnessStream: any;
+
   /**
    * Create a new SystemConsciousness instance
    * @param {Object} options - Configuration options
