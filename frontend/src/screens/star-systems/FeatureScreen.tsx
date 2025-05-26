@@ -1,12 +1,16 @@
 /**
+ * TypeScript Migration
+ * Migrated from: FeatureScreen.js
+ * @version 2.0.0
+ */
+/**
  * Feature Screen Component
- * 
+ *
  * This component provides the interface for a specific feature within a star system
  * in the QQ-Verse project.
- * 
+ *
  * @version 1.0.0
  */
-
 import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -14,52 +18,35 @@ import { useQuantumRouter } from '../../router/useQuantumRouter';
 import { starSystems } from '../../router/routes';
 import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
 import { StarSystemRoute } from '../../router/StarSystemRoute';
-
-// Props interface
-interface FeatureScreenProps {
-  starSystem?: string;
-  feature?: string;
-}
-
 /**
  * Feature screen component
  */
-const FeatureScreen: React.FC<FeatureScreenProps> = ({ starSystem, feature }) => {
-  // Get router and audio
-  const { navigate } = useQuantumRouter();
-  const audio = useAudio();
-  
-  // Find star system and feature data
-  const starSystemData = starSystems.find(system => system.name === starSystem);
-  const featureData = starSystemData?.features.find(f => f.name === feature);
-  
-  // Play feature sound on mount
-  useEffect(() => {
-    if (featureData) {
-      audio.play('feature-enter', { volume: 0.4 });
-    }
-  }, [featureData?.name, audio]);
-  
-  // If star system or feature not found, show error
-  if (!starSystemData || !featureData) {
-    return (
-      <div className="flex items-center justify-center w-full h-full bg-gray-900">
+const FeatureScreen = ({ starSystem, feature }) => {
+    // Get router and audio
+    const { navigate } = useQuantumRouter();
+    const audio = useAudio();
+    // Find star system and feature data
+    const starSystemData = starSystems.find(system => system.name === starSystem);
+    const featureData = starSystemData?.features.find(f => f.name === feature);
+    // Play feature sound on mount
+    useEffect(() => {
+        if (featureData) {
+            audio.play('feature-enter', { volume: 0.4 });
+        }
+    }, [featureData?.name, audio]);
+    // If star system or feature not found, show error
+    if (!starSystemData || !featureData) {
+        return (<div className="flex items-center justify-center w-full h-full bg-gray-900">
         <div className="text-center">
           <h2 className="text-2xl font-bold text-red-500">Feature Not Found</h2>
           <p className="mt-2 text-gray-300">The feature you're looking for doesn't exist.</p>
-          <Link
-            to="/"
-            className="inline-block px-4 py-2 mt-4 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-          >
+          <Link to="/" className="inline-block px-4 py-2 mt-4 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">
             Return to Quantum Hub
           </Link>
         </div>
-      </div>
-    );
-  }
-  
-  return (
-    <StarSystemRoute>
+      </div>);
+    }
+    return (<StarSystemRoute>
       <div className="flex flex-col w-full h-full p-6">
         {/* Header */}
         <div className="mb-6">
@@ -79,22 +66,14 @@ const FeatureScreen: React.FC<FeatureScreenProps> = ({ starSystem, feature }) =>
             </div>
             
             <div className="flex space-x-2">
-              <button
-                onClick={() => {
-                  audio.play('click', { volume: 0.3 });
-                  navigate(starSystemData.path);
-                }}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-opacity-20 hover:bg-opacity-30"
-                style={{ backgroundColor: `${starSystemData.color}30` }}
-              >
+              <button onClick={() => {
+            audio.play('click', { volume: 0.3 });
+            navigate(starSystemData.path);
+        }} className="px-4 py-2 text-sm font-medium rounded-md bg-opacity-20 hover:bg-opacity-30" style={{ backgroundColor: `${starSystemData.color}30` }}>
                 Back to {starSystemData.name}
               </button>
               
-              <Link
-                to="/"
-                className="px-4 py-2 text-sm font-medium bg-gray-700 rounded-md hover:bg-gray-600"
-                onClick={() => audio.play('click', { volume: 0.3 })}
-              >
+              <Link to="/" className="px-4 py-2 text-sm font-medium bg-gray-700 rounded-md hover:bg-gray-600" onClick={() => audio.play('click', { volume: 0.3 })}>
                 Return to Hub
               </Link>
             </div>
@@ -103,23 +82,19 @@ const FeatureScreen: React.FC<FeatureScreenProps> = ({ starSystem, feature }) =>
         
         {/* Feature content */}
         <div className="flex-1 p-6 overflow-auto rounded-lg" style={{ backgroundColor: `${starSystemData.color}10` }}>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-          >
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
             {/* Placeholder content - this would be replaced with actual feature content */}
             <div className="text-center">
               <div className="inline-block p-4 mb-4 rounded-full" style={{ backgroundColor: `${starSystemData.color}20` }}>
                 <svg className="w-16 h-16" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 3a7 7 0 100 14 7 7 0 000-14zm-9 7a9 9 0 1118 0 9 9 0 01-18 0zm10.293-4.707a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L10 7.414V12a1 1 0 102 0V7.414l.293.293a1 1 0 001.414-1.414l-2-2z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M10 3a7 7 0 100 14 7 7 0 000-14zm-9 7a9 9 0 1118 0 9 9 0 01-18 0zm10.293-4.707a1 1 0 00-1.414 0l-2 2a1 1 0 101.414 1.414L10 7.414V12a1 1 0 102 0V7.414l.293.293a1 1 0 001.414-1.414l-2-2z" clipRule="evenodd"/>
                 </svg>
               </div>
               <h3 className="mb-2 text-2xl font-bold">Feature Under Construction</h3>
               <p className="mb-4 text-lg opacity-80">
                 This feature is currently being developed. Check back soon for updates!
               </p>
-              <div className="w-16 h-1 mx-auto mb-4 rounded-full" style={{ backgroundColor: starSystemData.color }} />
+              <div className="w-16 h-1 mx-auto mb-4 rounded-full" style={{ backgroundColor: starSystemData.color }}/>
               <p className="opacity-60">
                 Feature ID: {starSystemData.name.toLowerCase()}-{featureData.name.toLowerCase().replace(/\s+/g, '-')}
               </p>
@@ -127,8 +102,6 @@ const FeatureScreen: React.FC<FeatureScreenProps> = ({ starSystem, feature }) =>
           </motion.div>
         </div>
       </div>
-    </StarSystemRoute>
-  );
+    </StarSystemRoute>);
 };
-
 export default FeatureScreen;

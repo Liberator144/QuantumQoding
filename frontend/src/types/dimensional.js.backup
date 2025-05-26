@@ -1,0 +1,26 @@
+/**
+ * Dimensional Types
+ *
+ * This module provides type definitions for dimensional boundary management.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Boundary state enum
+ */
+export var BoundaryState;
+(function (BoundaryState) {
+    BoundaryState["OPEN"] = "open";
+    BoundaryState["PARTIALLY_OPEN"] = "partially_open";
+    BoundaryState["QUANTUM_ENTANGLED"] = "quantum_entangled";
+    BoundaryState["CLOSED"] = "closed";
+})(BoundaryState || (BoundaryState = {}));
+/**
+ * Harmonization strategy enum
+ */
+export var HarmonizationStrategy;
+(function (HarmonizationStrategy) {
+    HarmonizationStrategy["FULL"] = "full";
+    HarmonizationStrategy["PARTIAL"] = "partial";
+    HarmonizationStrategy["ADAPTIVE"] = "adaptive";
+})(HarmonizationStrategy || (HarmonizationStrategy = {}));

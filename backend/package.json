@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "start": "node dist/server/index.js",
-    "dev": "nodemon --exec ts-node server/index.ts",
+    "dev": "nodemon --exec ts-node server/index-simple.ts",
     "build": "tsc",
     "lint": "eslint . --ext .ts",
     "test": "jest --config server/tests/jest.config.js",

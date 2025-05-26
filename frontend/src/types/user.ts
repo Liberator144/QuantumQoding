@@ -1,107 +1,142 @@
 /**
  * User Types
- * 
+ *
  * This module provides type definitions for user management.
- * 
+ *
  * @version 1.0.0
  */
 
-/**
- * User interface
- */
+// User Core Types
 export interface User {
-  id: string;
-  name: string;
-  email: string;
-  bio?: string;
-  avatar?: string;
-  role: 'user' | 'admin';
-  coherenceLevel: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/**
- * Authentication credentials interface
- */
-export interface AuthCredentials {
+  readonly id: string;
   username: string;
-  password: string;
-}
-
-/**
- * Registration data interface
- */
-export interface RegistrationData {
-  name: string;
   email: string;
-  password: string;
-  confirmPassword: string;
-}
-
-/**
- * User profile update interface
- */
-export interface ProfileUpdate {
-  name?: string;
-  bio?: string;
+  firstName?: string;
+  lastName?: string;
   avatar?: string;
+  role: UserRole;
+  status: UserStatus;
+  preferences: UserPreferences;
+  metadata: UserMetadata;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-/**
- * Authentication result interface
- */
-export interface AuthResult {
+export interface UserMetadata {
+  lastLogin?: Date;
+  loginCount: number;
+  ipAddress?: string;
+  userAgent?: string;
+  location?: UserLocation;
+  quantumCoherence?: number;
+}
+
+export interface UserLocation {
+  country?: string;
+  region?: string;
+  city?: string;
+  timezone?: string;
+}
+
+export interface UserPreferences {
+  theme: 'light' | 'dark' | 'quantum';
+  language: string;
+  notifications: NotificationPreferences;
+  privacy: PrivacySettings;
+  accessibility: AccessibilitySettings;
+}
+
+export interface NotificationPreferences {
+  email: boolean;
+  push: boolean;
+  sms: boolean;
+  quantumAlerts: boolean;
+}
+
+export interface PrivacySettings {
+  profileVisibility: 'public' | 'private' | 'quantum';
+  dataSharing: boolean;
+  analytics: boolean;
+  dimensionalTracking: boolean;
+}
+
+export interface AccessibilitySettings {
+  highContrast: boolean;
+  largeText: boolean;
+  screenReader: boolean;
+  quantumEnhancement: boolean;
+}
+
+// User Role and Status
+export enum UserRole {
+  ADMIN = 'admin',
+  MODERATOR = 'moderator',
+  USER = 'user',
+  GUEST = 'guest',
+  QUANTUM_ARCHITECT = 'quantum_architect'
+}
+
+export enum UserStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUSPENDED = 'suspended',
+  PENDING = 'pending',
+  QUANTUM_ENTANGLED = 'quantum_entangled'
+}
+
+// Authentication Types
+export interface AuthUser {
   user: User;
   token: string;
+  refreshToken: string;
+  expiresAt: Date;
 }
 
-/**
- * User settings interface
- */
-export interface UserSettings {
-  theme: 'dark' | 'light' | 'system';
-  animations: boolean;
-  sounds: boolean;
-  notifications: boolean;
-  dimensionalEffects: boolean;
-  dataSync: boolean;
-  autoSave: boolean;
-  developerMode: boolean;
+export interface LoginCredentials {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
 }
 
-/**
- * User notification interface
- */
-export interface UserNotification {
-  id: string;
-  userId: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  title: string;
-  message: string;
-  read: boolean;
-  createdAt: string;
+export interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+  firstName?: string;
+  lastName?: string;
+  acceptTerms: boolean;
 }
 
-/**
- * User activity interface
- */
-export interface UserActivity {
-  id: string;
-  userId: string;
-  type: string;
-  description: string;
-  metadata: Record<string, any>;
-  createdAt: string;
+// User Management Types
+export interface UserUpdate {
+  username?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  avatar?: string;
+  preferences?: Partial<UserPreferences>;
 }
 
-/**
- * User preferences interface
- */
-export interface UserPreferences {
-  defaultStarSystem?: string;
-  favoriteStarSystems: string[];
-  recentStarSystems: string[];
-  dashboardLayout: Record<string, any>;
-  customColors: Record<string, string>;
+export interface UserQuery {
+  search?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  limit?: number;
+  offset?: number;
+  sortBy?: 'username' | 'email' | 'createdAt' | 'lastLogin';
+  sortOrder?: 'asc' | 'desc';
 }
+
+// Type Guards
+export const isValidUserRole = (role: string): role is UserRole => {
+  return Object.values(UserRole).includes(role as UserRole);
+};
+
+export const isValidUserStatus = (status: string): status is UserStatus => {
+  return Object.values(UserStatus).includes(status as UserStatus);
+};
+
+export const isUser = (obj: unknown): obj is User => {
+  return typeof obj === 'object' && obj !== null && 
+         'id' in obj && 'username' in obj && 'email' in obj;
+};

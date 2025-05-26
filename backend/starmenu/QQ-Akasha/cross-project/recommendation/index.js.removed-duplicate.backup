@@ -1,0 +1,20 @@
+/**
+ * Predictive Knowledge Recommendation Module
+ * Enables proactive recommendation of knowledge entities based on developer context
+ */
+// Core types and interfaces
+export * from './types';
+// Context analyzer
+export * from './context-analyzer';
+// Recommendation strategies
+export * from './strategies';
+// Learning and adaptation
+export * from './learning';
+// Code generation
+export * from './code-generation';
+// Recommendation engine
+export * from './engine';
+// Recommendation service
+export * from './recommendation-service';
+// IDE integration
+export * from './ide/ide-integration';

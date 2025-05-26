@@ -1,0 +1,516 @@
+/**
+ * User Controller
+ *
+ * This module defines the user management controllers for the QQ-Verse backend server.
+ *
+ * @version 1.0.0
+ */
+import { AppError } from '../middleware/errorHandler';
+import { logger } from '../utils/logger';
+/**
+ * Get all users
+ * @route   GET /api/v1/users
+ * @access  Private/Admin
+ */
+export const getAllUsers = async (req, res, next) => {
+    try {
+        // TODO: Implement user retrieval from database
+        // For now, we'll just return mock users
+        const users = [
+            {
+                id: '1',
+                email: 'admin@example.com',
+                name: 'Admin User',
+                role: 'admin',
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: '2',
+                email: 'user@example.com',
+                name: 'Regular User',
+                role: 'user',
+                createdAt: new Date().toISOString(),
+            },
+        ];
+        res.status(200).json({
+            status: 'success',
+            results: users.length,
+            data: {
+                users,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get all users error:', error);
+        next(error);
+    }
+};
+/**
+ * Get user by ID
+ * @route   GET /api/v1/users/:id
+ * @access  Private
+ */
+export const getUserById = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is requesting their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to access this user data', 403));
+        }
+        // TODO: Implement user retrieval from database
+        // For now, we'll just return a mock user
+        const user = {
+            id,
+            email: 'user@example.com',
+            name: 'Test User',
+            role: 'user',
+            createdAt: new Date().toISOString(),
+        };
+        res.status(200).json({
+            status: 'success',
+            data: {
+                user,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get user by ID error:', error);
+        next(error);
+    }
+};
+/**
+ * Create a new user
+ * @route   POST /api/v1/users
+ * @access  Private/Admin
+ */
+export const createUser = async (req, res, next) => {
+    try {
+        const { email, password, name, role } = req.body;
+        // Validate input
+        if (!email || !password || !name) {
+            return next(new AppError('Please provide email, password and name', 400));
+        }
+        // TODO: Implement user creation in database
+        // For now, we'll just return a mock user
+        const user = {
+            id: '3',
+            email,
+            name,
+            role: role || 'user',
+            createdAt: new Date().toISOString(),
+        };
+        res.status(201).json({
+            status: 'success',
+            data: {
+                user,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Create user error:', error);
+        next(error);
+    }
+};
+/**
+ * Update user
+ * @route   PUT /api/v1/users/:id
+ * @access  Private
+ */
+export const updateUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { name, email } = req.body;
+        // Check if user is updating their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to update this user', 403));
+        }
+        // TODO: Implement user update in database
+        // For now, we'll just return a mock user
+        const user = {
+            id,
+            email: email || 'user@example.com',
+            name: name || 'Test User',
+            role: 'user',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+        };
+        res.status(200).json({
+            status: 'success',
+            data: {
+                user,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Update user error:', error);
+        next(error);
+    }
+};
+/**
+ * Delete user
+ * @route   DELETE /api/v1/users/:id
+ * @access  Private
+ */
+export const deleteUser = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is deleting their own account or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to delete this user', 403));
+        }
+        // TODO: Implement user deletion in database
+        res.status(204).json({
+            status: 'success',
+            data: null,
+        });
+    }
+    catch (error) {
+        logger.error('Delete user error:', error);
+        next(error);
+    }
+}; /**
+ * Get user quantum states
+ * @route   GET /api/v1/users/:id/quantum-states
+ * @access  Private
+ */
+export const getUserQuantumStates = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is requesting their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to access this user data', 403));
+        }
+        // TODO: Implement quantum state retrieval from database
+        // For now, we'll just return mock quantum states
+        const quantumStates = [
+            {
+                id: '1',
+                userId: id,
+                properties: {
+                    name: 'Primary State',
+                    type: 'consciousness',
+                    coherenceLevel: 0.95,
+                },
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: '2',
+                userId: id,
+                properties: {
+                    name: 'Secondary State',
+                    type: 'data',
+                    coherenceLevel: 0.87,
+                },
+                createdAt: new Date().toISOString(),
+            },
+        ];
+        res.status(200).json({
+            status: 'success',
+            results: quantumStates.length,
+            data: {
+                quantumStates,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get user quantum states error:', error);
+        next(error);
+    }
+};
+/**
+ * Get user consciousness streams
+ * @route   GET /api/v1/users/:id/consciousness-streams
+ * @access  Private
+ */
+export const getUserConsciousnessStreams = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is requesting their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to access this user data', 403));
+        }
+        // TODO: Implement consciousness stream retrieval from database
+        // For now, we'll just return mock consciousness streams
+        const consciousnessStreams = [
+            {
+                id: '1',
+                userId: id,
+                name: 'Primary Stream',
+                status: 'active',
+                packetCount: 42,
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: '2',
+                userId: id,
+                name: 'Secondary Stream',
+                status: 'inactive',
+                packetCount: 17,
+                createdAt: new Date().toISOString(),
+            },
+        ];
+        res.status(200).json({
+            status: 'success',
+            results: consciousnessStreams.length,
+            data: {
+                consciousnessStreams,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get user consciousness streams error:', error);
+        next(error);
+    }
+}; /**
+ * Get user neural fabric nodes
+ * @route   GET /api/v1/users/:id/neural-fabric-nodes
+ * @access  Private
+ */
+export const getUserNeuralFabricNodes = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is requesting their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to access this user data', 403));
+        }
+        // TODO: Implement neural fabric node retrieval from database
+        // For now, we'll just return mock neural fabric nodes
+        const neuralFabricNodes = [
+            {
+                id: '1',
+                userId: id,
+                name: 'Primary Node',
+                type: 'consciousness',
+                activationLevel: 0.92,
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: '2',
+                userId: id,
+                name: 'Secondary Node',
+                type: 'data',
+                activationLevel: 0.78,
+                createdAt: new Date().toISOString(),
+            },
+        ];
+        res.status(200).json({
+            status: 'success',
+            results: neuralFabricNodes.length,
+            data: {
+                neuralFabricNodes,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get user neural fabric nodes error:', error);
+        next(error);
+    }
+};
+/**
+ * Get user dimensional boundaries
+ * @route   GET /api/v1/users/:id/dimensional-boundaries
+ * @access  Private
+ */
+export const getUserDimensionalBoundaries = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is requesting their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to access this user data', 403));
+        }
+        // TODO: Implement dimensional boundary retrieval from database
+        // For now, we'll just return mock dimensional boundaries
+        const dimensionalBoundaries = [
+            {
+                id: '1',
+                userId: id,
+                name: 'Primary Boundary',
+                type: 'permeable',
+                state: 'open',
+                createdAt: new Date().toISOString(),
+            },
+            {
+                id: '2',
+                userId: id,
+                name: 'Secondary Boundary',
+                type: 'semi-permeable',
+                state: 'partially-open',
+                createdAt: new Date().toISOString(),
+            },
+        ];
+        res.status(200).json({
+            status: 'success',
+            results: dimensionalBoundaries.length,
+            data: {
+                dimensionalBoundaries,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get user dimensional boundaries error:', error);
+        next(error);
+    }
+}; /**
+ * Get user activity log
+ * @route   GET /api/v1/users/:id/activity-log
+ * @access  Private
+ */
+export const getUserActivityLog = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is requesting their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to access this user data', 403));
+        }
+        // TODO: Implement activity log retrieval from database
+        // For now, we'll just return mock activity log
+        const activityLog = [
+            {
+                id: '1',
+                userId: id,
+                action: 'login',
+                timestamp: new Date(Date.now() - 3600000).toISOString(),
+                details: {
+                    ip: '192.168.1.1',
+                    userAgent: 'Mozilla/5.0',
+                },
+            },
+            {
+                id: '2',
+                userId: id,
+                action: 'create_quantum_state',
+                timestamp: new Date(Date.now() - 1800000).toISOString(),
+                details: {
+                    stateId: '1',
+                    stateName: 'Primary State',
+                },
+            },
+        ];
+        res.status(200).json({
+            status: 'success',
+            results: activityLog.length,
+            data: {
+                activityLog,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get user activity log error:', error);
+        next(error);
+    }
+};
+/**
+ * Update user preferences
+ * @route   PUT /api/v1/users/:id/preferences
+ * @access  Private
+ */
+export const updateUserPreferences = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { preferences } = req.body;
+        // Check if user is updating their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to update this user', 403));
+        }
+        // Validate input
+        if (!preferences) {
+            return next(new AppError('Please provide preferences', 400));
+        }
+        // TODO: Implement user preferences update in database
+        // For now, we'll just return mock preferences
+        const updatedPreferences = {
+            ...preferences,
+            updatedAt: new Date().toISOString(),
+        };
+        res.status(200).json({
+            status: 'success',
+            data: {
+                preferences: updatedPreferences,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Update user preferences error:', error);
+        next(error);
+    }
+}; /**
+ * Get user permissions
+ * @route   GET /api/v1/users/:id/permissions
+ * @access  Private
+ */
+export const getUserPermissions = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        // Check if user is requesting their own data or is an admin
+        if (req.user.id !== id && req.user.role !== 'admin') {
+            return next(new AppError('You do not have permission to access this user data', 403));
+        }
+        // TODO: Implement permissions retrieval from database
+        // For now, we'll just return mock permissions
+        const permissions = {
+            userId: id,
+            role: req.user.id === id ? req.user.role : 'user',
+            capabilities: [
+                'read:quantum_states',
+                'write:quantum_states',
+                'read:consciousness_streams',
+                'write:consciousness_streams',
+                'read:neural_fabric',
+                'write:neural_fabric',
+                'read:dimensional_boundaries',
+                'write:dimensional_boundaries',
+            ],
+            restrictions: [],
+            updatedAt: new Date().toISOString(),
+        };
+        res.status(200).json({
+            status: 'success',
+            data: {
+                permissions,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Get user permissions error:', error);
+        next(error);
+    }
+};
+/**
+ * Update user permissions
+ * @route   PUT /api/v1/users/:id/permissions
+ * @access  Private/Admin
+ */
+export const updateUserPermissions = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const { role, capabilities, restrictions } = req.body;
+        // Validate input
+        if (!role && !capabilities && !restrictions) {
+            return next(new AppError('Please provide role, capabilities, or restrictions', 400));
+        }
+        // TODO: Implement permissions update in database
+        // For now, we'll just return mock permissions
+        const updatedPermissions = {
+            userId: id,
+            role: role || 'user',
+            capabilities: capabilities || [
+                'read:quantum_states',
+                'write:quantum_states',
+                'read:consciousness_streams',
+                'write:consciousness_streams',
+            ],
+            restrictions: restrictions || [],
+            updatedAt: new Date().toISOString(),
+        };
+        res.status(200).json({
+            status: 'success',
+            data: {
+                permissions: updatedPermissions,
+            },
+        });
+    }
+    catch (error) {
+        logger.error('Update user permissions error:', error);
+        next(error);
+    }
+};

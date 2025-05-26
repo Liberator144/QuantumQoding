@@ -14,6 +14,26 @@ import { DimensionalGateway } from './dimensions';
 import { EvolutionEngine } from './evolution';
 
 /**
+/**
+ * Registration options interface
+ * (moved outside of `UltimateCore` class to avoid a compile-time error)
+ */
+export interface RegistrationOptions {
+  /** Component capabilities */
+  capabilities?: string[];
+  /** Component dependencies */
+  dependencies?: string[];
+  /** Evolution priority */
+  evolutionPriority?: number;
+  /** Evolution rate */
+  evolutionRate?: number;
+  /** Maximum evolution level */
+  maxEvolutionLevel?: number;
+  /** Initial evolution level */
+  initialEvolutionLevel?: number;
+}
+
+/**
  * UltimateCore configuration options interface
  */
 export interface UltimateCoreOptions {
@@ -65,8 +85,9 @@ export interface UltimateCoreState {
  * Provides a unified interface for accessing all core components.
  */
 class UltimateCore extends EventEmitter {
+  // Add definite assignment assertions
   /** Configuration options */
-  public config: {
+  public config!: {
     debugMode: boolean;
     consciousness: Record<string, any>;
     quantum: Record<string, any>;
@@ -75,22 +96,22 @@ class UltimateCore extends EventEmitter {
   };
 
   /** System state */
-  public state: UltimateCoreState;
+  public state!: UltimateCoreState;
 
   /** Consciousness system */
-  public consciousness: SystemConsciousness;
+  public consciousness!: SystemConsciousness;
 
   /** Quantum system */
-  public quantum: {
+  public quantum!: {
     processor: QuantumProcessor;
     entanglement: QuantumEntanglement;
   };
 
   /** Dimensional gateway */
-  public dimensions: DimensionalGateway;
+  public dimensions!: DimensionalGateway;
 
   /** Evolution engine */
-  public evolution: EvolutionEngine;
+  public evolution!: EvolutionEngine;
 
   /**
    * Create a new UltimateCore instance
@@ -102,13 +123,13 @@ class UltimateCore extends EventEmitter {
     // Configuration
     this.config = {
       // Debug mode
-      debugMode: options.debugMode || false,
+      debugMode: options.debugMode ?? false,
 
       // Component options
-      consciousness: options.consciousness || {},
-      quantum: options.quantum || {},
-      dimensions: options.dimensions || {},
-      evolution: options.evolution || {},
+      consciousness: options.consciousness ?? {},
+      quantum: options.quantum ?? {},
+      dimensions: options.dimensions ?? {},
+      evolution: options.evolution ?? {},
     };
 
     // State
@@ -250,7 +271,7 @@ class UltimateCore extends EventEmitter {
     });
 
     this.evolution.on('component:evolved', data => {
-      this.log(`Component evolved: ${data.componentId} to level ${data.newLevel}`);
+      this.log(`Component evolved: ${data.componentId} to ${data.newLevel}`);
       this.emit('evolution:componentEvolved', data);
     });
   }
@@ -285,31 +306,13 @@ class UltimateCore extends EventEmitter {
   }
 
   /**
-   * Registration options interface
-   */
-  interface RegistrationOptions {
-    /** Component capabilities */
-    capabilities?: string[];
-    /** Component dependencies */
-    dependencies?: string[];
-    /** Evolution priority */
-    evolutionPriority?: number;
-    /** Evolution rate */
-    evolutionRate?: number;
-    /** Maximum evolution level */
-    maxEvolutionLevel?: number;
-    /** Initial evolution level */
-    initialEvolutionLevel?: number;
-  }
-
-  /**
    * Register a component in the system
    * @param componentId - Component ID
    * @param componentType - Component type
    * @param options - Registration options
    * @returns This instance for chaining
    */
-  public registerComponent(componentId: string, componentType: string, options: RegistrationOptions = {}): UltimateCore {
+  public registerComponent(componentId: string, componentType: string, options: RegistrationOptions = {}): this {
     // Register in consciousness system
     this.consciousness.registerComponent(
       componentId,
@@ -320,10 +323,10 @@ class UltimateCore extends EventEmitter {
 
     // Register in evolution engine
     this.evolution.registerComponent(componentId, {
-      evolutionPriority: options.evolutionPriority || 1,
-      evolutionRate: options.evolutionRate || 0.1,
-      maxEvolutionLevel: options.maxEvolutionLevel || 10,
-      initialEvolutionLevel: options.initialEvolutionLevel || 1,
+      evolutionPriority: options.evolutionPriority ?? 1,
+      evolutionRate: options.evolutionRate ?? 0.1,
+      maxEvolutionLevel: options.maxEvolutionLevel ?? 10,
+      initialEvolutionLevel: options.initialEvolutionLevel ?? 1,
     });
 
     // Log registration
@@ -337,7 +340,7 @@ class UltimateCore extends EventEmitter {
    * @param componentId - Component ID
    * @returns This instance for chaining
    */
-  public unregisterComponent(componentId: string): UltimateCore {
+  public unregisterComponent(componentId: string): this {
     // Unregister from consciousness system
     this.consciousness.unregisterComponent(componentId);
 
@@ -440,30 +443,10 @@ class UltimateCore extends EventEmitter {
   }
 
   /**
-   * System state interface
-   */
-  export interface SystemStateSnapshot {
-    status: SystemStatus;
-    componentStatus: {
-      consciousness: ComponentStatus;
-      quantum: ComponentStatus;
-      dimensions: ComponentStatus;
-      evolution: ComponentStatus;
-    };
-    consciousness: any;
-    quantum: {
-      processor: any;
-      entanglement: any;
-    };
-    dimensions: any;
-    evolution: any;
-  }
-
-  /**
    * Get the system state
-   * @returns System state snapshot
+   * @returns {Object} System state
    */
-  public getState(): SystemStateSnapshot {
+  getState() {
     return {
       status: this.state.status,
       componentStatus: { ...this.state.componentStatus },
@@ -479,14 +462,14 @@ class UltimateCore extends EventEmitter {
 
   /**
    * Log message if debug mode is enabled
-   * @param message - Message to log
+   * @param {string} message - Message to log
    * @private
    */
-  private log(message: string): void {
-    if (this.config.debugMode) {
-      console.log(`[UltimateCore] ${message}`);
+  log(message: string, level: 'debug' | 'info' | 'warn' | 'error' = 'info'): void {
+    if (this.config.debugMode || level !== 'debug') {
+      console.log(`[UltimateCore][${level.toUpperCase()}] ${message}`);
     }
-  }
+   }
 }
 
 export { UltimateCore };

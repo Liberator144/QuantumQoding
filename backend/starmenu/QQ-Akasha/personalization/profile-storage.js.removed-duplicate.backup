@@ -1,0 +1,152 @@
+/**
+ * User Profile Storage for Personalization System
+ */
+import { v4 as uuidv4 } from 'uuid';
+/**
+ * In-memory implementation of profile storage
+ */
+export class InMemoryProfileStorage {
+    constructor() {
+        this.profiles = new Map();
+        this.interactions = new Map();
+    }
+    /**
+     * Get a user profile by ID
+     */
+    async getProfile(userId) {
+        return this.profiles.get(userId) || null;
+    }
+    /**
+     * Create a new user profile
+     */
+    async createProfile(name, metadata = {}) {
+        const id = uuidv4();
+        const now = new Date();
+        const profile = {
+            id,
+            name,
+            createdAt: now,
+            updatedAt: now,
+            preferences: [],
+            recentInteractions: [],
+            projectContexts: [],
+            metadata,
+        };
+        this.profiles.set(id, profile);
+        this.interactions.set(id, []);
+        return profile;
+    }
+    /**
+     * Update a user profile
+     */
+    async updateProfile(userId, updates) {
+        const profile = this.profiles.get(userId);
+        if (!profile) {
+            throw new Error(`Profile with ID ${userId} not found`);
+        }
+        const updatedProfile = {
+            ...profile,
+            ...updates,
+            id: profile.id, // Ensure ID doesn't change
+            createdAt: profile.createdAt, // Ensure creation date doesn't change
+            updatedAt: new Date(), // Update the updated timestamp
+        };
+        this.profiles.set(userId, updatedProfile);
+        return updatedProfile;
+    }
+    /**
+     * Delete a user profile
+     */
+    async deleteProfile(userId) {
+        const deleted = this.profiles.delete(userId);
+        this.interactions.delete(userId);
+        return deleted;
+    }
+    /**
+     * Add a user interaction
+     */
+    async addInteraction(interaction) {
+        const id = uuidv4();
+        const newInteraction = {
+            ...interaction,
+            id,
+        };
+        // Get or create the user's interaction array
+        if (!this.interactions.has(interaction.userId)) {
+            this.interactions.set(interaction.userId, []);
+        }
+        const userInteractions = this.interactions.get(interaction.userId);
+        userInteractions.push(newInteraction);
+        // Update the profile's recent interactions
+        const profile = this.profiles.get(interaction.userId);
+        if (profile) {
+            profile.recentInteractions.push(newInteraction);
+            // Keep only the most recent interactions
+            if (profile.recentInteractions.length > 20) {
+                profile.recentInteractions = profile.recentInteractions.slice(-20);
+            }
+            profile.updatedAt = new Date();
+            this.profiles.set(interaction.userId, profile);
+        }
+        return newInteraction;
+    }
+    /**
+     * Get user interactions
+     */
+    async getInteractions(userId, limit) {
+        const userInteractions = this.interactions.get(userId) || [];
+        // Sort by timestamp (newest first)
+        const sorted = [...userInteractions].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+        // Apply limit if specified
+        if (limit !== undefined) {
+            return sorted.slice(0, limit);
+        }
+        return sorted;
+    }
+    /**
+     * Set a user preference
+     */
+    async setPreference(userId, preference) {
+        const profile = this.profiles.get(userId);
+        if (!profile) {
+            throw new Error(`Profile with ID ${userId} not found`);
+        }
+        const now = new Date();
+        const newPreference = {
+            ...preference,
+            updatedAt: now,
+        };
+        // Check if this preference already exists
+        const existingIndex = profile.preferences.findIndex(p => p.category === preference.category && p.key === preference.key);
+        if (existingIndex >= 0) {
+            // Update existing preference
+            profile.preferences[existingIndex] = newPreference;
+        }
+        else {
+            // Add new preference
+            profile.preferences.push(newPreference);
+        }
+        profile.updatedAt = now;
+        this.profiles.set(userId, profile);
+        return newPreference;
+    }
+    /**
+     * Get user preferences
+     */
+    async getPreferences(userId, category, key) {
+        const profile = this.profiles.get(userId);
+        if (!profile) {
+            return [];
+        }
+        let preferences = profile.preferences;
+        // Filter by category if specified
+        if (category) {
+            preferences = preferences.filter(p => p.category === category);
+        }
+        // Filter by key if specified
+        if (key) {
+            preferences = preferences.filter(p => p.key === key);
+        }
+        return preferences;
+    }
+}

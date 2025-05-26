@@ -1,0 +1,22 @@
+/**
+ * Core Module
+ *
+ * This module exports all core components.
+ *
+ * @version 1.0.0
+ */
+import { UltimateCore } from './UltimateCore';
+import * as consciousness from './consciousness';
+import * as quantum from './quantum';
+import * as dimensions from './dimensions';
+import * as evolution from './evolution';
+/**
+ * Creates and returns a new {@link UltimateCore} instance with optional configuration.
+ *
+ * @param options - Optional configuration settings for the core instance.
+ * @returns A new {@link UltimateCore} initialized with the provided options.
+ */
+export function createCore(options = {}) {
+    return new UltimateCore(options);
+}
+export { UltimateCore, consciousness, quantum, dimensions, evolution };

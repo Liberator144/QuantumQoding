@@ -1,0 +1,91 @@
+/**
+ * Base Component for Integration Hub
+ * Provides common functionality for all components
+ */
+import { v4 as uuidv4 } from 'uuid';
+/**
+ * Base class for all integration components
+ */
+export class BaseComponent {
+    constructor(hub, name, type, id = uuidv4()) {
+        this.initialized = false;
+        this.active = false;
+        this.hub = hub;
+        this.name = name;
+        this.type = type;
+        this.id = id;
+    }
+    /**
+     * Initialize the component
+     */
+    async initialize() {
+        if (this.initialized) {
+            return;
+        }
+        try {
+            await this.initializeComponent();
+            this.initialized = true;
+            this.active = true;
+            this.error = undefined;
+        }
+        catch (error) {
+            this.error = `Initialization error: ${error}`;
+            throw error;
+        }
+    }
+    /**
+     * Shutdown the component
+     */
+    async shutdown() {
+        if (!this.initialized) {
+            return;
+        }
+        try {
+            await this.shutdownComponent();
+            this.active = false;
+        }
+        catch (error) {
+            this.error = `Shutdown error: ${error}`;
+            throw error;
+        }
+        finally {
+            this.initialized = false;
+        }
+    }
+    /**
+     * Get component status
+     */
+    async getStatus() {
+        const details = await this.getComponentDetails();
+        return {
+            initialized: this.initialized,
+            active: this.active,
+            error: this.error,
+            details,
+        };
+    }
+    /**
+     * Send a message through the hub
+     */
+    sendMessage(event, payload, target, metadata) {
+        this.hub.sendMessage({
+            event,
+            source: this.id,
+            target,
+            payload,
+            metadata,
+        });
+    }
+    /**
+     * Subscribe to messages
+     */
+    on(event, listener) {
+        this.hub.on(event, listener, this.id);
+    }
+    /**
+     * Unsubscribe from messages
+     */
+    off(event, listener) {
+        this.hub.off(event, listener, this.id);
+    }
+}

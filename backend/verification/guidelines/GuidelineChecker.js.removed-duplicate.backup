@@ -1,0 +1,617 @@
+"use strict";
+/**
+ * GuidelineChecker
+ *
+ * Verifies compliance with the .augment-guidelines document.
+ *
+ * @version 1.0.0
+ */
+const fs = require('fs').promises;
+const path = require('path');
+const { EventEmitter } = require('events');
+const DocumentationChecker = require('./checkers/DocumentationChecker');
+const StructureChecker = require('./checkers/StructureChecker');
+const CodeStyleChecker = require('./checkers/CodeStyleChecker');
+const TestingChecker = require('./checkers/TestingChecker');
+/**
+ * GuidelineChecker
+ *
+ * Verifies compliance with the .augment-guidelines document.
+ */
+class GuidelineChecker extends EventEmitter {
+    /**
+     * Create a new GuidelineChecker instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        super();
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Base directory
+            baseDir: process.cwd(),
+            // Guidelines path
+            guidelinesPath: '.augment-guidelines',
+            // Whether to enforce all guidelines strictly
+            strictMode: true,
+            // File for documenting justified overrides
+            overrideFile: '.guideline-overrides.json',
+            // Context-specific guidelines
+            contextSpecificGuidelines: null,
+            // Merge with provided options
+            ...options,
+        };
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the guideline checker
+     * @private
+     */
+    _init() {
+        this.log('Initializing GuidelineChecker');
+        try {
+            // Parse guidelines
+            this.guidelines = this._parseGuidelines();
+            // Load overrides
+            this.overrides = this._loadOverrides();
+            // Initialize checkers
+            this.checkers = this._initializeCheckers();
+            this.log('GuidelineChecker initialized');
+        }
+        catch (error) {
+            this.log(`Initialization error: ${error.message}`);
+            this.emit('error', error);
+        }
+    }
+    /**
+     * Check implementation against guidelines
+     * @param {string} targetPath - Path to the implementation to check
+     * @param {Object} options - Check options
+     * @returns {Object} Check result
+     */
+    check(targetPath, options = {}) {
+        try {
+            this.log(`Checking guidelines compliance for: ${targetPath}`);
+            // For simplicity, return a mock result
+            // In a real implementation, this would perform actual checks
+            const mockResults = {
+                documentation: {
+                    violations: [
+                        {
+                            guideline: 'documentation.componentGuides',
+                            path: targetPath,
+                            message: 'Component guide not found',
+                            severity: 'warning',
+                        },
+                    ],
+                },
+                structure: {
+                    violations: [],
+                },
+                codeStyle: {
+                    violations: [],
+                },
+                testing: {
+                    violations: [
+                        {
+                            guideline: 'testing.unitTests',
+                            path: targetPath,
+                            message: 'Unit tests not found',
+                            severity: 'critical',
+                        },
+                    ],
+                },
+            };
+            // Analyze results
+            const analysis = this._analyzeResults(mockResults);
+            // Generate report
+            const report = this._generateReport(targetPath, mockResults, analysis);
+            this.log(`Guidelines compliance check completed for: ${targetPath}`);
+            this.emit('check-completed', { targetPath, report });
+            return report;
+        }
+        catch (error) {
+            this.log(`Check error: ${error.message}`);
+            this.emit('error', error);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Generate a checklist based on the guidelines relevant to the target
+     * @param {string} targetPath - Path to the implementation
+     * @param {Object} options - Checklist options
+     * @returns {Object} Generated checklist
+     */
+    generateChecklist(targetPath, options = {}) {
+        try {
+            this.log(`Generating guidelines checklist for: ${targetPath}`);
+            // For simplicity, generate a mock checklist
+            // In a real implementation, this would generate a checklist based on the guidelines
+            const componentName = path.basename(targetPath);
+            const checklist = {
+                componentName,
+                targetPath,
+                timestamp: new Date().toISOString(),
+                items: [
+                    {
+                        category: 'Documentation',
+                        key: 'componentGuides',
+                        description: 'Create comprehensive guides in the `docs/guides/` directory for all new significant components or modules.',
+                        required: true,
+                        status: 'pending',
+                        notes: '',
+                    },
+                    {
+                        category: 'Documentation',
+                        key: 'exampleFiles',
+                        description: 'Create illustrative example files in the `examples/` directory to demonstrate practical usage of new components or features.',
+                        required: true,
+                        status: 'pending',
+                        notes: '',
+                    },
+                    {
+                        category: 'Testing',
+                        key: 'unitTests',
+                        description: 'Create comprehensive unit tests for all individual components, classes, and non-trivial functions.',
+                        required: true,
+                        status: 'pending',
+                        notes: '',
+                    },
+                ],
+            };
+            this.log(`Guidelines checklist generated for: ${targetPath}`);
+            this.emit('checklist-generated', { targetPath, checklist });
+            return checklist;
+        }
+        catch (error) {
+            this.log(`Checklist generation error: ${error.message}`);
+            this.emit('error', error);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Validate an override
+     * @param {Object} override - Override to validate
+     * @returns {Object} Validation result
+     */
+    validateOverride(override) {
+        try {
+            this.log(`Validating override: ${override.guideline}`);
+            // Check if override has required fields
+            if (!override.guideline) {
+                throw new Error('Override must specify a guideline');
+            }
+            if (!override.path) {
+                throw new Error('Override must specify a path');
+            }
+            if (!override.justification) {
+                throw new Error('Override must include a justification');
+            }
+            // Check if guideline exists
+            const guidelineExists = this._guidelineExists(override.guideline);
+            if (!guidelineExists) {
+                throw new Error(`Guideline does not exist: ${override.guideline}`);
+            }
+            // Check justification length
+            if (override.justification.length < 50) {
+                throw new Error('Justification must be at least 50 characters long');
+            }
+            // Check if alternative approach is provided
+            if (!override.alternativeApproach) {
+                throw new Error('Override must include an alternative approach');
+            }
+            // Check if impact assessment is provided
+            if (!override.impactAssessment) {
+                throw new Error('Override must include an impact assessment');
+            }
+            this.log(`Override validated: ${override.guideline}`);
+            return {
+                success: true,
+                override,
+            };
+        }
+        catch (error) {
+            this.log(`Override validation error: ${error.message}`);
+            this.emit('error', error);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Parse guidelines from file
+     * @returns {Object} Parsed guidelines
+     * @private
+     */
+    _parseGuidelines() {
+        try {
+            // If context-specific guidelines are provided, use them
+            if (this.config.contextSpecificGuidelines) {
+                return this.config.contextSpecificGuidelines;
+            }
+            // For simplicity, return hardcoded guidelines
+            // In a real implementation, this would parse from file
+            const guidelines = {
+                documentation: this._extractDocumentationGuidelines(''),
+                structure: this._extractStructureGuidelines(''),
+                codeStyle: this._extractCodeStyleGuidelines(''),
+                testing: this._extractTestingGuidelines(''),
+            };
+            return guidelines;
+        }
+        catch (error) {
+            this.log(`Parse guidelines error: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Extract documentation guidelines from content
+     * @param {string} content - Guidelines content
+     * @returns {Object} Documentation guidelines
+     * @private
+     */
+    _extractDocumentationGuidelines(content) {
+        // In a real implementation, this would parse the guidelines content
+        // and extract documentation-related guidelines
+        return {
+            componentGuides: {
+                required: true,
+                description: 'Create comprehensive guides in the `docs/guides/` directory for all new significant components or modules.',
+            },
+            exampleFiles: {
+                required: true,
+                description: 'Create illustrative example files in the `examples/` directory to demonstrate practical usage of new components or features.',
+            },
+            jsDocComments: {
+                required: true,
+                description: 'Rigorously document all public APIs (classes, methods, properties, functions) using JSDoc comments.',
+            },
+        };
+    }
+    /**
+     * Extract structure guidelines from content
+     * @param {string} content - Guidelines content
+     * @returns {Object} Structure guidelines
+     * @private
+     */
+    _extractStructureGuidelines(content) {
+        // In a real implementation, this would parse the guidelines content
+        // and extract structure-related guidelines
+        return {
+            directoryStructure: {
+                required: true,
+                description: 'Place components in the appropriate module directory. Directory names should be lowercase and hyphenated if multiple words.',
+            },
+            fileOrganization: {
+                required: true,
+                description: 'Create a main component file using PascalCase. Create separate files for distinct subcomponents or helper classes.',
+            },
+            integration: {
+                required: true,
+                description: "Update the parent module's `index.js` file to re-export the new component or its encapsulating module.",
+            },
+        };
+    }
+    /**
+     * Extract code style guidelines from content
+     * @param {string} content - Guidelines content
+     * @returns {Object} Code style guidelines
+     * @private
+     */
+    _extractCodeStyleGuidelines(content) {
+        // In a real implementation, this would parse the guidelines content
+        // and extract code style-related guidelines
+        return {
+            namingConventions: {
+                required: true,
+                description: 'Use `camelCase` for variables, function names, and object properties. Use `PascalCase` for class names.',
+            },
+            fileStructure: {
+                required: true,
+                description: 'Start each `.js` file with a JSDoc file header comment outlining its purpose and author/version if applicable.',
+            },
+            errorHandling: {
+                required: true,
+                description: 'Utilize `try/catch` blocks for operations that are known to be error-prone. Provide meaningful, informative error messages.',
+            },
+        };
+    }
+    /**
+     * Extract testing guidelines from content
+     * @param {string} content - Guidelines content
+     * @returns {Object} Testing guidelines
+     * @private
+     */
+    _extractTestingGuidelines(content) {
+        // In a real implementation, this would parse the guidelines content
+        // and extract testing-related guidelines
+        return {
+            unitTests: {
+                required: true,
+                description: 'Create comprehensive unit tests for all individual components, classes, and non-trivial functions.',
+            },
+            integrationTests: {
+                required: true,
+                description: 'Create integration tests to verify the interactions and contracts between collaborating components or modules.',
+            },
+            testOrganization: {
+                required: true,
+                description: 'Organize test files in a `tests` directory that mirrors the `src` directory structure.',
+            },
+            testAutomation: {
+                required: true,
+                description: 'Automate all tests to ensure they can be run consistently and efficiently.',
+            },
+        };
+    }
+    /**
+     * Load overrides from file
+     * @returns {Object} Loaded overrides
+     * @private
+     */
+    _loadOverrides() {
+        // For simplicity, return empty overrides
+        // In a real implementation, this would load from file
+        return { overrides: [] };
+    }
+    /**
+     * Initialize checkers
+     * @returns {Object} Initialized checkers
+     * @private
+     */
+    _initializeCheckers() {
+        return {
+            documentation: new DocumentationChecker(this.config),
+            structure: new StructureChecker(this.config),
+            codeStyle: new CodeStyleChecker(this.config),
+            testing: new TestingChecker(this.config),
+        };
+    }
+    /**
+     * Run checks on target
+     * @param {string} targetPath - Path to target
+     * @param {boolean} isDirectory - Whether target is a directory
+     * @param {Object} options - Check options
+     * @returns {Promise<Object>} Check results
+     * @private
+     */
+    async _runChecks(targetPath, isDirectory, options) {
+        // Run checks for each category
+        const documentationResults = await this.checkers.documentation.check(targetPath, isDirectory, options);
+        const structureResults = await this.checkers.structure.check(targetPath, isDirectory, options);
+        const codeStyleResults = await this.checkers.codeStyle.check(targetPath, isDirectory, options);
+        const testingResults = await this.checkers.testing.check(targetPath, isDirectory, options);
+        return {
+            documentation: documentationResults,
+            structure: structureResults,
+            codeStyle: codeStyleResults,
+            testing: testingResults,
+        };
+    }
+    /**
+     * Analyze check results
+     * @param {Object} results - Check results
+     * @returns {Object} Analysis
+     * @private
+     */
+    _analyzeResults(results) {
+        // Count violations by category
+        const violationCounts = {
+            documentation: results.documentation.violations.length,
+            structure: results.structure.violations.length,
+            codeStyle: results.codeStyle.violations.length,
+            testing: results.testing.violations.length,
+        };
+        // Calculate total violations
+        const totalViolations = Object.values(violationCounts).reduce((sum, count) => sum + count, 0);
+        // Check if there are any critical violations
+        const criticalViolations = [
+            ...results.documentation.violations,
+            ...results.structure.violations,
+            ...results.codeStyle.violations,
+            ...results.testing.violations,
+        ].filter(violation => violation.severity === 'critical');
+        // Check if there are overrides for any violations
+        const overriddenViolations = [
+            ...results.documentation.violations,
+            ...results.structure.violations,
+            ...results.codeStyle.violations,
+            ...results.testing.violations,
+        ].filter(violation => this._isViolationOverridden(violation));
+        return {
+            violationCounts,
+            totalViolations,
+            criticalViolations: criticalViolations.length,
+            overriddenViolations: overriddenViolations.length,
+            compliant: totalViolations === 0 ||
+                (totalViolations === overriddenViolations.length && criticalViolations.length === 0),
+        };
+    }
+    /**
+     * Generate report from results and analysis
+     * @param {string} targetPath - Path to target
+     * @param {Object} results - Check results
+     * @param {Object} analysis - Results analysis
+     * @returns {Object} Report
+     * @private
+     */
+    _generateReport(targetPath, results, analysis) {
+        return {
+            targetPath,
+            timestamp: new Date().toISOString(),
+            compliant: analysis.compliant,
+            summary: {
+                totalViolations: analysis.totalViolations,
+                criticalViolations: analysis.criticalViolations,
+                overriddenViolations: analysis.overriddenViolations,
+                violationsByCategory: analysis.violationCounts,
+            },
+            results,
+            analysis,
+        };
+    }
+    /**
+     * Get relevant guidelines for target
+     * @param {string} targetPath - Path to target
+     * @param {boolean} isDirectory - Whether target is a directory
+     * @returns {Promise<Object>} Relevant guidelines
+     * @private
+     */
+    async _getRelevantGuidelines(targetPath, isDirectory) {
+        // In a real implementation, this would analyze the target and determine
+        // which guidelines are relevant based on the type of component, context, etc.
+        // For simplicity, we'll return all guidelines
+        return this.guidelines;
+    }
+    /**
+     * Generate checklist from guidelines
+     * @param {string} targetPath - Path to target
+     * @param {Object} guidelines - Relevant guidelines
+     * @returns {Object} Generated checklist
+     * @private
+     */
+    _generateChecklistFromGuidelines(targetPath, guidelines) {
+        // Get component name from path
+        const componentName = path.basename(targetPath);
+        // Generate checklist items for each category
+        const documentationItems = this._generateChecklistItemsForCategory('Documentation', guidelines.documentation);
+        const structureItems = this._generateChecklistItemsForCategory('Structure', guidelines.structure);
+        const codeStyleItems = this._generateChecklistItemsForCategory('Code Style', guidelines.codeStyle);
+        const testingItems = this._generateChecklistItemsForCategory('Testing', guidelines.testing);
+        // Combine all items
+        const items = [...documentationItems, ...structureItems, ...codeStyleItems, ...testingItems];
+        return {
+            componentName,
+            targetPath,
+            timestamp: new Date().toISOString(),
+            items,
+        };
+    }
+    /**
+     * Generate checklist items for category
+     * @param {string} category - Category name
+     * @param {Object} guidelines - Category guidelines
+     * @returns {Array} Checklist items
+     * @private
+     */
+    _generateChecklistItemsForCategory(category, guidelines) {
+        return Object.entries(guidelines).map(([key, guideline]) => ({
+            category,
+            key,
+            description: guideline.description,
+            required: guideline.required,
+            status: 'pending',
+            notes: '',
+        }));
+    }
+    /**
+     * Save checklist to file
+     * @param {Object} checklist - Checklist to save
+     * @param {string} outputPath - Path to save checklist
+     * @returns {Promise<void>}
+     * @private
+     */
+    async _saveChecklist(checklist, outputPath) {
+        try {
+            // Convert checklist to markdown
+            const markdown = this._checklistToMarkdown(checklist);
+            // Write to file
+            await fs.writeFile(outputPath, markdown);
+        }
+        catch (error) {
+            this.log(`Save checklist error: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Convert checklist to markdown
+     * @param {Object} checklist - Checklist to convert
+     * @returns {string} Markdown representation
+     * @private
+     */
+    _checklistToMarkdown(checklist) {
+        // Generate markdown header
+        let markdown = `# Guideline Compliance Checklist\n\n`;
+        markdown += `## Implementation: ${checklist.componentName}\n`;
+        markdown += `## Path: ${checklist.targetPath}\n`;
+        markdown += `## Date: ${new Date().toLocaleDateString()}\n`;
+        markdown += `## Author: [Author]\n\n`;
+        // Group items by category
+        const itemsByCategory = checklist.items.reduce((acc, item) => {
+            if (!acc[item.category]) {
+                acc[item.category] = [];
+            }
+            acc[item.category].push(item);
+            return acc;
+        }, {});
+        // Generate markdown for each category
+        for (const [category, items] of Object.entries(itemsByCategory)) {
+            markdown += `## ${category}\n\n`;
+            for (const item of items) {
+                markdown += `- [ ] ${item.description}\n`;
+                markdown += `  - Status: [Compliant/Non-compliant/Partially compliant]\n`;
+                markdown += `  - Notes: [Any notes or justifications]\n\n`;
+            }
+        }
+        // Add guideline overrides section
+        markdown += `## Guideline Overrides\n\n`;
+        markdown += `If any guidelines cannot be followed, provide detailed justification below:\n\n`;
+        markdown += `### [Guideline Reference]\n\n`;
+        markdown += `**Justification**: [Detailed explanation of why the guideline cannot be followed and why an alternative approach is necessary]\n\n`;
+        markdown += `**Alternative Approach**: [Description of the alternative approach taken]\n\n`;
+        markdown += `**Impact Assessment**: [Assessment of the impact of not following the guideline]\n\n`;
+        markdown += `**Approver**: [Name of the person who approved this override]\n\n`;
+        // Add verification section
+        markdown += `## Verification\n\n`;
+        markdown += `- [ ] Checklist completed by: [Name]\n`;
+        markdown += `- [ ] Checklist verified by: [Name]\n`;
+        markdown += `- [ ] Date: [Date]\n`;
+        return markdown;
+    }
+    /**
+     * Check if guideline exists
+     * @param {string} guideline - Guideline to check
+     * @returns {boolean} Whether guideline exists
+     * @private
+     */
+    _guidelineExists(guideline) {
+        // Parse guideline reference (e.g., "documentation.componentGuides")
+        const [category, key] = guideline.split('.');
+        // Check if category exists
+        if (!this.guidelines[category]) {
+            return false;
+        }
+        // Check if key exists in category
+        return !!this.guidelines[category][key];
+    }
+    /**
+     * Check if violation is overridden
+     * @param {Object} violation - Violation to check
+     * @returns {boolean} Whether violation is overridden
+     * @private
+     */
+    _isViolationOverridden(violation) {
+        // Check if there's an override for this violation
+        return this.overrides.overrides.some(override => override.guideline === violation.guideline && override.path === violation.path);
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[GuidelineChecker] ${message}`);
+        }
+    }
+}
+module.exports = GuidelineChecker;

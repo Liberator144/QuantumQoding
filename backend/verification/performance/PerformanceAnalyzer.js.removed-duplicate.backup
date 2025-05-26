@@ -1,0 +1,521 @@
+"use strict";
+/**
+ * PerformanceAnalyzer
+ *
+ * Analyzes the performance impact of code changes.
+ *
+ * @version 1.0.0
+ */
+const { EventEmitter } = require('events');
+const fs = require('fs').promises;
+const path = require('path');
+const { execSync } = require('child_process');
+const { performance } = require('perf_hooks');
+/**
+ * PerformanceAnalyzer
+ *
+ * Analyzes the performance impact of code changes.
+ */
+class PerformanceAnalyzer extends EventEmitter {
+    /**
+     * Create a new PerformanceAnalyzer instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        super();
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Base directory
+            baseDir: process.cwd(),
+            // Benchmark directory
+            benchmarkDir: path.join(process.cwd(), 'benchmarks'),
+            // Results directory
+            resultsDir: path.join(process.cwd(), 'performance-results'),
+            // Threshold for significant performance change (percentage)
+            significantChangeThreshold: 5,
+            // Number of iterations for each benchmark
+            iterations: 5,
+            // Warmup iterations
+            warmupIterations: 2,
+            // Timeout for each benchmark (ms)
+            timeout: 30000,
+            // Merge with provided options
+            ...options,
+        };
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the analyzer
+     * @private
+     */
+    _init() {
+        this.log('Initializing PerformanceAnalyzer');
+        // Create results directory if it doesn't exist
+        try {
+            const fs = require('fs');
+            if (!fs.existsSync(this.config.resultsDir)) {
+                execSync(`mkdir -p ${this.config.resultsDir}`);
+            }
+        }
+        catch (error) {
+            this.log(`Error creating results directory: ${error.message}`);
+        }
+        this.log('PerformanceAnalyzer initialized');
+    }
+    /**
+     * Log a message if debug mode is enabled
+     * @param {string} message - Message to log
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[PerformanceAnalyzer] ${message}`);
+        }
+    }
+    /**
+     * Analyze the performance impact of a file
+     * @param {string} filePath - Path to the file to analyze
+     * @param {Object} _options - Analysis options (unused)
+     * @returns {Promise<Object>} Analysis result
+     */
+    async analyzeFile(filePath, _options = {}) {
+        try {
+            this.log(`Analyzing performance impact of ${filePath}`);
+            // Find benchmarks for the file
+            const benchmarks = await this._findBenchmarksForFile(filePath);
+            if (benchmarks.length === 0) {
+                this.log(`No benchmarks found for ${filePath}`);
+                return {
+                    success: true,
+                    filePath,
+                    hasBenchmarks: false,
+                    message: 'No benchmarks found for this file',
+                };
+            }
+            // Run benchmarks
+            const results = await this._runBenchmarks(benchmarks);
+            // Compare with previous results
+            const comparison = await this._compareWithPreviousResults(results);
+            // Generate report
+            const report = this._generateReport(filePath, results, comparison);
+            // Save results
+            await this._saveResults(filePath, results);
+            return {
+                success: true,
+                filePath,
+                hasBenchmarks: true,
+                results,
+                comparison,
+                report,
+            };
+        }
+        catch (error) {
+            this.log(`Error analyzing performance impact: ${error.message}`);
+            return {
+                success: false,
+                filePath,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Find benchmarks for a file
+     * @param {string} filePath - Path to the file
+     * @returns {Promise<Array<Object>>} Benchmarks
+     * @private
+     */
+    async _findBenchmarksForFile(filePath) {
+        try {
+            const fileName = path.basename(filePath, path.extname(filePath));
+            const benchmarkPath = path.join(this.config.benchmarkDir, `${fileName}.benchmark.js`);
+            // Check if benchmark file exists
+            const benchmarkExists = await fs
+                .access(benchmarkPath)
+                .then(() => true)
+                .catch(() => false);
+            if (!benchmarkExists) {
+                return [];
+            }
+            // Load benchmark file
+            const benchmarkModule = require(benchmarkPath);
+            // Get benchmarks
+            const benchmarks = Array.isArray(benchmarkModule) ? benchmarkModule : [benchmarkModule];
+            return benchmarks.map(benchmark => ({
+                ...benchmark,
+                filePath: benchmarkPath,
+            }));
+        }
+        catch (error) {
+            this.log(`Error finding benchmarks: ${error.message}`);
+            return [];
+        }
+    }
+    /**
+     * Run benchmarks
+     * @param {Array<Object>} benchmarks - Benchmarks to run
+     * @returns {Promise<Array<Object>>} Benchmark results
+     * @private
+     */
+    async _runBenchmarks(benchmarks) {
+        const results = [];
+        for (const benchmark of benchmarks) {
+            try {
+                this.log(`Running benchmark: ${benchmark.name}`);
+                // Run warmup iterations
+                for (let i = 0; i < this.config.warmupIterations; i++) {
+                    await this._runBenchmark(benchmark);
+                }
+                // Run benchmark iterations
+                const durations = [];
+                const memoryUsages = [];
+                for (let i = 0; i < this.config.iterations; i++) {
+                    const { duration, memoryUsage } = await this._runBenchmark(benchmark);
+                    durations.push(duration);
+                    memoryUsages.push(memoryUsage);
+                }
+                // Calculate statistics
+                const avgDuration = durations.reduce((sum, duration) => sum + duration, 0) / durations.length;
+                const minDuration = Math.min(...durations);
+                const maxDuration = Math.max(...durations);
+                const avgMemoryUsage = memoryUsages.reduce((sum, usage) => sum + usage, 0) / memoryUsages.length;
+                const minMemoryUsage = Math.min(...memoryUsages);
+                const maxMemoryUsage = Math.max(...memoryUsages);
+                results.push({
+                    name: benchmark.name,
+                    description: benchmark.description,
+                    iterations: this.config.iterations,
+                    duration: {
+                        avg: avgDuration,
+                        min: minDuration,
+                        max: maxDuration,
+                    },
+                    memoryUsage: {
+                        avg: avgMemoryUsage,
+                        min: minMemoryUsage,
+                        max: maxMemoryUsage,
+                    },
+                    timestamp: Date.now(),
+                });
+                this.log(`Benchmark ${benchmark.name} completed`);
+            }
+            catch (error) {
+                this.log(`Error running benchmark ${benchmark.name}: ${error.message}`);
+                results.push({
+                    name: benchmark.name,
+                    description: benchmark.description,
+                    error: error.message,
+                    timestamp: Date.now(),
+                });
+            }
+        }
+        return results;
+    }
+    /**
+     * Run a single benchmark
+     * @param {Object} benchmark - Benchmark to run
+     * @returns {Promise<Object>} Benchmark result
+     * @private
+     */
+    async _runBenchmark(benchmark) {
+        return new Promise((resolve, reject) => {
+            // Set timeout
+            const timeoutId = setTimeout(() => {
+                reject(new Error(`Benchmark ${benchmark.name} timed out after ${this.config.timeout}ms`));
+            }, this.config.timeout);
+            try {
+                // Measure memory usage before
+                const memBefore = process.memoryUsage().heapUsed;
+                // Measure execution time
+                const startTime = performance.now();
+                // Run benchmark
+                const result = benchmark.run();
+                // Handle promise or direct result
+                Promise.resolve(result)
+                    .then(() => {
+                    // Measure execution time
+                    const endTime = performance.now();
+                    const duration = endTime - startTime;
+                    // Measure memory usage after
+                    const memAfter = process.memoryUsage().heapUsed;
+                    const memoryUsage = memAfter - memBefore;
+                    // Clear timeout
+                    clearTimeout(timeoutId);
+                    resolve({ duration, memoryUsage });
+                })
+                    .catch(error => {
+                    // Clear timeout
+                    clearTimeout(timeoutId);
+                    reject(error);
+                });
+            }
+            catch (error) {
+                // Clear timeout
+                clearTimeout(timeoutId);
+                reject(error);
+            }
+        });
+    }
+    /**
+     * Compare with previous results
+     * @param {Array<Object>} results - Current benchmark results
+     * @returns {Promise<Array<Object>>} Comparison results
+     * @private
+     */
+    async _compareWithPreviousResults(results) {
+        const comparison = [];
+        for (const result of results) {
+            try {
+                // Skip benchmarks with errors
+                if (result.error) {
+                    comparison.push({
+                        name: result.name,
+                        hasError: true,
+                        error: result.error,
+                    });
+                    continue;
+                }
+                // Get previous result
+                const previousResult = await this._getPreviousResult(result.name);
+                if (!previousResult) {
+                    comparison.push({
+                        name: result.name,
+                        isFirstRun: true,
+                    });
+                    continue;
+                }
+                // Calculate duration change
+                const durationChange = ((result.duration.avg - previousResult.duration.avg) / previousResult.duration.avg) * 100;
+                // Calculate memory usage change
+                const memoryUsageChange = ((result.memoryUsage.avg - previousResult.memoryUsage.avg) /
+                    previousResult.memoryUsage.avg) *
+                    100;
+                // Determine if changes are significant
+                const isSignificantDurationChange = Math.abs(durationChange) >= this.config.significantChangeThreshold;
+                const isSignificantMemoryChange = Math.abs(memoryUsageChange) >= this.config.significantChangeThreshold;
+                comparison.push({
+                    name: result.name,
+                    durationChange,
+                    memoryUsageChange,
+                    isSignificantDurationChange,
+                    isSignificantMemoryChange,
+                    isSignificant: isSignificantDurationChange || isSignificantMemoryChange,
+                    previous: {
+                        duration: previousResult.duration,
+                        memoryUsage: previousResult.memoryUsage,
+                        timestamp: previousResult.timestamp,
+                    },
+                });
+            }
+            catch (error) {
+                this.log(`Error comparing results for ${result.name}: ${error.message}`);
+                comparison.push({
+                    name: result.name,
+                    error: error.message,
+                });
+            }
+        }
+        return comparison;
+    }
+    /**
+     * Get previous result for a benchmark
+     * @param {string} benchmarkName - Benchmark name
+     * @returns {Promise<Object>} Previous result
+     * @private
+     */
+    async _getPreviousResult(benchmarkName) {
+        try {
+            const resultsPath = path.join(this.config.resultsDir, `${benchmarkName}.json`);
+            // Check if results file exists
+            const resultsExist = await fs
+                .access(resultsPath)
+                .then(() => true)
+                .catch(() => false);
+            if (!resultsExist) {
+                return null;
+            }
+            const resultsJson = await fs.readFile(resultsPath, 'utf8');
+            return JSON.parse(resultsJson);
+        }
+        catch (error) {
+            this.log(`Error getting previous result: ${error.message}`);
+            return null;
+        }
+    }
+    /**
+     * Generate performance report
+     * @param {string} filePath - Path to the file
+     * @param {Array<Object>} results - Benchmark results
+     * @param {Array<Object>} comparison - Comparison results
+     * @returns {Object} Report
+     * @private
+     */
+    _generateReport(filePath, results, comparison) {
+        // Count significant changes
+        const significantChanges = comparison.filter(comp => comp.isSignificant).length;
+        // Determine overall impact
+        let overallImpact = 'none';
+        if (significantChanges > 0) {
+            // Calculate average duration change
+            const durationChanges = comparison
+                .filter(comp => !comp.isFirstRun && !comp.hasError)
+                .map(comp => comp.durationChange);
+            if (durationChanges.length > 0) {
+                const avgDurationChange = durationChanges.reduce((sum, change) => sum + change, 0) / durationChanges.length;
+                if (avgDurationChange > this.config.significantChangeThreshold) {
+                    overallImpact = 'negative';
+                }
+                else if (avgDurationChange < -this.config.significantChangeThreshold) {
+                    overallImpact = 'positive';
+                }
+                else {
+                    overallImpact = 'mixed';
+                }
+            }
+        }
+        return {
+            filePath,
+            benchmarks: results.length,
+            significantChanges,
+            overallImpact,
+            summary: this._generateSummary(filePath, results, comparison, overallImpact),
+        };
+    }
+    /**
+     * Generate summary text
+     * @param {string} filePath - Path to the file
+     * @param {Array<Object>} results - Benchmark results
+     * @param {Array<Object>} comparison - Comparison results
+     * @param {string} overallImpact - Overall impact
+     * @returns {string} Summary text
+     * @private
+     */
+    _generateSummary(filePath, results, comparison, overallImpact) {
+        const fileName = path.basename(filePath);
+        let summary = `# Performance Impact Analysis for ${fileName}\n\n`;
+        if (results.length === 0) {
+            summary += 'No benchmarks found for this file.\n';
+            return summary;
+        }
+        // Add overall impact
+        summary += `## Overall Impact: ${this._formatImpact(overallImpact)}\n\n`;
+        // Add benchmark results
+        summary += '## Benchmark Results\n\n';
+        for (let i = 0; i < results.length; i++) {
+            const result = results[i];
+            const comp = comparison[i];
+            summary += `### ${result.name}\n\n`;
+            if (result.error) {
+                summary += `⚠️ Error: ${result.error}\n\n`;
+                continue;
+            }
+            summary += `${result.description || 'No description'}\n\n`;
+            summary += '| Metric | Current | Previous | Change |\n';
+            summary += '| ------ | ------- | -------- | ------ |\n';
+            if (comp.isFirstRun) {
+                summary += `| Duration | ${this._formatDuration(result.duration.avg)} | N/A | N/A |\n`;
+                summary += `| Memory Usage | ${this._formatMemory(result.memoryUsage.avg)} | N/A | N/A |\n`;
+            }
+            else if (comp.hasError) {
+                summary += `| Duration | ${this._formatDuration(result.duration.avg)} | Error | N/A |\n`;
+                summary += `| Memory Usage | ${this._formatMemory(result.memoryUsage.avg)} | Error | N/A |\n`;
+            }
+            else {
+                summary += `| Duration | ${this._formatDuration(result.duration.avg)} | ${this._formatDuration(comp.previous.duration.avg)} | ${this._formatChange(comp.durationChange, true)} |\n`;
+                summary += `| Memory Usage | ${this._formatMemory(result.memoryUsage.avg)} | ${this._formatMemory(comp.previous.memoryUsage.avg)} | ${this._formatChange(comp.memoryUsageChange, false)} |\n`;
+            }
+            summary += '\n';
+        }
+        return summary;
+    }
+    /**
+     * Format duration
+     * @param {number} duration - Duration in milliseconds
+     * @returns {string} Formatted duration
+     * @private
+     */
+    _formatDuration(duration) {
+        return `${duration.toFixed(2)}ms`;
+    }
+    /**
+     * Format memory usage
+     * @param {number} memory - Memory usage in bytes
+     * @returns {string} Formatted memory usage
+     * @private
+     */
+    _formatMemory(memory) {
+        if (memory < 1024) {
+            return `${memory.toFixed(2)}B`;
+        }
+        else if (memory < 1024 * 1024) {
+            return `${(memory / 1024).toFixed(2)}KB`;
+        }
+        else {
+            return `${(memory / (1024 * 1024)).toFixed(2)}MB`;
+        }
+    }
+    /**
+     * Format change percentage
+     * @param {number} change - Change percentage
+     * @param {boolean} isDuration - Whether the change is for duration
+     * @returns {string} Formatted change
+     * @private
+     */
+    _formatChange(change, isDuration) {
+        const isSignificant = Math.abs(change) >= this.config.significantChangeThreshold;
+        const isPositive = isDuration ? change < 0 : change > 0;
+        let formatted = `${change.toFixed(2)}%`;
+        if (isSignificant) {
+            if (isPositive) {
+                formatted = `✅ ${formatted}`;
+            }
+            else {
+                formatted = `❌ ${formatted}`;
+            }
+        }
+        return formatted;
+    }
+    /**
+     * Format overall impact
+     * @param {string} impact - Overall impact
+     * @returns {string} Formatted impact
+     * @private
+     */
+    _formatImpact(impact) {
+        switch (impact) {
+            case 'positive':
+                return '✅ Positive (Performance Improved)';
+            case 'negative':
+                return '❌ Negative (Performance Degraded)';
+            case 'mixed':
+                return '⚠️ Mixed (Some Improvements, Some Degradations)';
+            case 'none':
+            default:
+                return '✓ None (No Significant Changes)';
+        }
+    }
+    /**
+     * Save benchmark results
+     * @param {string} _filePath - Path to the file (unused)
+     * @param {Array<Object>} results - Benchmark results
+     * @returns {Promise<void>}
+     * @private
+     */
+    async _saveResults(_filePath, results) {
+        try {
+            for (const result of results) {
+                // Skip results with errors
+                if (result.error) {
+                    continue;
+                }
+                const resultsPath = path.join(this.config.resultsDir, `${result.name}.json`);
+                await fs.writeFile(resultsPath, JSON.stringify(result, null, 2));
+            }
+        }
+        catch (error) {
+            this.log(`Error saving results: ${error.message}`);
+        }
+    }
+}
+module.exports = PerformanceAnalyzer;

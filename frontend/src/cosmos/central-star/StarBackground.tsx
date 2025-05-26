@@ -1,29 +1,34 @@
+/**
+ * TypeScript Migration
+ * Migrated from: StarBackground.js
+ * @version 2.0.0
+ */
 export function StarBackground() {
-  return <div className="absolute inset-0 overflow-hidden">
+    return <div className="absolute inset-0 overflow-hidden">
       {/* Large particles */}
       {[...Array(20)].map((_, i) => <div key={`large-${i}`} className="absolute bg-white rounded-full opacity-60" style={{
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      width: '2px',
-      height: '2px',
-      animation: `twinkle ${2 + Math.random() * 3}s infinite alternate`
-    }} />)}
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                width: '2px',
+                height: '2px',
+                animation: `twinkle ${2 + Math.random() * 3}s infinite alternate`
+            }}/>)}
       {/* Medium particles */}
       {[...Array(40)].map((_, i) => <div key={`medium-${i}`} className="absolute bg-white rounded-full opacity-40" style={{
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      width: '1px',
-      height: '1px',
-      animation: `twinkle ${2 + Math.random() * 4}s infinite alternate`
-    }} />)}
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                width: '1px',
+                height: '1px',
+                animation: `twinkle ${2 + Math.random() * 4}s infinite alternate`
+            }}/>)}
       {/* Small particles */}
       {[...Array(60)].map((_, i) => <div key={`small-${i}`} className="absolute bg-white rounded-full opacity-20" style={{
-      top: `${Math.random() * 100}%`,
-      left: `${Math.random() * 100}%`,
-      width: '1px',
-      height: '1px',
-      animation: `twinkle ${3 + Math.random() * 5}s infinite alternate`
-    }} />)}
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                width: '1px',
+                height: '1px',
+                animation: `twinkle ${3 + Math.random() * 5}s infinite alternate`
+            }}/>)}
       <style>{`
         @keyframes twinkle {
           0% {

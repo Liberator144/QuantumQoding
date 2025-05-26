@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Quantum Safeguard: Pre-push JavaScript Detection
+echo "🔍 Quantum Safeguard: Pre-push JavaScript contamination scan..."
+
+# Count JavaScript files in the repository
+JS_COUNT=$(find . -name "*.js" -o -name "*.jsx" | grep -v node_modules | grep -v dist | grep -v build | grep -v \.backup | wc -l | tr -d ' ')
+
+if [ "$JS_COUNT" -gt 0 ]; then
+  echo "❌ QUANTUM BREACH DETECTED!"
+  echo "🚨 $JS_COUNT JavaScript files found in repository:"
+  find . -name "*.js" -o -name "*.jsx" | grep -v node_modules | grep -v dist | grep -v build | grep -v \.backup | head -10
+  if [ "$JS_COUNT" -gt 10 ]; then
+    echo "   ... and $((JS_COUNT - 10)) more files"
+  fi
+  echo ""
+  echo "🛡️  TypeScript Sovereignty Violation - Push BLOCKED"
+  echo "📚 See migration plan: docs/error-protocol/typescript_migration_plan.md"
+  exit 1
+fi
+
+echo "✅ TypeScript Sovereignty verified - Push authorized"

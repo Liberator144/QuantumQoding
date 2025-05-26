@@ -1,164 +1,144 @@
 /**
  * UI Types
- * 
+ *
  * This module provides type definitions for UI components.
- * 
+ *
  * @version 1.0.0
  */
 
-/**
- * Star system interface
- */
-export interface StarSystem {
-  name: string;
-  path: string;
-  color: string;
-  orbit: 'inner' | 'middle' | 'outer';
-  description: string;
-  features: StarSystemFeature[];
+import type { ReactNode, CSSProperties } from 'react';
+
+// Base UI Component Types
+export interface BaseComponentProps {
+  className?: string;
+  style?: CSSProperties;
+  children?: ReactNode;
+  testId?: string;
 }
 
-/**
- * Star system feature interface
- */
-export interface StarSystemFeature {
-  name: string;
-  path: string;
-  description: string;
+export interface InteractiveComponentProps extends BaseComponentProps {
+  disabled?: boolean;
+  loading?: boolean;
+  onClick?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
 }
 
-/**
- * Route interface
- */
-export interface Route {
-  path: string;
-  element: React.ReactNode;
-  children?: Route[];
-  meta?: {
-    requiresAuth?: boolean;
-    title?: string;
-    description?: string;
-    starSystem?: string;
-    feature?: string;
-    orbit?: 'inner' | 'middle' | 'outer';
-  };
+// Layout Types
+export interface LayoutProps extends BaseComponentProps {
+  direction?: 'row' | 'column';
+  align?: 'start' | 'center' | 'end' | 'stretch';
+  justify?: 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly';
+  gap?: number | string;
+  padding?: number | string;
+  margin?: number | string;
 }
 
-/**
- * Navigation options interface
- */
-export interface NavigateOptions {
-  replace?: boolean;
-  state?: any;
-  transitionType?: 'fade' | 'slide' | 'scale' | 'wormhole';
+export interface GridProps extends BaseComponentProps {
+  columns?: number | string;
+  rows?: number | string;
+  gap?: number | string;
+  autoFlow?: 'row' | 'column' | 'dense';
 }
 
-/**
- * Notification interface
- */
-export interface Notification {
-  id: string;
-  type: 'info' | 'success' | 'warning' | 'error';
-  message: string;
-  duration?: number;
-  createdAt: number;
-}
-
-/**
- * Modal interface
- */
-export interface Modal {
-  id: string;
-  title: string;
-  content: React.ReactNode;
-  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
-  onClose?: () => void;
-  onConfirm?: () => void;
-  confirmText?: string;
-  cancelText?: string;
-  showCloseButton?: boolean;
-}
-
-/**
- * Theme interface
- */
+// Theme Types
 export interface Theme {
-  colors: {
-    primary: string;
-    secondary: string;
-    accent: string;
-    background: string;
-    surface: string;
-    text: string;
-    textSecondary: string;
-    error: string;
-    warning: string;
-    success: string;
-    info: string;
-  };
-  fonts: {
-    body: string;
-    heading: string;
-    monospace: string;
-  };
-  fontSizes: {
-    xs: string;
-    sm: string;
-    md: string;
-    lg: string;
-    xl: string;
-    '2xl': string;
-    '3xl': string;
-    '4xl': string;
-  };
-  space: {
-    xs: string;
-    sm: string;
-    md: string;
-    lg: string;
-    xl: string;
-    '2xl': string;
-    '3xl': string;
-    '4xl': string;
-  };
-  radii: {
-    sm: string;
-    md: string;
-    lg: string;
-    full: string;
-  };
-  shadows: {
-    sm: string;
-    md: string;
-    lg: string;
-    xl: string;
-  };
-  transitions: {
-    fast: string;
-    normal: string;
-    slow: string;
-  };
+  colors: ColorPalette;
+  typography: Typography;
+  spacing: Spacing;
+  breakpoints: Breakpoints;
+  shadows: Shadows;
+  animations: Animations;
 }
 
-/**
- * Animation interface
- */
-export interface Animation {
-  name: string;
-  duration: number;
-  easing: string;
-  delay?: number;
-  repeat?: number;
-  direction?: 'normal' | 'reverse' | 'alternate' | 'alternate-reverse';
-  fillMode?: 'none' | 'forwards' | 'backwards' | 'both';
+export interface ColorPalette {
+  primary: ColorScale;
+  secondary: ColorScale;
+  accent: ColorScale;
+  neutral: ColorScale;
+  semantic: SemanticColors;
+  quantum: QuantumColors;
 }
 
-/**
- * Audio options interface
- */
-export interface AudioOptions {
-  volume?: number;
-  rate?: number;
-  detune?: number;
-  loop?: boolean;
+export interface ColorScale {
+  50: string;
+  500: string;
+  900: string;
 }
+
+export interface SemanticColors {
+  success: string;
+  warning: string;
+  error: string;
+  info: string;
+}
+
+export interface QuantumColors {
+  coherence: string;
+  entanglement: string;
+  superposition: string;
+  dimensional: string;
+}
+
+// Component State Types
+export interface ComponentState {
+  isVisible: boolean;
+  isLoading: boolean;
+  isDisabled: boolean;
+  hasError: boolean;
+  errorMessage?: string;
+}
+
+export interface FormState {
+  values: Record<string, unknown>;
+  errors: Record<string, string>;
+  touched: Record<string, boolean>;
+  isSubmitting: boolean;
+  isValid: boolean;
+}
+
+// Event Types
+export interface UIEvent {
+  type: UIEventType;
+  target: string;
+  timestamp: Date;
+  data?: unknown;
+}
+
+export enum UIEventType {
+  CLICK = 'click',
+  HOVER = 'hover',
+  FOCUS = 'focus',
+  BLUR = 'blur',
+  SCROLL = 'scroll',
+  RESIZE = 'resize',
+  QUANTUM_INTERACTION = 'quantum_interaction'
+}
+
+// Quantum UI Types
+export interface QuantumComponentProps extends BaseComponentProps {
+  coherenceLevel?: number;
+  dimensionalState?: 'stable' | 'transitioning' | 'superposition';
+  quantumEntangled?: boolean;
+  onQuantumStateChange?: (state: QuantumUIState) => void;
+}
+
+export interface QuantumUIState {
+  coherence: number;
+  entanglement: boolean;
+  superposition: boolean;
+  dimensionalPhase: number;
+}
+
+// Utility Types
+export type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
+export type Variant = 'primary' | 'secondary' | 'accent' | 'quantum';
+
+// Type Guards
+export const isValidSize = (size: string): size is Size => {
+  return ['xs', 'sm', 'md', 'lg', 'xl'].includes(size);
+};
+
+export const isValidVariant = (variant: string): variant is Variant => {
+  return ['primary', 'secondary', 'accent', 'quantum'].includes(variant);
+};

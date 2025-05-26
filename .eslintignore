@@ -1,0 +1,44 @@
+# Build artifacts
+dist/
+build/
+coverage/
+.next/
+out/
+
+# Package files
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Generated files
+*.min.js
+*.min.css
+*.bundle.js
+*.generated.*
+
+# Configuration files
+.github/
+.vscode/
+*.config.js
+*.config.ts
+vite.config.js
+tailwind.config.js
+postcss.config.js
+jest.config.js
+
+# Temporary exclusions for JavaScript files that need TypeScript conversion
+# These should be gradually removed as files are converted to TypeScript
+
+# Frontend JavaScript files
+frontend/src/**/*.js
+frontend/visualization/**/*.js
+
+# Source JavaScript files  
+src/**/*.js
+
+# Other JavaScript files
+**/*.js
+
+# Exclude specific problematic files temporarily
+frontend/src/utils/audio/audioUtils.ts

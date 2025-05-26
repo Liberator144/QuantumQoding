@@ -1,0 +1,8 @@
+/**
+ * Record Schema
+ *
+ * Defines the schema for database records in the unified data model.
+ *
+ * @version 1.0.0
+ */
+export {};

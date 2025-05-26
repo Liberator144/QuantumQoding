@@ -1,0 +1,16 @@
+/**
+ * Pull Request Schema
+ *
+ * Defines the schema for pull requests in the unified data model.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Pull request merge status
+ */
+export var PullRequestMergeStatus;
+(function (PullRequestMergeStatus) {
+    PullRequestMergeStatus["MERGEABLE"] = "mergeable";
+    PullRequestMergeStatus["CONFLICTING"] = "conflicting";
+    PullRequestMergeStatus["UNKNOWN"] = "unknown";
+})(PullRequestMergeStatus || (PullRequestMergeStatus = {}));

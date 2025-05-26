@@ -1,0 +1,319 @@
+"use strict";
+/**
+ * Authentication Manager
+ *
+ * Manages user authentication.
+ *
+ * @version 1.0.0
+ */
+const crypto = require('crypto');
+/**
+ * Authentication Manager
+ *
+ * Manages user authentication.
+ */
+class AuthManager {
+    /**
+     * Create a new AuthManager instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Database instance
+            database: null,
+            // User collection name
+            userCollection: '_users',
+            // Password hash iterations
+            hashIterations: 10000,
+            // Password hash key length
+            hashKeyLength: 64,
+            // Password hash algorithm
+            hashAlgorithm: 'sha512',
+            // Token expiration (ms)
+            tokenExpiration: 24 * 60 * 60 * 1000, // 24 hours
+            // Default admin user
+            defaultAdmin: {
+                username: 'admin',
+                password: 'admin',
+                roles: ['admin'],
+            },
+            // Create default admin
+            createDefaultAdmin: false,
+            // Merge with provided options
+            ...options,
+        };
+        // State
+        this.tokens = new Map();
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the manager
+     * @private
+     */
+    _init() {
+        this.log('Initializing Authentication Manager');
+        // Set up user collection if database is provided
+        if (this.config.database) {
+            this._setupUserCollection();
+        }
+        this.log('Authentication Manager initialized');
+    }
+    /**
+     * Set up user collection
+     * @private
+     */
+    async _setupUserCollection() {
+        if (!this.config.database) {
+            return;
+        }
+        // Get or create user collection
+        const userCollection = this.config.database.getCollection(this.config.userCollection) ||
+            this.config.database.createCollection(this.config.userCollection);
+        this.log(`User collection set up: ${this.config.userCollection}`);
+        // Create default admin if enabled
+        if (this.config.createDefaultAdmin) {
+            try {
+                // Check if admin exists
+                const admin = userCollection.findOne({ username: this.config.defaultAdmin.username });
+                if (!admin) {
+                    // Create admin
+                    await this.registerUser(this.config.defaultAdmin);
+                    this.log(`Default admin created: ${this.config.defaultAdmin.username}`);
+                }
+            }
+            catch (error) {
+                this.log(`Error creating default admin: ${error.message}`);
+            }
+        }
+    }
+    /**
+     * Set database reference
+     * @param {UnifiedQuantumDatabase} database - Database instance
+     * @returns {AuthManager} This instance for chaining
+     */
+    setDatabase(database) {
+        this.config.database = database;
+        this._setupUserCollection();
+        this.log('Database reference set');
+        return this;
+    }
+    /**
+     * Register a user
+     * @param {Object} user - User
+     * @returns {Promise<Object>} Registered user
+     */
+    async registerUser(user) {
+        if (!this.config.database) {
+            throw new Error('Database not set');
+        }
+        // Validate user
+        if (!user.username) {
+            throw new Error('Username is required');
+        }
+        if (!user.password) {
+            throw new Error('Password is required');
+        }
+        // Get user collection
+        const userCollection = this.config.database.getCollection(this.config.userCollection);
+        if (!userCollection) {
+            throw new Error(`User collection not found: ${this.config.userCollection}`);
+        }
+        // Check if username exists
+        const existingUser = userCollection.findOne({ username: user.username });
+        if (existingUser) {
+            throw new Error(`Username already exists: ${user.username}`);
+        }
+        // Generate salt
+        const salt = crypto.randomBytes(16).toString('hex');
+        // Hash password
+        const hashedPassword = await this._hashPassword(user.password, salt);
+        // Create user
+        const newUser = {
+            id: `user-${crypto.randomBytes(8).toString('hex')}`,
+            username: user.username,
+            password: hashedPassword,
+            salt,
+            roles: user.roles || [],
+            metadata: user.metadata || {},
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        };
+        // Insert user
+        userCollection.insert(newUser);
+        // Return user without sensitive data
+        const { password, salt: userSalt, ...userWithoutSensitiveData } = newUser;
+        this.log(`User registered: ${user.username}`);
+        return userWithoutSensitiveData;
+    }
+    /**
+     * Login
+     * @param {string} username - Username
+     * @param {string} password - Password
+     * @returns {Promise<Object>} Login result
+     */
+    async login(username, password) {
+        if (!this.config.database) {
+            return {
+                success: false,
+                message: 'Database not set',
+            };
+        }
+        // Get user collection
+        const userCollection = this.config.database.getCollection(this.config.userCollection);
+        if (!userCollection) {
+            return {
+                success: false,
+                message: `User collection not found: ${this.config.userCollection}`,
+            };
+        }
+        // Find user
+        const user = userCollection.findOne({ username });
+        if (!user) {
+            return {
+                success: false,
+                message: 'Invalid username or password',
+            };
+        }
+        // Verify password
+        const hashedPassword = await this._hashPassword(password, user.salt);
+        if (hashedPassword !== user.password) {
+            return {
+                success: false,
+                message: 'Invalid username or password',
+            };
+        }
+        // Generate token
+        const token = this._generateToken();
+        // Store token
+        this.tokens.set(token, {
+            userId: user.id,
+            username: user.username,
+            expiresAt: Date.now() + this.config.tokenExpiration,
+        });
+        // Return user without sensitive data
+        const { password: userPassword, salt, ...userWithoutSensitiveData } = user;
+        this.log(`User logged in: ${username}`);
+        return {
+            success: true,
+            user: userWithoutSensitiveData,
+            token,
+            expiresAt: Date.now() + this.config.tokenExpiration,
+        };
+    }
+    /**
+     * Verify token
+     * @param {string} token - Token
+     * @returns {Promise<Object>} Verification result
+     */
+    async verifyToken(token) {
+        if (!token) {
+            return {
+                valid: false,
+                message: 'Token is required',
+            };
+        }
+        // Check if token exists
+        if (!this.tokens.has(token)) {
+            return {
+                valid: false,
+                message: 'Invalid token',
+            };
+        }
+        // Get token data
+        const tokenData = this.tokens.get(token);
+        // Check if token is expired
+        if (tokenData.expiresAt < Date.now()) {
+            // Remove expired token
+            this.tokens.delete(token);
+            return {
+                valid: false,
+                message: 'Token expired',
+            };
+        }
+        if (!this.config.database) {
+            return {
+                valid: false,
+                message: 'Database not set',
+            };
+        }
+        // Get user collection
+        const userCollection = this.config.database.getCollection(this.config.userCollection);
+        if (!userCollection) {
+            return {
+                valid: false,
+                message: `User collection not found: ${this.config.userCollection}`,
+            };
+        }
+        // Find user
+        const user = userCollection.findById(tokenData.userId);
+        if (!user) {
+            // Remove token
+            this.tokens.delete(token);
+            return {
+                valid: false,
+                message: 'User not found',
+            };
+        }
+        // Return user without sensitive data
+        const { password, salt, ...userWithoutSensitiveData } = user;
+        return {
+            valid: true,
+            user: userWithoutSensitiveData,
+        };
+    }
+    /**
+     * Invalidate token
+     * @param {string} token - Token
+     * @returns {Promise<boolean>} Success
+     */
+    async invalidateToken(token) {
+        if (!token) {
+            return false;
+        }
+        // Remove token
+        const removed = this.tokens.delete(token);
+        return removed;
+    }
+    /**
+     * Hash password
+     * @param {string} password - Password
+     * @param {string} salt - Salt
+     * @returns {Promise<string>} Hashed password
+     * @private
+     */
+    async _hashPassword(password, salt) {
+        return new Promise((resolve, reject) => {
+            crypto.pbkdf2(password, salt, this.config.hashIterations, this.config.hashKeyLength, this.config.hashAlgorithm, (err, derivedKey) => {
+                if (err) {
+                    reject(err);
+                }
+                else {
+                    resolve(derivedKey.toString('hex'));
+                }
+            });
+        });
+    }
+    /**
+     * Generate token
+     * @returns {string} Token
+     * @private
+     */
+    _generateToken() {
+        return crypto.randomBytes(32).toString('hex');
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[AuthManager] ${message}`);
+        }
+    }
+}
+module.exports = { AuthManager };

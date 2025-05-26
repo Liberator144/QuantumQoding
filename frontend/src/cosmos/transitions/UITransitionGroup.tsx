@@ -1,154 +1,105 @@
-import React, { ReactNode, useEffect } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
-import { UITransitionPreset, TransitionDirection } from './UITransition';
-
-interface UITransitionGroupProps {
-  show: boolean;
-  staggerAmount?: number;
-  staggerDirection?: 'forward' | 'reverse' | 'from-center' | 'to-center';
-  totalDuration?: number;
-  wrapperPreset?: UITransitionPreset;
-  wrapperDirection?: TransitionDirection;
-  className?: string;
-  itemClassName?: string;
-  itemProps?: Record<string, any>;
-  onAnimationComplete?: () => void;
-  onAnimationStart?: () => void;
-  children: ReactNode[];
-}
-
+/**
+ * TypeScript Migration
+ * Migrated from: UITransitionGroup.js
+ * @version 2.0.0
+ */
+import React, { useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 /**
  * Enhanced group component for coordinated staggered animations of UI elements
  * Provides various staggering patterns and wrapper animations
  */
-const UITransitionGroup: React.FC<UITransitionGroupProps> = ({
-  show,
-  staggerAmount = 0.05,
-  staggerDirection = 'forward',
-  totalDuration,
-  wrapperPreset,
-  wrapperDirection = 'right',
-  className = '',
-  itemClassName = '',
-  itemProps = {},
-  onAnimationComplete,
-  onAnimationStart,
-  children
-}) => {
-  // Compute stagger indices based on direction
-  const getStaggerIndex = (index: number, count: number): number => {
-    switch (staggerDirection) {
-      case 'reverse':
-        return count - index - 1;
-      case 'from-center':
-        const centerIndex = Math.floor(count / 2);
-        return Math.abs(index - centerIndex);
-      case 'to-center':
-        const center = Math.floor(count / 2);
-        return count - Math.abs(index - center) - 1;
-      case 'forward':
-      default:
-        return index;
-    }
-  };
-  
-  // Calculate actual stagger amount if totalDuration is specified
-  const actualStaggerAmount = totalDuration && children.length > 1
-    ? totalDuration / (children.length - 1)
-    : staggerAmount;
-  
-  // Children count for stagger calculations
-  const childCount = React.Children.count(children);
-  
-  // Trigger animation start
-  useEffect(() => {
-    if (show && onAnimationStart) {
-      onAnimationStart();
-    }
-  }, [show, onAnimationStart]);
-  
-  // Define wrapper animation variants
-  const wrapperVariants: Variants = {
-    hidden: {
-      opacity: 0,
-      x: wrapperDirection === 'left' ? 50 : wrapperDirection === 'right' ? -50 : 0,
-      y: wrapperDirection === 'up' ? 50 : wrapperDirection === 'down' ? -50 : 0,
-      scale: wrapperPreset === 'zoom' ? 0.8 : 1
-    },
-    visible: {
-      opacity: 1,
-      x: 0,
-      y: 0,
-      scale: 1,
-      transition: {
-        duration: 0.5,
-        when: "beforeChildren",
-        staggerChildren: actualStaggerAmount
-      }
-    },
-    exit: {
-      opacity: 0,
-      x: wrapperDirection === 'left' ? -50 : wrapperDirection === 'right' ? 50 : 0,
-      y: wrapperDirection === 'up' ? -50 : wrapperDirection === 'down' ? 50 : 0,
-      scale: wrapperPreset === 'zoom' ? 0.9 : 1,
-      transition: {
-        duration: 0.3,
-        when: "afterChildren",
-        staggerChildren: actualStaggerAmount,
-        staggerDirection: -1
-      }
-    }
-  };
-  
-  // Create wrapper with optional animation
-  const groupContent = (
-    <div className={`ui-transition-group ${className}`}>
+const UITransitionGroup = ({ show, staggerAmount = 0.05, staggerDirection = 'forward', totalDuration, wrapperPreset, wrapperDirection = 'right', className = '', itemClassName = '', itemProps = {}, onAnimationComplete, onAnimationStart, children }) => {
+    // Compute stagger indices based on direction
+    const getStaggerIndex = (index, count) => {
+        switch (staggerDirection) {
+            case 'reverse':
+                return count - index - 1;
+            case 'from-center':
+                const centerIndex = Math.floor(count / 2);
+                return Math.abs(index - centerIndex);
+            case 'to-center':
+                const center = Math.floor(count / 2);
+                return count - Math.abs(index - center) - 1;
+            case 'forward':
+            default:
+                return index;
+        }
+    };
+    // Calculate actual stagger amount if totalDuration is specified
+    const actualStaggerAmount = totalDuration && children.length > 1
+        ? totalDuration / (children.length - 1)
+        : staggerAmount;
+    // Children count for stagger calculations
+    const childCount = React.Children.count(children);
+    // Trigger animation start
+    useEffect(() => {
+        if (show && onAnimationStart) {
+            onAnimationStart();
+        }
+    }, [show, onAnimationStart]);
+    // Define wrapper animation variants
+    const wrapperVariants = {
+        hidden: {
+            opacity: 0,
+            x: wrapperDirection === 'left' ? 50 : wrapperDirection === 'right' ? -50 : 0,
+            y: wrapperDirection === 'up' ? 50 : wrapperDirection === 'down' ? -50 : 0,
+            scale: wrapperPreset === 'zoom' ? 0.8 : 1
+        },
+        visible: {
+            opacity: 1,
+            x: 0,
+            y: 0,
+            scale: 1,
+            transition: {
+                duration: 0.5,
+                when: "beforeChildren",
+                staggerChildren: actualStaggerAmount
+            }
+        },
+        exit: {
+            opacity: 0,
+            x: wrapperDirection === 'left' ? -50 : wrapperDirection === 'right' ? 50 : 0,
+            y: wrapperDirection === 'up' ? -50 : wrapperDirection === 'down' ? 50 : 0,
+            scale: wrapperPreset === 'zoom' ? 0.9 : 1,
+            transition: {
+                duration: 0.3,
+                when: "afterChildren",
+                staggerChildren: actualStaggerAmount,
+                staggerDirection: -1
+            }
+        }
+    };
+    // Create wrapper with optional animation
+    const groupContent = (<div className={`ui-transition-group ${className}`}>
       {React.Children.map(children, (child, index) => {
-        // Only process React elements
-        if (!React.isValidElement(child)) return child;
-        
-        // Calculate stagger index based on direction
-        const staggerIdx = getStaggerIndex(index, childCount);
-        
-        // Clone the element to add stagger props
-        return React.cloneElement(child, {
-          staggerIndex: staggerIdx,
-          staggerAmount: actualStaggerAmount,
-          key: `ui-transition-item-${index}`,
-          show: true, // Ensure child is shown
-          className: `${child.props.className || ''} ${itemClassName}`.trim(),
-          ...itemProps
-        });
-      })}
-    </div>
-  );
-  
-  // If no wrapper animation is needed, just return the group with AnimatePresence
-  if (!wrapperPreset) {
-    return (
-      <AnimatePresence mode="wait" onExitComplete={onAnimationComplete}>
+            // Only process React elements
+            if (!React.isValidElement(child))
+                return child;
+            // Calculate stagger index based on direction
+            const staggerIdx = getStaggerIndex(index, childCount);
+            // Clone the element to add stagger props
+            return React.cloneElement(child, {
+                staggerIndex: staggerIdx,
+                staggerAmount: actualStaggerAmount,
+                key: `ui-transition-item-${index}`,
+                show: true, // Ensure child is shown
+                className: `${child.props.className || ''} ${itemClassName}`.trim(),
+                ...itemProps
+            });
+        })}
+    </div>);
+    // If no wrapper animation is needed, just return the group with AnimatePresence
+    if (!wrapperPreset) {
+        return (<AnimatePresence mode="wait" onExitComplete={onAnimationComplete}>
         {show && groupContent}
-      </AnimatePresence>
-    );
-  }
-  
-  // Create a wrapper animation for the entire group
-  return (
-    <AnimatePresence mode="wait" onExitComplete={onAnimationComplete}>
-      {show && (
-        <motion.div
-          className="ui-transition-group-wrapper"
-          initial="hidden"
-          animate="visible"
-          exit="exit"
-          variants={wrapperVariants}
-          style={{ transformOrigin: 'center center' }}
-        >
+      </AnimatePresence>);
+    }
+    // Create a wrapper animation for the entire group
+    return (<AnimatePresence mode="wait" onExitComplete={onAnimationComplete}>
+      {show && (<motion.div className="ui-transition-group-wrapper" initial="hidden" animate="visible" exit="exit" variants={wrapperVariants} style={{ transformOrigin: 'center center' }}>
           {groupContent}
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+        </motion.div>)}
+    </AnimatePresence>);
 };
-
 export default UITransitionGroup;

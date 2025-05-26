@@ -1,0 +1,15 @@
+/**
+ * Multi-file context module for analyzing context across multiple files
+ */
+// Types
+export * from './types';
+// Multi-file context extractor
+export * from './multi-file-context-extractor';
+// Symbol resolver
+export * from './symbol-resolver';
+// Dependency analyzer
+export * from './dependency-analyzer';
+// Import manager
+export * from './import-manager';
+// Consistency validator
+export * from './consistency-validator';

@@ -1,0 +1,224 @@
+/* QQ-Verse Global Styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global CSS Variables for Quantum Coherence */
+:root {
+  /* Quantum Color Palette */
+  --quantum-primary: #00ffff;
+  --quantum-secondary: #ff00ff;
+  --quantum-accent: #ffff00;
+  --quantum-background: #050714;
+  --quantum-surface: #0a0f1c;
+  --quantum-text: #ffffff;
+  --quantum-text-secondary: #b0b0b0;
+  
+  /* Neural Fabric Colors */
+  --neural-primary: #4f46e5;
+  --neural-secondary: #7c3aed;
+  --neural-glow: #8b5cf6;
+  
+  /* Consciousness Stream Colors */
+  --consciousness-flow: #06b6d4;
+  --consciousness-depth: #0891b2;
+  --consciousness-surface: #67e8f9;
+  
+  /* Dimensional Gateway Colors */
+  --dimensional-portal: #f59e0b;
+  --dimensional-bridge: #d97706;
+  --dimensional-anchor: #92400e;
+}
+
+/* Base Styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--quantum-background);
+  color: var(--quantum-text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  line-height: 1.6;
+}
+
+/* Quantum Effects */
+.quantum-glow {
+  box-shadow: 0 0 20px var(--quantum-primary);
+  transition: box-shadow 0.3s ease;
+}
+
+.quantum-glow:hover {
+  box-shadow: 0 0 30px var(--quantum-primary), 0 0 60px var(--quantum-primary);
+}
+
+.neural-pulse {
+  animation: neural-pulse 2s ease-in-out infinite;
+}
+
+@keyframes neural-pulse {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.consciousness-flow {
+  background: linear-gradient(
+    45deg,
+    var(--consciousness-flow),
+    var(--consciousness-depth),
+    var(--consciousness-surface)
+  );
+  background-size: 200% 200%;
+  animation: consciousness-flow 3s ease infinite;
+}
+
+@keyframes consciousness-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.dimensional-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.dimensional-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--dimensional-portal),
+    transparent
+  );
+  animation: dimensional-shimmer 2s infinite;
+}
+
+@keyframes dimensional-shimmer {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--quantum-surface);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--quantum-primary);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--quantum-secondary);
+}
+
+/* Selection Styling */
+::selection {
+  background: var(--quantum-primary);
+  color: var(--quantum-background);
+}
+
+::-moz-selection {
+  background: var(--quantum-primary);
+  color: var(--quantum-background);
+}
+
+/* Focus Styles */
+:focus {
+  outline: 2px solid var(--quantum-primary);
+  outline-offset: 2px;
+}
+
+/* Utility Classes */
+.text-quantum {
+  color: var(--quantum-primary);
+}
+
+.text-neural {
+  color: var(--neural-primary);
+}
+
+.text-consciousness {
+  color: var(--consciousness-flow);
+}
+
+.text-dimensional {
+  color: var(--dimensional-portal);
+}
+
+.bg-quantum {
+  background-color: var(--quantum-background);
+}
+
+.bg-surface {
+  background-color: var(--quantum-surface);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  body {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  body {
+    font-size: 12px;
+  }
+}
+
+/* Print Styles */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
+  
+  .quantum-glow,
+  .neural-pulse,
+  .consciousness-flow,
+  .dimensional-shimmer {
+    animation: none;
+    box-shadow: none;
+    background: none;
+  }
+}

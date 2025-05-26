@@ -1,0 +1,340 @@
+/**
+ * Multi-file context extractor for extracting context from multiple files
+ */
+import { extractContext } from '../context-extractor';
+import { detectLanguage } from '../language-detector';
+/**
+ * Default multi-file context extraction options
+ */
+const DEFAULT_EXTRACTION_OPTIONS = {
+    maxFiles: 20,
+    maxDepth: 2,
+    analyzeImports: true,
+    analyzeReferences: true,
+    analyzeInheritance: true,
+    analyzeImplementations: true,
+    includePatterns: [],
+    excludePatterns: [],
+};
+/**
+ * Extract multi-file context
+ */
+export async function extractMultiFileContext(filePath, content, projectFiles, cursorPosition, selection, options = DEFAULT_EXTRACTION_OPTIONS) {
+    const errors = [];
+    const warnings = [];
+    try {
+        // Merge options with defaults
+        const mergedOptions = {
+            ...DEFAULT_EXTRACTION_OPTIONS,
+            ...options,
+        };
+        // Initialize multi-file context
+        const multiFileContext = {
+            files: new Map(),
+            fileContexts: new Map(),
+            symbolTable: {
+                byName: new Map(),
+                byFile: new Map(),
+                byType: new Map(),
+            },
+            dependencyGraph: {
+                nodes: [],
+                edges: [],
+            },
+            currentFilePath: filePath,
+            cursorPosition,
+            selection,
+        };
+        // Add current file
+        const currentFileLanguage = detectLanguage(filePath, content);
+        const currentFile = {
+            path: filePath,
+            content,
+            language: currentFileLanguage,
+            lastModified: new Date(),
+            size: content.length,
+        };
+        multiFileContext.files.set(filePath, currentFile);
+        multiFileContext.dependencyGraph.nodes.push(currentFile);
+        // Extract context for current file
+        const currentFileContext = await extractContext(filePath, content, cursorPosition, selection);
+        if (currentFileContext.errors.length > 0) {
+            errors.push(...currentFileContext.errors.map(error => `Error in current file: ${error}`));
+        }
+        if (currentFileContext.warnings.length > 0) {
+            warnings.push(...currentFileContext.warnings.map(warning => `Warning in current file: ${warning}`));
+        }
+        multiFileContext.fileContexts.set(filePath, currentFileContext.fileContext);
+        // Add symbols from current file
+        addSymbolsFromFileContext(multiFileContext.symbolTable, currentFileContext.fileContext);
+        // Process related files
+        const filesToProcess = new Set();
+        const processedFiles = new Set([filePath]);
+        // Add files from imports
+        if (mergedOptions.analyzeImports) {
+            const importedFiles = getImportedFiles(currentFileContext.fileContext, projectFiles);
+            importedFiles.forEach(importedFile => {
+                if (!processedFiles.has(importedFile)) {
+                    filesToProcess.add(importedFile);
+                }
+            });
+            // Add dependencies from imports
+            addDependenciesFromImports(multiFileContext.dependencyGraph, filePath, currentFileContext.fileContext.imports);
+        }
+        // Process related files up to maxDepth
+        let currentDepth = 0;
+        while (currentDepth < mergedOptions.maxDepth && filesToProcess.size > 0) {
+            const currentFilesToProcess = Array.from(filesToProcess);
+            filesToProcess.clear();
+            for (const fileToProcess of currentFilesToProcess) {
+                // Skip if we've reached the maximum number of files
+                if (multiFileContext.files.size >= mergedOptions.maxFiles) {
+                    warnings.push(`Reached maximum number of files (${mergedOptions.maxFiles}). Some files were not processed.`);
+                    break;
+                }
+                // Find file in project files
+                const projectFile = projectFiles.find(pf => pf.path === fileToProcess);
+                if (!projectFile) {
+                    warnings.push(`File not found in project files: ${fileToProcess}`);
+                    continue;
+                }
+                // Extract context for file
+                try {
+                    const fileLanguage = detectLanguage(fileToProcess, projectFile.content);
+                    const file = {
+                        path: fileToProcess,
+                        content: projectFile.content,
+                        language: fileLanguage,
+                        lastModified: new Date(),
+                        size: projectFile.content.length,
+                    };
+                    multiFileContext.files.set(fileToProcess, file);
+                    multiFileContext.dependencyGraph.nodes.push(file);
+                    const fileContext = await extractContext(fileToProcess, projectFile.content);
+                    if (fileContext.errors.length > 0) {
+                        warnings.push(...fileContext.errors.map(error => `Error in file ${fileToProcess}: ${error}`));
+                    }
+                    multiFileContext.fileContexts.set(fileToProcess, fileContext.fileContext);
+                    // Add symbols from file
+                    addSymbolsFromFileContext(multiFileContext.symbolTable, fileContext.fileContext);
+                    // Add files from imports for next depth
+                    if (mergedOptions.analyzeImports && currentDepth < mergedOptions.maxDepth - 1) {
+                        const importedFiles = getImportedFiles(fileContext.fileContext, projectFiles);
+                        importedFiles.forEach(importedFile => {
+                            if (!processedFiles.has(importedFile) && !filesToProcess.has(importedFile)) {
+                                filesToProcess.add(importedFile);
+                            }
+                        });
+                        // Add dependencies from imports
+                        addDependenciesFromImports(multiFileContext.dependencyGraph, fileToProcess, fileContext.fileContext.imports);
+                    }
+                    // Mark file as processed
+                    processedFiles.add(fileToProcess);
+                }
+                catch (error) {
+                    warnings.push(`Failed to process file ${fileToProcess}: ${error}`);
+                }
+            }
+            currentDepth++;
+        }
+        // Analyze references between files
+        if (mergedOptions.analyzeReferences) {
+            analyzeReferences(multiFileContext);
+        }
+        // Analyze inheritance relationships
+        if (mergedOptions.analyzeInheritance) {
+            analyzeInheritance(multiFileContext);
+        }
+        // Analyze implementation relationships
+        if (mergedOptions.analyzeImplementations) {
+            analyzeImplementations(multiFileContext);
+        }
+        return {
+            context: multiFileContext,
+            errors,
+            warnings,
+        };
+    }
+    catch (error) {
+        errors.push(`Failed to extract multi-file context: ${error}`);
+        // Return minimal context
+        return {
+            context: {
+                files: new Map([
+                    [
+                        filePath,
+                        {
+                            path: filePath,
+                            content,
+                            language: detectLanguage(filePath, content),
+                            lastModified: new Date(),
+                            size: content.length,
+                        },
+                    ],
+                ]),
+                fileContexts: new Map(),
+                symbolTable: {
+                    byName: new Map(),
+                    byFile: new Map(),
+                    byType: new Map(),
+                },
+                dependencyGraph: {
+                    nodes: [],
+                    edges: [],
+                },
+                currentFilePath: filePath,
+                cursorPosition,
+                selection,
+            },
+            errors,
+            warnings,
+        };
+    }
+}
+/**
+ * Add symbols from file context to symbol table
+ */
+function addSymbolsFromFileContext(symbolTable, fileContext) {
+    for (const element of fileContext.elements) {
+        const symbol = {
+            name: element.name,
+            type: element.type,
+            location: {
+                filePath: fileContext.filePath,
+                startLine: element.startPosition.line,
+                startColumn: element.startPosition.column,
+                endLine: element.endPosition.line,
+                endColumn: element.endPosition.column,
+            },
+            scope: element.scope,
+            visibility: element.visibility,
+            dataType: element.dataType,
+        };
+        // Add to byName map
+        if (!symbolTable.byName.has(symbol.name)) {
+            symbolTable.byName.set(symbol.name, []);
+        }
+        symbolTable.byName.get(symbol.name).push(symbol);
+        // Add to byFile map
+        if (!symbolTable.byFile.has(fileContext.filePath)) {
+            symbolTable.byFile.set(fileContext.filePath, []);
+        }
+        symbolTable.byFile.get(fileContext.filePath).push(symbol);
+        // Add to byType map
+        if (!symbolTable.byType.has(symbol.type)) {
+            symbolTable.byType.set(symbol.type, []);
+        }
+        symbolTable.byType.get(symbol.type).push(symbol);
+    }
+}
+/**
+ * Get imported files from file context
+ */
+function getImportedFiles(fileContext, projectFiles) {
+    const importedFiles = [];
+    for (const importDecl of fileContext.imports) {
+        // Convert import source to file path
+        const importedFilePath = resolveImportPath(fileContext.filePath, importDecl.source);
+        // Check if file exists in project files
+        if (projectFiles.some(pf => pf.path === importedFilePath)) {
+            importedFiles.push(importedFilePath);
+        }
+    }
+    return importedFiles;
+}
+/**
+ * Resolve import path to file path
+ */
+function resolveImportPath(currentFilePath, importSource) {
+    // This is a simplified implementation
+    // In a real implementation, this would handle various import formats and resolve paths correctly
+    // If import source is a relative path
+    if (importSource.startsWith('./') || importSource.startsWith('../')) {
+        const currentDir = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
+        let resolvedPath = `${currentDir}/${importSource}`;
+        // Normalize path
+        resolvedPath = resolvedPath.replace(/\/\.\//g, '/'); // Remove ./
+        // Handle ../
+        while (resolvedPath.includes('/../')) {
+            resolvedPath = resolvedPath.replace(/\/[^\/]+\/\.\.\//g, '/');
+        }
+        // Add extension if missing
+        if (!resolvedPath.includes('.')) {
+            resolvedPath += '.ts'; // Default to TypeScript
+        }
+        return resolvedPath;
+    }
+    // For non-relative imports, we would need a more sophisticated resolution mechanism
+    // This is a simplified implementation
+    return importSource;
+}
+/**
+ * Add dependencies from imports
+ */
+function addDependenciesFromImports(dependencyGraph, sourcePath, imports) {
+    for (const importDecl of imports) {
+        const targetPath = resolveImportPath(sourcePath, importDecl.source);
+        // Check if dependency already exists
+        const existingDependency = dependencyGraph.edges.find(edge => edge.source === sourcePath && edge.target === targetPath);
+        if (existingDependency) {
+            // Update existing dependency
+            if (existingDependency.type === 'import' && existingDependency.importedSymbols) {
+                // Add imported symbols
+                const symbols = importDecl.elements || [];
+                if (importDecl.defaultImport) {
+                    symbols.push(importDecl.defaultImport);
+                }
+                if (importDecl.namespaceImport) {
+                    symbols.push(importDecl.namespaceImport);
+                }
+                for (const symbol of symbols) {
+                    if (!existingDependency.importedSymbols.includes(symbol)) {
+                        existingDependency.importedSymbols.push(symbol);
+                    }
+                }
+            }
+        }
+        else {
+            // Create new dependency
+            const symbols = importDecl.elements || [];
+            if (importDecl.defaultImport) {
+                symbols.push(importDecl.defaultImport);
+            }
+            if (importDecl.namespaceImport) {
+                symbols.push(importDecl.namespaceImport);
+            }
+            const dependency = {
+                source: sourcePath,
+                target: targetPath,
+                type: 'import',
+                importedSymbols: symbols,
+                strength: 1.0, // Maximum strength for direct imports
+            };
+            dependencyGraph.edges.push(dependency);
+        }
+    }
+}
+/**
+ * Analyze references between files
+ */
+function analyzeReferences(multiFileContext) {
+    // This is a placeholder implementation
+    // In a real implementation, this would analyze references between files
+    // by looking for symbol usages across files
+}
+/**
+ * Analyze inheritance relationships
+ */
+function analyzeInheritance(multiFileContext) {
+    // This is a placeholder implementation
+    // In a real implementation, this would analyze inheritance relationships
+    // between classes and interfaces
+}
+/**
+ * Analyze implementation relationships
+ */
+function analyzeImplementations(multiFileContext) {
+    // This is a placeholder implementation
+    // In a real implementation, this would analyze implementation relationships
+    // between interfaces and classes
+}

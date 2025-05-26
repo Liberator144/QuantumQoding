@@ -1,0 +1,185 @@
+/**
+ * Base Database Adapter
+ *
+ * Base implementation for all database adapters.
+ * Provides common functionality and default implementations.
+ *
+ * @version 1.0.0
+ */
+import { EventEmitter } from 'events';
+/**
+ * Default adapter options
+ */
+const DEFAULT_OPTIONS = {
+    debugMode: false,
+    connectionTimeout: 30000,
+    operationTimeout: 10000,
+    retryAttempts: 3,
+    retryDelay: 1000,
+    cacheEnabled: true,
+    cacheTTL: 60000,
+    batchSize: 100
+};
+/**
+ * Base adapter implementation
+ */
+export class BaseAdapter extends EventEmitter {
+    /**
+     * Constructor
+     * @param name - Adapter name
+     * @param type - Adapter type
+     * @param options - Adapter options
+     */
+    constructor(name, type, options = {}) {
+        super();
+        /** Is connected */
+        this._isConnected = false;
+        /** Active watches */
+        this.watches = new Map();
+        /** Cache */
+        this.cache = new Map();
+        this.name = name;
+        this.type = type;
+        this.options = { ...DEFAULT_OPTIONS, ...options };
+        this.log(`Initialized ${this.name} adapter`);
+    }
+    /**
+     * Get is connected
+     */
+    get isConnected() {
+        return this._isConnected;
+    }
+    /**
+     * Find entity by ID
+     * @param collection - Collection name
+     * @param id - Entity ID
+     * @param options - Query options
+     * @returns Promise resolving to found entity or null
+     */
+    async findById(collection, id, options) {
+        return this.findOne(collection, { id }, options);
+    }
+    /**
+     * Update entity by ID
+     * @param collection - Collection name
+     * @param id - Entity ID
+     * @param update - Update object
+     * @param options - Update options
+     * @returns Promise resolving to updated entity or null
+     */
+    async updateById(collection, id, update, options) {
+        const result = await this.update(collection, { id }, update, {
+            ...options,
+            multi: false,
+            returnUpdated: true
+        });
+        if (result.modified === 0) {
+            return null;
+        }
+        return this.findById(collection, id);
+    }
+    /**
+     * Delete entity by ID
+     * @param collection - Collection name
+     * @param id - Entity ID
+     * @returns Promise resolving to deletion success
+     */
+    async deleteById(collection, id) {
+        const deleted = await this.delete(collection, { id });
+        return deleted > 0;
+    }
+    /**
+     * Get cache key
+     * @param collection - Collection name
+     * @param query - Query object
+     * @param options - Query options
+     * @returns Cache key
+     */
+    getCacheKey(collection, query, options) {
+        return `${collection}:${JSON.stringify(query)}:${JSON.stringify(options || {})}`;
+    }
+    /**
+     * Get from cache
+     * @param key - Cache key
+     * @returns Cached data or null
+     */
+    getFromCache(key) {
+        if (!this.options.cacheEnabled) {
+            return null;
+        }
+        const cached = this.cache.get(key);
+        if (!cached) {
+            return null;
+        }
+        // Check if expired
+        if (cached.expires < Date.now()) {
+            this.cache.delete(key);
+            return null;
+        }
+        return cached.data;
+    }
+    /**
+     * Set in cache
+     * @param key - Cache key
+     * @param data - Data to cache
+     */
+    setInCache(key, data) {
+        if (!this.options.cacheEnabled) {
+            return;
+        }
+        const expires = Date.now() + (this.options.cacheTTL || 60000);
+        this.cache.set(key, {
+            data,
+            expires
+        });
+    }
+    /**
+     * Clear cache
+     * @param collection - Collection name (optional, if provided only clears cache for this collection)
+     */
+    clearCache(collection) {
+        if (!this.options.cacheEnabled) {
+            return;
+        }
+        if (collection) {
+            // Clear cache for collection
+            const prefix = `${collection}:`;
+            for (const key of this.cache.keys()) {
+                if (key.startsWith(prefix)) {
+                    this.cache.delete(key);
+                }
+            }
+            this.log(`Cleared cache for collection: ${collection}`);
+        }
+        else {
+            // Clear all cache
+            this.cache.clear();
+            this.log('Cleared all cache');
+        }
+    }
+    /**
+     * Generate ID
+     * @returns Generated ID
+     */
+    generateId() {
+        return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param message - Message to log
+     */
+    log(message) {
+        if (this.options.debugMode) {
+            console.log(`[${this.name}Adapter] ${message}`);
+        }
+    }
+    /**
+     * Log error
+     * @param message - Error message
+     * @param error - Error object
+     */
+    logError(message, error) {
+        console.error(`[${this.name}Adapter] ${message}`, error);
+        this.emit('error', { message, error });
+    }
+}

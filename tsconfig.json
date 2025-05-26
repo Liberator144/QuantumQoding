@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "downlevelIteration": true,
-    
+
     /* Enhanced Type Checking */
     "noImplicitAny": true,
     "noImplicitThis": true,
@@ -17,7 +17,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
-    
+
     /* Additional Libraries */
     "lib": [
       "es2020",
@@ -28,5 +28,22 @@
       "ES2018.AsyncIterable"
     ]
   },
-  "exclude": ["node_modules", "dist", "**/node_modules/*"]
+  "include": [
+    "src/**/*",
+    "types/**/*",
+    "backend/**/*.ts",
+    "frontend/src/**/*.ts",
+    "frontend/src/**/*.tsx",
+    "frontend/visualization/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/node_modules/*",
+    "**/*.js",
+    "**/*.jsx",
+    "frontend/src/**/*.js",
+    "frontend/visualization/**/*.js",
+    "src/**/*.js"
+  ]
 }

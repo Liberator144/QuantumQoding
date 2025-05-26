@@ -1,0 +1,407 @@
+/**
+ * Analytics Model for Personalization System
+ * Provides insights into user behavior and preferences
+ */
+import { InteractionType } from '../types';
+/**
+ * Analytics manager for personalization insights
+ */
+export class AnalyticsManager {
+    /**
+     * Analyze user interactions
+     */
+    analyzeInteractions(interactions) {
+        // Count interactions by type
+        const interactionsByType = {};
+        for (const interaction of interactions) {
+            interactionsByType[interaction.type] = (interactionsByType[interaction.type] || 0) + 1;
+        }
+        // Count interactions over time (by day)
+        const interactionsByDay = {};
+        for (const interaction of interactions) {
+            const date = interaction.timestamp.toISOString().split('T')[0];
+            interactionsByDay[date] = (interactionsByDay[date] || 0) + 1;
+        }
+        const interactionsOverTime = Object.entries(interactionsByDay)
+            .map(([date, count]) => ({ date, count }))
+            .sort((a, b) => a.date.localeCompare(b.date));
+        // Count interactions by context
+        const contextCounts = {};
+        for (const interaction of interactions) {
+            const projectContext = interaction.context.projectContext;
+            if (projectContext) {
+                contextCounts[projectContext] = (contextCounts[projectContext] || 0) + 1;
+            }
+        }
+        const commonContexts = Object.entries(contextCounts)
+            .map(([context, count]) => ({ context, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+        // Count interactions by hour of day
+        const hourCounts = new Array(24).fill(0);
+        for (const interaction of interactions) {
+            const hour = interaction.timestamp.getHours();
+            hourCounts[hour]++;
+        }
+        // Find active hours (hours with more than average activity)
+        const averagePerHour = interactions.length / 24;
+        const activeHours = hourCounts
+            .map((count, hour) => ({ hour, count }))
+            .filter(h => h.count > averagePerHour)
+            .map(h => h.hour);
+        // Count interactions by day of week
+        const dayOfWeekCounts = new Array(7).fill(0);
+        for (const interaction of interactions) {
+            const dayOfWeek = interaction.timestamp.getDay();
+            dayOfWeekCounts[dayOfWeek]++;
+        }
+        // Find active days (days with more than average activity)
+        const averagePerDay = interactions.length / 7;
+        const activeDaysOfWeek = dayOfWeekCounts
+            .map((count, day) => ({ day, count }))
+            .filter(d => d.count > averagePerDay)
+            .map(d => d.day);
+        return {
+            totalInteractions: interactions.length,
+            interactionsByType,
+            interactionsOverTime,
+            commonContexts,
+            activeHours,
+            activeDaysOfWeek,
+        };
+    }
+    /**
+     * Analyze user preferences
+     */
+    analyzePreferences(preferences) {
+        // Count preferences by category
+        const preferencesByCategory = {};
+        for (const preference of preferences) {
+            preferencesByCategory[preference.category] =
+                (preferencesByCategory[preference.category] || 0) + 1;
+        }
+        // Count preferences by source
+        const preferencesBySource = {};
+        for (const preference of preferences) {
+            preferencesBySource[preference.source] = (preferencesBySource[preference.source] || 0) + 1;
+        }
+        // Calculate average confidence
+        const totalConfidence = preferences.reduce((sum, pref) => sum + pref.confidence, 0);
+        const averageConfidence = preferences.length > 0 ? totalConfidence / preferences.length : 0;
+        // Count preferences by value
+        const preferenceValueCounts = {};
+        for (const preference of preferences) {
+            const key = `${preference.category}:${preference.key}:${JSON.stringify(preference.value)}`;
+            preferenceValueCounts[key] = (preferenceValueCounts[key] || 0) + 1;
+        }
+        const commonPreferences = Object.entries(preferenceValueCounts)
+            .map(([key, count]) => {
+            const [category, prefKey, valueStr] = key.split(':', 3);
+            return {
+                category,
+                key: prefKey,
+                value: JSON.parse(valueStr),
+                count,
+            };
+        })
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+        return {
+            totalPreferences: preferences.length,
+            preferencesByCategory,
+            preferencesBySource,
+            averageConfidence,
+            commonPreferences,
+        };
+    }
+    /**
+     * Generate personalization insights
+     */
+    generateInsights(interactions, preferences) {
+        const interactionAnalytics = this.analyzeInteractions(interactions);
+        const preferenceAnalytics = this.analyzePreferences(preferences);
+        const insights = {
+            interactionInsights: {},
+            preferenceInsights: {},
+            behavioralPatterns: {},
+            recommendations: [],
+        };
+        // Interaction insights
+        insights.interactionInsights = {
+            activityLevel: this.categorizeActivityLevel(interactionAnalytics.totalInteractions),
+            mostFrequentActivity: this.getMostFrequentActivity(interactionAnalytics.interactionsByType),
+            timePattern: this.analyzeTimePattern(interactionAnalytics.activeHours),
+            contextSwitching: this.analyzeContextSwitching(interactionAnalytics.commonContexts),
+        };
+        // Preference insights
+        insights.preferenceInsights = {
+            preferenceStrength: this.categorizePreferenceStrength(preferenceAnalytics.averageConfidence),
+            dominantCategories: this.getDominantCategories(preferenceAnalytics.preferencesByCategory),
+            preferenceConsistency: this.analyzePreferenceConsistency(preferences),
+        };
+        // Behavioral patterns
+        insights.behavioralPatterns = {
+            workflowStyle: this.analyzeWorkflowStyle(interactions),
+            feedbackPattern: this.analyzeFeedbackPattern(interactions),
+            learningCurve: this.analyzeLearningCurve(interactions),
+        };
+        // Recommendations
+        insights.recommendations = this.generateRecommendations(interactionAnalytics, preferenceAnalytics, insights);
+        return insights;
+    }
+    /**
+     * Categorize activity level
+     */
+    categorizeActivityLevel(totalInteractions) {
+        if (totalInteractions < 10) {
+            return 'low';
+        }
+        else if (totalInteractions < 50) {
+            return 'moderate';
+        }
+        else if (totalInteractions < 200) {
+            return 'high';
+        }
+        else {
+            return 'very high';
+        }
+    }
+    /**
+     * Get most frequent activity
+     */
+    getMostFrequentActivity(interactionsByType) {
+        let maxCount = 0;
+        let maxType = '';
+        for (const [type, count] of Object.entries(interactionsByType)) {
+            if (count > maxCount) {
+                maxCount = count;
+                maxType = type;
+            }
+        }
+        if (maxCount === 0) {
+            return null;
+        }
+        return { type: maxType, count: maxCount };
+    }
+    /**
+     * Analyze time pattern
+     */
+    analyzeTimePattern(activeHours) {
+        if (activeHours.length === 0) {
+            return 'unknown';
+        }
+        const morning = activeHours.filter(h => h >= 5 && h < 12).length;
+        const afternoon = activeHours.filter(h => h >= 12 && h < 17).length;
+        const evening = activeHours.filter(h => h >= 17 && h < 22).length;
+        const night = activeHours.filter(h => h >= 22 || h < 5).length;
+        const max = Math.max(morning, afternoon, evening, night);
+        if (max === morning) {
+            return 'morning person';
+        }
+        else if (max === afternoon) {
+            return 'afternoon person';
+        }
+        else if (max === evening) {
+            return 'evening person';
+        }
+        else {
+            return 'night owl';
+        }
+    }
+    /**
+     * Analyze context switching
+     */
+    analyzeContextSwitching(commonContexts) {
+        if (commonContexts.length === 0) {
+            return 'unknown';
+        }
+        if (commonContexts.length === 1) {
+            return 'highly focused';
+        }
+        const totalCount = commonContexts.reduce((sum, c) => sum + c.count, 0);
+        const primaryContextRatio = commonContexts[0].count / totalCount;
+        if (primaryContextRatio > 0.8) {
+            return 'primarily focused';
+        }
+        else if (primaryContextRatio > 0.5) {
+            return 'moderately focused';
+        }
+        else {
+            return 'context switcher';
+        }
+    }
+    /**
+     * Categorize preference strength
+     */
+    categorizePreferenceStrength(averageConfidence) {
+        if (averageConfidence < 0.3) {
+            return 'weak';
+        }
+        else if (averageConfidence < 0.7) {
+            return 'moderate';
+        }
+        else {
+            return 'strong';
+        }
+    }
+    /**
+     * Get dominant preference categories
+     */
+    getDominantCategories(preferencesByCategory) {
+        return Object.entries(preferencesByCategory)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 2)
+            .map(([category]) => category);
+    }
+    /**
+     * Analyze preference consistency
+     */
+    analyzePreferenceConsistency(preferences) {
+        if (preferences.length < 5) {
+            return 'unknown';
+        }
+        // Check if preferences have consistent confidence levels
+        const confidences = preferences.map(p => p.confidence);
+        const avgConfidence = confidences.reduce((sum, c) => sum + c, 0) / confidences.length;
+        const variance = confidences.reduce((sum, c) => sum + Math.pow(c - avgConfidence, 2), 0) / confidences.length;
+        if (variance < 0.05) {
+            return 'highly consistent';
+        }
+        else if (variance < 0.15) {
+            return 'moderately consistent';
+        }
+        else {
+            return 'variable';
+        }
+    }
+    /**
+     * Analyze workflow style
+     */
+    analyzeWorkflowStyle(interactions) {
+        // This is a simplified implementation
+        const queryCount = interactions.filter(i => i.type === InteractionType.QUERY).length;
+        const codeGenCount = interactions.filter(i => i.type === InteractionType.CODE_GENERATION).length;
+        const docGenCount = interactions.filter(i => i.type === InteractionType.DOCUMENTATION_GENERATION).length;
+        if (codeGenCount > queryCount && codeGenCount > docGenCount) {
+            return 'code-focused';
+        }
+        else if (docGenCount > queryCount && docGenCount > codeGenCount) {
+            return 'documentation-focused';
+        }
+        else if (queryCount > codeGenCount && queryCount > docGenCount) {
+            return 'exploration-focused';
+        }
+        else {
+            return 'balanced';
+        }
+    }
+    /**
+     * Analyze feedback pattern
+     */
+    analyzeFeedbackPattern(interactions) {
+        const feedbackInteractions = interactions.filter(i => i.type === InteractionType.FEEDBACK);
+        if (feedbackInteractions.length < 5) {
+            return 'unknown';
+        }
+        let positiveCount = 0;
+        let negativeCount = 0;
+        for (const interaction of feedbackInteractions) {
+            if (interaction.context.feedback === 'positive') {
+                positiveCount++;
+            }
+            else if (interaction.context.feedback === 'negative') {
+                negativeCount++;
+            }
+        }
+        const totalFeedback = positiveCount + negativeCount;
+        if (totalFeedback === 0) {
+            return 'neutral';
+        }
+        const positiveRatio = positiveCount / totalFeedback;
+        if (positiveRatio > 0.8) {
+            return 'highly positive';
+        }
+        else if (positiveRatio > 0.6) {
+            return 'mostly positive';
+        }
+        else if (positiveRatio > 0.4) {
+            return 'balanced';
+        }
+        else if (positiveRatio > 0.2) {
+            return 'mostly negative';
+        }
+        else {
+            return 'highly negative';
+        }
+    }
+    /**
+     * Analyze learning curve
+     */
+    analyzeLearningCurve(interactions) {
+        if (interactions.length < 20) {
+            return 'insufficient data';
+        }
+        // Sort interactions by timestamp
+        const sorted = [...interactions].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+        // Split into quarters
+        const quarterSize = Math.floor(sorted.length / 4);
+        const quarters = [
+            sorted.slice(0, quarterSize),
+            sorted.slice(quarterSize, quarterSize * 2),
+            sorted.slice(quarterSize * 2, quarterSize * 3),
+            sorted.slice(quarterSize * 3),
+        ];
+        // Calculate complexity over time (simplistic measure)
+        const complexityByQuarter = quarters.map(quarter => {
+            const avgContentLength = quarter.reduce((sum, i) => {
+                const content = i.context.content || i.context.query || '';
+                return sum + content.length;
+            }, 0) / quarter.length;
+            return avgContentLength;
+        });
+        // Check if complexity is increasing
+        if (complexityByQuarter[3] > complexityByQuarter[0] * 1.5) {
+            return 'steep learning curve';
+        }
+        else if (complexityByQuarter[3] > complexityByQuarter[0] * 1.2) {
+            return 'moderate learning curve';
+        }
+        else {
+            return 'flat learning curve';
+        }
+    }
+    /**
+     * Generate recommendations based on insights
+     */
+    generateRecommendations(interactionAnalytics, preferenceAnalytics, insights) {
+        const recommendations = [];
+        // Activity level recommendations
+        if (insights.interactionInsights.activityLevel === 'low') {
+            recommendations.push('Increase interaction frequency to improve personalization accuracy');
+        }
+        // Time pattern recommendations
+        if (interactionAnalytics.activeHours.length <= 3) {
+            recommendations.push('Consider creating time-specific personas for your active hours');
+        }
+        // Context switching recommendations
+        if (insights.interactionInsights.contextSwitching === 'context switcher') {
+            recommendations.push('Create project-specific personas to better handle context switching');
+        }
+        // Preference strength recommendations
+        if (insights.preferenceInsights.preferenceStrength === 'weak') {
+            recommendations.push('Provide explicit preferences to improve personalization quality');
+        }
+        // Workflow style recommendations
+        if (insights.behavioralPatterns.workflowStyle === 'code-focused') {
+            recommendations.push('Consider enabling advanced code style personalization features');
+        }
+        else if (insights.behavioralPatterns.workflowStyle === 'documentation-focused') {
+            recommendations.push('Consider enabling advanced documentation style personalization features');
+        }
+        // Feedback pattern recommendations
+        if (insights.behavioralPatterns.feedbackPattern === 'mostly negative') {
+            recommendations.push('Review and adjust your current preferences to better match your expectations');
+        }
+        return recommendations;
+    }
+}

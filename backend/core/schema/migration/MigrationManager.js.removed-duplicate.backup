@@ -1,0 +1,440 @@
+"use strict";
+/**
+ * Migration Manager
+ *
+ * Manages schema migrations and their execution.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Migration Manager
+ *
+ * Manages schema migrations and their execution.
+ */
+class MigrationManager {
+    /**
+     * Create a new MigrationManager instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Database instance
+            database: null,
+            // Migration collection name
+            migrationCollection: '_migrations',
+            // Batch size for migrations
+            batchSize: 100,
+            // Merge with provided options
+            ...options,
+        };
+        // State
+        this.migrations = new Map();
+        this.migrationFunctions = new Map();
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the manager
+     * @private
+     */
+    _init() {
+        this.log('Initializing Migration Manager');
+        // Set up migration collection if database is provided
+        if (this.config.database) {
+            this._setupMigrationCollection();
+        }
+        this.log('Migration Manager initialized');
+    }
+    /**
+     * Set up migration collection
+     * @private
+     */
+    _setupMigrationCollection() {
+        if (!this.config.database) {
+            return;
+        }
+        // Get or create migration collection
+        const migrationCollection = this.config.database.getCollection(this.config.migrationCollection) ||
+            this.config.database.createCollection(this.config.migrationCollection);
+        this.log(`Migration collection set up: ${this.config.migrationCollection}`);
+    }
+    /**
+     * Set database reference
+     * @param {UnifiedQuantumDatabase} database - Database instance
+     * @returns {MigrationManager} This instance for chaining
+     */
+    setDatabase(database) {
+        this.config.database = database;
+        this._setupMigrationCollection();
+        this.log('Database reference set');
+        return this;
+    }
+    /**
+     * Register a migration
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @param {Function} migrationFn - Migration function
+     * @returns {Promise<Object>} Registered migration
+     */
+    async registerMigration(collectionName, fromVersion, toVersion, migrationFn) {
+        if (!this.config.database) {
+            throw new Error('Database not set');
+        }
+        // Validate parameters
+        if (!collectionName) {
+            throw new Error('Collection name is required');
+        }
+        if (!fromVersion) {
+            throw new Error('From version is required');
+        }
+        if (!toVersion) {
+            throw new Error('To version is required');
+        }
+        if (typeof migrationFn !== 'function') {
+            throw new Error('Migration function is required');
+        }
+        // Get migration collection
+        const migrationCollection = this.config.database.getCollection(this.config.migrationCollection);
+        if (!migrationCollection) {
+            throw new Error(`Migration collection not found: ${this.config.migrationCollection}`);
+        }
+        // Check if migration already exists
+        const existingMigration = await this.getMigration(collectionName, fromVersion, toVersion);
+        if (existingMigration) {
+            // Update existing migration
+            const updatedMigration = {
+                ...existingMigration,
+                updatedAt: Date.now(),
+            };
+            migrationCollection.update(existingMigration.id, updatedMigration);
+            // Update cache
+            this._updateMigrationCache(updatedMigration);
+            // Store migration function
+            this._storeMigrationFunction(collectionName, fromVersion, toVersion, migrationFn);
+            this.log(`Updated migration: ${collectionName} (${fromVersion} -> ${toVersion})`);
+            return updatedMigration;
+        }
+        else {
+            // Create new migration
+            const newMigration = {
+                id: `migration-${collectionName}-${fromVersion}-${toVersion}`,
+                collectionName,
+                fromVersion,
+                toVersion,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            };
+            migrationCollection.insert(newMigration);
+            // Update cache
+            this._updateMigrationCache(newMigration);
+            // Store migration function
+            this._storeMigrationFunction(collectionName, fromVersion, toVersion, migrationFn);
+            this.log(`Registered migration: ${collectionName} (${fromVersion} -> ${toVersion})`);
+            return newMigration;
+        }
+    }
+    /**
+     * Get a migration
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @returns {Promise<Object>} Migration
+     */
+    async getMigration(collectionName, fromVersion, toVersion) {
+        // Check cache first
+        const cacheKey = `${collectionName}-${fromVersion}-${toVersion}`;
+        if (this.migrations.has(cacheKey)) {
+            return this.migrations.get(cacheKey);
+        }
+        if (!this.config.database) {
+            return null;
+        }
+        // Get migration collection
+        const migrationCollection = this.config.database.getCollection(this.config.migrationCollection);
+        if (!migrationCollection) {
+            return null;
+        }
+        // Find migration
+        const migration = migrationCollection.findOne({
+            collectionName,
+            fromVersion,
+            toVersion,
+        });
+        if (migration) {
+            // Update cache
+            this._updateMigrationCache(migration);
+        }
+        return migration;
+    }
+    /**
+     * Get all migrations for a collection
+     * @param {string} collectionName - Collection name
+     * @returns {Promise<Array>} Migrations
+     */
+    async getMigrations(collectionName) {
+        if (!this.config.database) {
+            return [];
+        }
+        // Get migration collection
+        const migrationCollection = this.config.database.getCollection(this.config.migrationCollection);
+        if (!migrationCollection) {
+            return [];
+        }
+        // Find migrations
+        const migrations = migrationCollection.find({ collectionName }, { sort: { fromVersion: 1, toVersion: 1 } });
+        // Update cache
+        for (const migration of migrations) {
+            this._updateMigrationCache(migration);
+        }
+        return migrations;
+    }
+    /**
+     * Delete a migration
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @returns {Promise<boolean>} Success
+     */
+    async deleteMigration(collectionName, fromVersion, toVersion) {
+        if (!this.config.database) {
+            return false;
+        }
+        // Get migration collection
+        const migrationCollection = this.config.database.getCollection(this.config.migrationCollection);
+        if (!migrationCollection) {
+            return false;
+        }
+        // Find migration
+        const migration = await this.getMigration(collectionName, fromVersion, toVersion);
+        if (!migration) {
+            return false;
+        }
+        // Delete migration
+        migrationCollection.remove(migration.id);
+        // Remove from cache
+        this._removeMigrationFromCache(collectionName, fromVersion, toVersion);
+        this.log(`Deleted migration: ${collectionName} (${fromVersion} -> ${toVersion})`);
+        return true;
+    }
+    /**
+     * Migrate a collection
+     * @param {Object} collection - Collection
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @param {Object} options - Migration options
+     * @returns {Promise<Object>} Migration result
+     */
+    async migrateCollection(collection, fromVersion, toVersion, options = {}) {
+        if (!collection) {
+            throw new Error('Collection is required');
+        }
+        if (!fromVersion) {
+            throw new Error('From version is required');
+        }
+        if (!toVersion) {
+            throw new Error('To version is required');
+        }
+        // Get migration path
+        const migrationPath = await this._getMigrationPath(collection.name, fromVersion, toVersion);
+        if (migrationPath.length === 0) {
+            throw new Error(`No migration path found: ${collection.name} (${fromVersion} -> ${toVersion})`);
+        }
+        // Execute migrations
+        let currentVersion = fromVersion;
+        let documentsProcessed = 0;
+        let documentsUpdated = 0;
+        for (const migration of migrationPath) {
+            // Get migration function
+            const migrationFn = this._getMigrationFunction(migration.collectionName, migration.fromVersion, migration.toVersion);
+            if (!migrationFn) {
+                throw new Error(`Migration function not found: ${migration.collectionName} (${migration.fromVersion} -> ${migration.toVersion})`);
+            }
+            // Execute migration
+            const result = await this._executeMigration(collection, migrationFn, options);
+            // Update counters
+            documentsProcessed += result.documentsProcessed;
+            documentsUpdated += result.documentsUpdated;
+            // Update current version
+            currentVersion = migration.toVersion;
+            this.log(`Executed migration: ${migration.collectionName} (${migration.fromVersion} -> ${migration.toVersion})`);
+        }
+        return {
+            success: true,
+            collectionName: collection.name,
+            fromVersion,
+            toVersion,
+            documentsProcessed,
+            documentsUpdated,
+        };
+    }
+    /**
+     * Execute a migration
+     * @param {Object} collection - Collection
+     * @param {Function} migrationFn - Migration function
+     * @param {Object} options - Migration options
+     * @returns {Promise<Object>} Migration result
+     * @private
+     */
+    async _executeMigration(collection, migrationFn, options = {}) {
+        // Get all documents
+        const documents = collection.find({});
+        let documentsProcessed = 0;
+        let documentsUpdated = 0;
+        // Process documents in batches
+        const batchSize = options.batchSize || this.config.batchSize;
+        for (let i = 0; i < documents.length; i += batchSize) {
+            const batch = documents.slice(i, i + batchSize);
+            // Process batch
+            for (const document of batch) {
+                try {
+                    // Apply migration function
+                    const result = await migrationFn(document);
+                    // Update document if changed
+                    if (result && result !== document) {
+                        collection.update(document.id, result);
+                        documentsUpdated++;
+                    }
+                    documentsProcessed++;
+                }
+                catch (error) {
+                    this.log(`Error migrating document ${document.id}: ${error.message}`);
+                    // Handle error based on options
+                    if (options.continueOnError) {
+                        documentsProcessed++;
+                    }
+                    else {
+                        throw error;
+                    }
+                }
+            }
+        }
+        return {
+            documentsProcessed,
+            documentsUpdated,
+        };
+    }
+    /**
+     * Get migration path
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @returns {Promise<Array>} Migration path
+     * @private
+     */
+    async _getMigrationPath(collectionName, fromVersion, toVersion) {
+        // Get all migrations for collection
+        const migrations = await this.getMigrations(collectionName);
+        // Build migration graph
+        const graph = new Map();
+        for (const migration of migrations) {
+            if (!graph.has(migration.fromVersion)) {
+                graph.set(migration.fromVersion, []);
+            }
+            graph.get(migration.fromVersion).push(migration);
+        }
+        // Find path using BFS
+        const queue = [{ version: fromVersion, path: [] }];
+        const visited = new Set([fromVersion]);
+        while (queue.length > 0) {
+            const { version, path } = queue.shift();
+            if (version === toVersion) {
+                return path;
+            }
+            const edges = graph.get(version) || [];
+            for (const migration of edges) {
+                if (!visited.has(migration.toVersion)) {
+                    visited.add(migration.toVersion);
+                    queue.push({
+                        version: migration.toVersion,
+                        path: [...path, migration],
+                    });
+                }
+            }
+        }
+        return [];
+    }
+    /**
+     * Update migration cache
+     * @param {Object} migration - Migration
+     * @private
+     */
+    _updateMigrationCache(migration) {
+        const cacheKey = `${migration.collectionName}-${migration.fromVersion}-${migration.toVersion}`;
+        this.migrations.set(cacheKey, migration);
+    }
+    /**
+     * Remove migration from cache
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @private
+     */
+    _removeMigrationFromCache(collectionName, fromVersion, toVersion) {
+        const cacheKey = `${collectionName}-${fromVersion}-${toVersion}`;
+        this.migrations.delete(cacheKey);
+        // Remove migration function
+        this._removeMigrationFunction(collectionName, fromVersion, toVersion);
+    }
+    /**
+     * Store migration function
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @param {Function} migrationFn - Migration function
+     * @private
+     */
+    _storeMigrationFunction(collectionName, fromVersion, toVersion, migrationFn) {
+        if (!this.migrationFunctions.has(collectionName)) {
+            this.migrationFunctions.set(collectionName, new Map());
+        }
+        const collectionMigrations = this.migrationFunctions.get(collectionName);
+        const key = `${fromVersion}-${toVersion}`;
+        collectionMigrations.set(key, migrationFn);
+    }
+    /**
+     * Get migration function
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @returns {Function} Migration function
+     * @private
+     */
+    _getMigrationFunction(collectionName, fromVersion, toVersion) {
+        if (!this.migrationFunctions.has(collectionName)) {
+            return null;
+        }
+        const collectionMigrations = this.migrationFunctions.get(collectionName);
+        const key = `${fromVersion}-${toVersion}`;
+        return collectionMigrations.get(key) || null;
+    }
+    /**
+     * Remove migration function
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @private
+     */
+    _removeMigrationFunction(collectionName, fromVersion, toVersion) {
+        if (!this.migrationFunctions.has(collectionName)) {
+            return;
+        }
+        const collectionMigrations = this.migrationFunctions.get(collectionName);
+        const key = `${fromVersion}-${toVersion}`;
+        collectionMigrations.delete(key);
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[MigrationManager] ${message}`);
+        }
+    }
+}
+module.exports = { MigrationManager };

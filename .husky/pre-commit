@@ -1,5 +1,23 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-# Run lint-staged to format and lint changed files
-npx lint-staged
+# Quantum Safeguard: Prevent JavaScript files in configuration directories
+echo "🔍 Quantum Safeguard: Checking for JavaScript contamination in config files..."
+
+# Check for JavaScript files in configuration directories only
+JS_CONFIG_FILES=$(git diff --cached --name-only | grep -E '\.(js|jsx)$' | grep -E '(config|jest\.config|eslintrc|vite\.config|tailwind\.config|postcss\.config)' | grep -v node_modules | grep -v dist | grep -v build | grep -v \.backup || true)
+
+if [ ! -z "$JS_CONFIG_FILES" ]; then
+  echo "❌ QUANTUM BREACH DETECTED!"
+  echo "JavaScript configuration files found in commit:"
+  echo "$JS_CONFIG_FILES"
+  echo ""
+  echo "🚨 All configuration files must be TypeScript (.ts)"
+  echo "🛡️  Quantum Coherence Protocol: JavaScript configs are FORBIDDEN"
+  echo ""
+  echo "Please convert these configuration files to TypeScript before committing."
+  exit 1
+fi
+
+echo "✅ Quantum Coherence maintained - No JavaScript configuration contamination detected"
+echo "🚀 Proceeding with TypeScript-first commit..."

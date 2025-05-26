@@ -1,0 +1,8 @@
+/**
+ * Consciousness Types
+ *
+ * This module provides type definitions for consciousness stream management.
+ *
+ * @version 1.0.0
+ */
+export {};

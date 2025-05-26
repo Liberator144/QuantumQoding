@@ -1,0 +1,38 @@
+/**
+ * Types for AI-Powered Knowledge Synthesis
+ * Enables creating new knowledge by combining insights from multiple sources
+ */
+/**
+ * Types of knowledge synthesis operations
+ */
+export var SynthesisOperationType;
+(function (SynthesisOperationType) {
+    /** Combine multiple patterns into a new unified pattern */
+    SynthesisOperationType["PATTERN_COMBINATION"] = "pattern_combination";
+    /** Extract common elements from multiple patterns */
+    SynthesisOperationType["PATTERN_EXTRACTION"] = "pattern_extraction";
+    /** Generalize multiple specific patterns into a more abstract pattern */
+    SynthesisOperationType["PATTERN_GENERALIZATION"] = "pattern_generalization";
+    /** Specialize a general pattern for a specific use case */
+    SynthesisOperationType["PATTERN_SPECIALIZATION"] = "pattern_specialization";
+    /** Optimize a pattern for better performance, readability, etc. */
+    SynthesisOperationType["PATTERN_OPTIMIZATION"] = "pattern_optimization";
+    /** Merge multiple best practices into a unified set */
+    SynthesisOperationType["PRACTICE_CONSOLIDATION"] = "practice_consolidation";
+    /** Create a new solution by combining multiple existing solutions */
+    SynthesisOperationType["SOLUTION_COMPOSITION"] = "solution_composition";
+    /** Custom synthesis operation */
+    SynthesisOperationType["CUSTOM"] = "custom";
+})(SynthesisOperationType || (SynthesisOperationType = {}));
+/**
+ * Default synthesis configuration
+ */
+export const DEFAULT_SYNTHESIS_CONFIG = {
+    minConfidence: 0.7,
+    maxKnowledgeToCombine: 5,
+    autoResolveConflicts: false,
+    useAI: true,
+    aiModel: 'gpt-4',
+    aiTemperature: 0.7,
+    aiMaxTokens: 4000,
+};

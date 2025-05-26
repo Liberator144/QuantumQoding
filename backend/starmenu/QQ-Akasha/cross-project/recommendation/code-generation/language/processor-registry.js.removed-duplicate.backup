@@ -1,0 +1,107 @@
+/**
+ * Language processor registry
+ */
+import { LanguageProcessorRegistry } from './types';
+import { TypeScriptProcessor } from './typescript-processor';
+import { PythonProcessor } from './python-processor';
+import { JavaProcessor } from './java-processor';
+/**
+ * Create and initialize a language processor registry
+ */
+export function createLanguageProcessorRegistry() {
+    const registry = new LanguageProcessorRegistry();
+    // Register TypeScript processor
+    registry.registerProcessor(new TypeScriptProcessor());
+    // Register Python processor
+    registry.registerProcessor(new PythonProcessor());
+    // Register Java processor
+    registry.registerProcessor(new JavaProcessor());
+    return registry;
+}
+/**
+ * Get a language processor for a specific language
+ */
+export function getLanguageProcessor(language) {
+    const registry = createLanguageProcessorRegistry();
+    return registry.getProcessor(language);
+}
+/**
+ * Check if a language is supported
+ */
+export function isLanguageSupported(language) {
+    const registry = createLanguageProcessorRegistry();
+    return registry.isLanguageSupported(language);
+}
+/**
+ * Get all supported languages
+ */
+export function getSupportedLanguages() {
+    const registry = createLanguageProcessorRegistry();
+    return registry.getSupportedLanguages();
+}
+/**
+ * Process a template for a specific language
+ */
+export function processTemplate(template, language, context) {
+    const processor = getLanguageProcessor(language);
+    if (!processor) {
+        throw new Error(`Language processor not found for language: ${language}`);
+    }
+    return processor.processTemplate(template, context);
+}
+/**
+ * Validate syntax for a specific language
+ */
+export function validateSyntax(code, language) {
+    const processor = getLanguageProcessor(language);
+    if (!processor) {
+        return {
+            valid: false,
+            errors: [`Language processor not found for language: ${language}`],
+        };
+    }
+    return processor.validateSyntax(code);
+}
+/**
+ * Format code for a specific language
+ */
+export function formatCode(code, language, style) {
+    const processor = getLanguageProcessor(language);
+    if (!processor) {
+        return code; // Return unformatted code if processor not found
+    }
+    return processor.formatCode(code, style);
+}
+/**
+ * Extract imports from code for a specific language
+ */
+export function extractImports(code, language) {
+    const processor = getLanguageProcessor(language);
+    if (!processor) {
+        return {
+            imports: [],
+            code,
+        };
+    }
+    return processor.extractImports(code);
+}
+/**
+ * Add imports to code for a specific language
+ */
+export function addImports(code, imports, language) {
+    const processor = getLanguageProcessor(language);
+    if (!processor) {
+        return code; // Return original code if processor not found
+    }
+    return processor.addImports(code, imports);
+}
+/**
+ * Get style guide for a specific language
+ */
+export function getStyleGuide(language) {
+    const processor = getLanguageProcessor(language);
+    if (!processor) {
+        return null;
+    }
+    return processor.getStyleGuide();
+}

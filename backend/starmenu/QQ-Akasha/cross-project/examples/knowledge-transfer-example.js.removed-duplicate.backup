@@ -1,0 +1,190 @@
+/**
+ * Example usage of the Cross-Project Knowledge Transfer System
+ */
+import { createKnowledgeTransferSystem, KnowledgeType, GraphMergeStrategy } from '../index';
+/**
+ * Run the example
+ */
+async function runExample() {
+    console.log('Cross-Project Knowledge Transfer Example');
+    console.log('----------------------------------------');
+    // Create the knowledge transfer system
+    const system = createKnowledgeTransferSystem();
+    // Add some projects
+    console.log('\n1. Setting up projects...');
+    system.projectManager.addProject({
+        id: 'project-a',
+        name: 'Project A',
+        description: 'A web application project',
+        rootPath: '/path/to/project-a',
+        primaryLanguage: 'typescript',
+        languages: ['typescript', 'javascript', 'html', 'css'],
+        frameworks: ['react', 'express'],
+        dependencies: {
+            react: '^17.0.2',
+            express: '^4.17.1',
+            typescript: '^4.5.4',
+        },
+        tags: ['web', 'frontend', 'backend'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: {},
+    });
+    system.projectManager.addProject({
+        id: 'project-b',
+        name: 'Project B',
+        description: 'A mobile application project',
+        rootPath: '/path/to/project-b',
+        primaryLanguage: 'typescript',
+        languages: ['typescript', 'javascript'],
+        frameworks: ['react-native'],
+        dependencies: {
+            'react-native': '^0.66.4',
+            typescript: '^4.5.4',
+        },
+        tags: ['mobile', 'frontend'],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        metadata: {},
+    });
+    console.log(`Added projects: ${system.projectManager
+        .getAllProjects()
+        .map(p => p.name)
+        .join(', ')}`);
+    // Create some knowledge in Project A
+    console.log('\n2. Creating knowledge in Project A...');
+    const codePatternA = await system.transferManager.createKnowledge(KnowledgeType.CODE_PATTERN, 'API Request Handler', 'A reusable pattern for handling API requests with error handling and loading states', `
+function useApiRequest<T>(apiFunction: () => Promise<T>) {
+  const [data, setData] = useState<T | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<Error | null>(null);
+
+  const execute = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await apiFunction();
+      setData(result);
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error(String(err)));
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { data, loading, error, execute };
+}
+    `, 'project-a', ['api', 'hooks', 'react', 'error-handling'], {
+        language: 'typescript',
+        compatibility: {
+            languages: ['typescript', 'javascript'],
+            frameworks: ['react', 'react-native'],
+            environments: ['web', 'mobile'],
+        },
+    });
+    const bestPracticeA = await system.transferManager.createKnowledge(KnowledgeType.BEST_PRACTICE, 'Component Structure', 'Best practices for structuring React components', `
+1. Use functional components with hooks instead of class components
+2. Keep components small and focused on a single responsibility
+3. Extract reusable logic into custom hooks
+4. Use TypeScript interfaces to define prop types
+5. Implement proper error boundaries
+6. Use React.memo for performance optimization when appropriate
+    `, 'project-a', ['react', 'components', 'architecture'], {
+        language: 'typescript',
+        compatibility: {
+            languages: ['typescript', 'javascript'],
+            frameworks: ['react', 'react-native'],
+            environments: ['web', 'mobile'],
+        },
+    });
+    // Create some knowledge in Project B
+    console.log('\n3. Creating knowledge in Project B...');
+    const codePatternB = await system.transferManager.createKnowledge(KnowledgeType.CODE_PATTERN, 'Mobile Navigation', 'A pattern for handling navigation in mobile applications', `
+import { createStackNavigator } from '@react-navigation/stack';
+import { NavigationContainer } from '@react-navigation/native';
+
+const Stack = createStackNavigator();
+
+function AppNavigator() {
+  return (
+    <NavigationContainer>
+      <Stack.Navigator initialRouteName="Home">
+        <Stack.Screen name="Home" component={HomeScreen} />
+        <Stack.Screen name="Details" component={DetailsScreen} />
+        <Stack.Screen name="Profile" component={ProfileScreen} />
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
+    `, 'project-b', ['navigation', 'mobile', 'react-native'], {
+        language: 'typescript',
+        compatibility: {
+            languages: ['typescript', 'javascript'],
+            frameworks: ['react-native'],
+            environments: ['mobile'],
+        },
+    });
+    console.log(`Created knowledge entities: ${[codePatternA, bestPracticeA, codePatternB].map(k => k.title).join(', ')}`);
+    // Search for knowledge across projects
+    console.log('\n4. Searching for knowledge across projects...');
+    // Set active project to Project B
+    system.projectManager.setActiveProject('project-b');
+    // Search for React-related knowledge
+    const searchResults = await system.transferManager.searchKnowledge('react', {
+        minRelevance: 0.5,
+        minCompatibility: 0.7,
+    });
+    console.log(`Found ${searchResults.length} relevant knowledge entities from other projects:`);
+    for (const result of searchResults) {
+        console.log(`- "${result.knowledge.title}" (Relevance: ${result.relevance.toFixed(2)}, Compatibility: ${result.compatibilityScore.toFixed(2)})`);
+        console.log(`  Notes: ${result.compatibilityNotes.join(' ')}`);
+    }
+    // Build knowledge graphs
+    console.log('\n5. Building knowledge graphs...');
+    // Build graph for Project A
+    const graphA = await system.graphBuilder.buildGraph({ sourceProject: 'project-a' }, { name: 'Project A Knowledge Graph' });
+    // Build graph for Project B
+    const graphB = await system.graphBuilder.buildGraph({ sourceProject: 'project-b' }, { name: 'Project B Knowledge Graph' });
+    console.log(`Built graphs: ${graphA.name} (${graphA.nodes.size} nodes), ${graphB.name} (${graphB.nodes.size} nodes)`);
+    // Merge graphs
+    console.log('\n6. Merging knowledge graphs...');
+    const mergeResult = await system.graphMerger.mergeGraphs(graphA, graphB, {
+        strategy: GraphMergeStrategy.UNION,
+        createCrossGraphRelationships: true,
+        minCrossGraphSimilarity: 0.6,
+    });
+    console.log(`Merged graph: ${mergeResult.graph.name} (${mergeResult.graph.nodes.size} nodes, ${mergeResult.graph.relationships.size} relationships)`);
+    console.log(`Created ${mergeResult.stats.newCrossGraphRelationships} cross-project relationships`);
+    // Analyze the merged graph
+    console.log('\n7. Analyzing the merged knowledge graph...');
+    const analysisResult = await system.graphAnalyzer.analyzeGraph(mergeResult.graph);
+    console.log('Analysis insights:');
+    for (const insight of analysisResult.insights) {
+        console.log(`- ${insight}`);
+    }
+    // Apply knowledge from Project A to Project B
+    console.log('\n8. Applying knowledge from Project A to Project B...');
+    if (searchResults.length > 0) {
+        const knowledgeToApply = searchResults[0].knowledge;
+        // Translate the knowledge if needed
+        const translationResult = await system.translator.translateKnowledge(knowledgeToApply, system.projectManager.getProject('project-b'));
+        console.log(`Translated "${knowledgeToApply.title}" with confidence ${translationResult.confidence.toFixed(2)}`);
+        console.log(`Translation notes: ${translationResult.notes.join(' ')}`);
+        // Apply the knowledge
+        const application = await system.transferManager.applyKnowledge(knowledgeToApply.id, 'project-b', {
+            appliedBy: 'example-user',
+            notes: 'Applied through example script',
+        });
+        console.log(`Applied knowledge "${knowledgeToApply.title}" to Project B`);
+    }
+    else {
+        console.log('No suitable knowledge found to apply');
+    }
+    console.log('\nExample completed successfully!');
+}
+// Run the example
+runExample().catch(error => {
+    console.error('Error running example:', error);
+});

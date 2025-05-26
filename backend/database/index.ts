@@ -1,13 +1,13 @@
 /**
  * Database Integration
- * 
+ *
  * This module exports the unified data model and related components for the QQ-Verse project.
- * 
+ *
  * @version 1.0.0
  */
 
 // Unified data model
-export { UnifiedDataModel, UnifiedDataModelOptions } from './UnifiedDataModel';
+export { UnifiedDataModel } from './UnifiedDataModel';
 export { default as UnifiedDataModelInstance } from './UnifiedDataModel';
 
 // Interfaces

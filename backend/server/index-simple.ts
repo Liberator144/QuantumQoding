@@ -1,0 +1,133 @@
+/**
+ * Simplified Server Entry Point for Development
+ *
+ * This is a simplified version of the QQ-Verse backend server for development purposes.
+ * It includes basic functionality without complex database connections.
+ *
+ * @version 1.0.0
+ */
+
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import { createServer } from 'http';
+
+// Create Express app
+const app = express();
+
+// Create HTTP server
+const httpServer = createServer(app);
+
+// Basic configuration
+const PORT = process.env.PORT || 3001;
+const CORS_ORIGINS = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:5173'];
+
+// Apply middleware
+app.use(cors({
+  origin: CORS_ORIGINS,
+  credentials: true,
+}));
+app.use(helmet());
+app.use(compression());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Basic health check endpoint
+app.get('/api/health', (_req: express.Request, res: express.Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Quantum status endpoint
+app.get('/api/quantum/status', (_req: express.Request, res: express.Response) => {
+  res.json({
+    status: 'operational',
+    coherence: 0.95,
+    entanglement: 'stable',
+    dimensions: ['primary', 'secondary', 'tertiary'],
+    neuralFabric: {
+      status: 'OPERATIONAL',
+      connections: 1024,
+      bandwidth: '10.5 GB/s'
+    },
+    consciousnessStream: {
+      status: 'FLOWING',
+      frequency: '432 Hz',
+      amplitude: 0.87
+    }
+  });
+});
+
+// Basic API info endpoint
+app.get('/api', (_req: express.Request, res: express.Response) => {
+  res.json({
+    name: 'QQ-Verse Backend API',
+    version: '1.0.0',
+    description: 'Quantum-Coherent Backend Server',
+    endpoints: [
+      '/api/health',
+      '/api/quantum/status'
+    ]
+  });
+});
+
+// 404 handler
+app.use('*', (req: express.Request, res: express.Response) => {
+  res.status(404).json({
+    error: 'Endpoint not found',
+    path: req.originalUrl,
+    method: req.method
+  });
+});
+
+// Error handler
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('Server error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: err.message || 'Unknown error occurred'
+  });
+});
+
+// Start server
+async function startServer() {
+  try {
+    httpServer.listen(PORT, () => {
+      console.log('🚀 QQ-Verse Backend Server running on port', PORT);
+      console.log('🌐 Health check: http://localhost:' + PORT + '/api/health');
+      console.log('⚛️  Quantum status: http://localhost:' + PORT + '/api/quantum/status');
+      console.log('🧠 Neural Fabric: OPERATIONAL');
+      console.log('🌊 Consciousness Stream: FLOWING');
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+// Handle graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  httpServer.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  httpServer.close(() => {
+    console.log('HTTP server closed');
+    process.exit(0);
+  });
+});
+
+// Start server
+startServer();
+
+export { app, httpServer };

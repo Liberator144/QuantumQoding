@@ -1,6 +1,6 @@
 /**
  * Components Module
- * 
+ *
  * This module exports all reusable UI components organized by their category.
  * Components are divided into three main categories:
  * - common: Generic UI components that can be used across the application

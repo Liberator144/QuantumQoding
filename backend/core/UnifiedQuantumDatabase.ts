@@ -76,6 +76,28 @@ export interface Schema {
 }
 
 /**
+ * Collection options interface - moved to top-level
+ */
+export interface CollectionOptions {
+  adapter?: string;
+  schema?: string;
+  validateSchema?: boolean;
+  [key: string]: any;
+}
+
+/**
+ * Sync result interface - moved to top-level
+ */
+export interface SyncResults {
+  [collectionName: string]: {
+    success?: boolean;
+    synced?: number;
+    count?: number;
+    error?: string;
+  };
+}
+
+/**
  * Event listener type
  */
 export type EventListener = (data: any) => void;
@@ -124,7 +146,7 @@ class UnifiedQuantumDatabase {
   private eventListeners: Map<string, EventListener[]>;
 
   /** Auto-sync interval ID */
-  private _syncInterval?: NodeJS.Timeout;
+  private _syncInterval?: ReturnType<typeof setInterval>;
 
   /**
    * Create a new UnifiedQuantumDatabase instance
@@ -372,20 +394,6 @@ class UnifiedQuantumDatabase {
   }
 
   /**
-   * Collection options interface
-   */
-  export interface CollectionOptions {
-    /** Adapter name */
-    adapter?: string;
-    /** Schema name */
-    schema?: string;
-    /** Validate schema flag */
-    validateSchema?: boolean;
-    /** Other options */
-    [key: string]: any;
-  }
-
-  /**
    * Create a collection
    * @param name - Collection name
    * @param options - Collection options
@@ -443,17 +451,7 @@ class UnifiedQuantumDatabase {
     return this.collections.get(name);
   }
 
-  /**
-   * Sync result interface
-   */
-  export interface SyncResults {
-    [collectionName: string]: {
-      success?: boolean;
-      synced?: number;
-      count?: number;
-      error?: string;
-    };
-  }
+  // SyncResults interface moved to module level
 
   /**
    * Synchronize all collections

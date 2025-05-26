@@ -1,0 +1,19 @@
+/**
+ * Visualization Utilities
+ *
+ * This module exports utility functions and classes for the visualization engine.
+ *
+ * @version 1.0.0
+ */
+export { PerformanceOptimizer, OptimizationLevel } from './PerformanceOptimizer';
+export { LODManager } from './LODManager';
+export { ModelSimplifier, SimplificationMethod } from './ModelSimplifier';
+export { LODTransitionSystem, TransitionMethod, TransitionState } from './LODTransitionSystem';
+export { ViewDistanceOptimizer } from './ViewDistanceOptimizer';
+export { VirtualRenderer, CullingMethod } from './VirtualRenderer';
+export { BufferZoneManager } from './BufferZoneManager';
+export { OcclusionCullingSystem, OcclusionCullingMethod } from './OcclusionCullingSystem';
+export { UniversePartitioner, SectorType } from './UniversePartitioner';
+export { ConsciousnessStreamTester, ConsciousnessEventType } from './ConsciousnessStreamTester';
+export { ConsciousnessStreamMonitor } from './ConsciousnessStreamMonitor';
+export { colorUtils } from './colorUtils';

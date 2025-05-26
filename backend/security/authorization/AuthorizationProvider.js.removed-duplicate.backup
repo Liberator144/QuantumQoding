@@ -1,0 +1,307 @@
+"use strict";
+/**
+ * Authorization Provider
+ *
+ * Provides authorization functionality.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Authorization Provider
+ *
+ * Provides authorization functionality.
+ */
+class AuthorizationProvider {
+    /**
+     * Create a new AuthorizationProvider instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Cache enabled
+            cacheEnabled: true,
+            // Cache TTL (in seconds)
+            cacheTTL: 300, // 5 minutes
+            // Merge with provided options
+            ...options,
+        };
+        // Role repository
+        this.roleRepository = this.config.roleRepository;
+        // Permission repository
+        this.permissionRepository = this.config.permissionRepository;
+        // Permission cache
+        this.permissionCache = new Map();
+        // Role cache
+        this.roleCache = new Map();
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the authorization provider
+     * @private
+     */
+    _init() {
+        this.log('Initializing Authorization Provider');
+        this.log('Authorization Provider initialized');
+    }
+    /**
+     * Authorize user
+     * @param {Object} user - User object
+     * @param {string} action - Action to authorize
+     * @param {string} resource - Resource to access
+     * @returns {Promise<Object>} Authorization result
+     */
+    async authorize(user, action, resource) {
+        try {
+            // Check if user has permission
+            const hasPermission = await this.hasPermission(user, action, resource);
+            if (hasPermission) {
+                this.log(`User authorized: ${user.username}, ${action}, ${resource}`);
+                return {
+                    authorized: true,
+                };
+            }
+            this.log(`User not authorized: ${user.username}, ${action}, ${resource}`);
+            return {
+                authorized: false,
+                error: 'Access denied',
+            };
+        }
+        catch (error) {
+            this.log(`Authorization error: ${error.message}`);
+            return {
+                authorized: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Check if user has permission
+     * @param {Object} user - User object
+     * @param {string} action - Action to check
+     * @param {string} resource - Resource to access
+     * @returns {Promise<boolean>} True if user has permission
+     */
+    async hasPermission(user, action, resource) {
+        try {
+            // Get user permissions
+            const permissions = await this._getUserPermissions(user.id);
+            // Check direct permissions
+            for (const permission of permissions) {
+                if (this._matchesPermission(permission, action, resource)) {
+                    this.log(`User has direct permission: ${user.username}, ${action}, ${resource}`);
+                    return true;
+                }
+            }
+            // Get user roles
+            let roles = [];
+            if (user.roles) {
+                roles = user.roles;
+            }
+            else {
+                roles = await this.getRoles(user.id);
+            }
+            // Check role-based permissions
+            for (const role of roles) {
+                const rolePermissions = await this._getRolePermissions(role);
+                for (const permission of rolePermissions) {
+                    if (this._matchesPermission(permission, action, resource)) {
+                        this.log(`User has role-based permission: ${user.username}, ${role}, ${action}, ${resource}`);
+                        return true;
+                    }
+                }
+            }
+            this.log(`User does not have permission: ${user.username}, ${action}, ${resource}`);
+            return false;
+        }
+        catch (error) {
+            this.log(`Permission check error: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Get user roles
+     * @param {string} userId - User ID
+     * @returns {Promise<Array>} User roles
+     */
+    async getRoles(userId) {
+        try {
+            // Check cache
+            if (this.config.cacheEnabled) {
+                const cacheKey = `roles:${userId}`;
+                const cachedRoles = this.roleCache.get(cacheKey);
+                if (cachedRoles && cachedRoles.expiresAt > Date.now()) {
+                    this.log(`Using cached roles for user: ${userId}`);
+                    return cachedRoles.roles;
+                }
+            }
+            // Get roles from repository
+            const roles = await this.roleRepository.getRolesByUserId(userId);
+            // Cache roles
+            if (this.config.cacheEnabled) {
+                const cacheKey = `roles:${userId}`;
+                this.roleCache.set(cacheKey, {
+                    roles,
+                    expiresAt: Date.now() + this.config.cacheTTL * 1000,
+                });
+            }
+            return roles;
+        }
+        catch (error) {
+            this.log(`Get roles error: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Get user permissions
+     * @param {string} userId - User ID
+     * @returns {Promise<Array>} User permissions
+     */
+    async getPermissions(userId) {
+        try {
+            // Get direct permissions
+            const directPermissions = await this._getUserPermissions(userId);
+            // Get role-based permissions
+            const roles = await this.getRoles(userId);
+            let rolePermissions = [];
+            for (const role of roles) {
+                const permissions = await this._getRolePermissions(role);
+                rolePermissions = [...rolePermissions, ...permissions];
+            }
+            // Combine and deduplicate permissions
+            const allPermissions = [...directPermissions, ...rolePermissions];
+            const uniquePermissions = this._deduplicatePermissions(allPermissions);
+            return uniquePermissions;
+        }
+        catch (error) {
+            this.log(`Get permissions error: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Get user permissions
+     * @param {string} userId - User ID
+     * @returns {Promise<Array>} User permissions
+     * @private
+     */
+    async _getUserPermissions(userId) {
+        try {
+            // Check cache
+            if (this.config.cacheEnabled) {
+                const cacheKey = `permissions:user:${userId}`;
+                const cachedPermissions = this.permissionCache.get(cacheKey);
+                if (cachedPermissions && cachedPermissions.expiresAt > Date.now()) {
+                    this.log(`Using cached permissions for user: ${userId}`);
+                    return cachedPermissions.permissions;
+                }
+            }
+            // Get permissions from repository
+            const permissions = await this.permissionRepository.getPermissionsByUserId(userId);
+            // Cache permissions
+            if (this.config.cacheEnabled) {
+                const cacheKey = `permissions:user:${userId}`;
+                this.permissionCache.set(cacheKey, {
+                    permissions,
+                    expiresAt: Date.now() + this.config.cacheTTL * 1000,
+                });
+            }
+            return permissions;
+        }
+        catch (error) {
+            this.log(`Get user permissions error: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Get role permissions
+     * @param {string} roleId - Role ID
+     * @returns {Promise<Array>} Role permissions
+     * @private
+     */
+    async _getRolePermissions(roleId) {
+        try {
+            // Check if roleId is an object with id property
+            const id = roleId && typeof roleId === 'object' && roleId.id ? roleId.id : roleId;
+            // Check cache
+            if (this.config.cacheEnabled) {
+                const cacheKey = `permissions:role:${id}`;
+                const cachedPermissions = this.permissionCache.get(cacheKey);
+                if (cachedPermissions && cachedPermissions.expiresAt > Date.now()) {
+                    this.log(`Using cached permissions for role: ${id}`);
+                    return cachedPermissions.permissions;
+                }
+            }
+            // Get permissions from repository
+            const permissions = await this.roleRepository.getPermissionsByRoleId(id);
+            // Cache permissions
+            if (this.config.cacheEnabled) {
+                const cacheKey = `permissions:role:${id}`;
+                this.permissionCache.set(cacheKey, {
+                    permissions,
+                    expiresAt: Date.now() + this.config.cacheTTL * 1000,
+                });
+            }
+            return permissions;
+        }
+        catch (error) {
+            this.log(`Get role permissions error: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Check if permission matches action and resource
+     * @param {Object} permission - Permission object
+     * @param {string} action - Action to check
+     * @param {string} resource - Resource to access
+     * @returns {boolean} True if permission matches
+     * @private
+     */
+    _matchesPermission(permission, action, resource) {
+        // Check wildcard permission
+        if (permission.resource === '*' && permission.action === '*') {
+            return true;
+        }
+        // Check resource wildcard
+        if (permission.resource === '*' && permission.action === action) {
+            return true;
+        }
+        // Check action wildcard
+        if (permission.resource === resource && permission.action === '*') {
+            return true;
+        }
+        // Check exact match
+        return permission.resource === resource && permission.action === action;
+    }
+    /**
+     * Deduplicate permissions
+     * @param {Array} permissions - Permissions to deduplicate
+     * @returns {Array} Deduplicated permissions
+     * @private
+     */
+    _deduplicatePermissions(permissions) {
+        const uniquePermissions = [];
+        const seen = new Set();
+        for (const permission of permissions) {
+            const key = `${permission.resource}:${permission.action}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                uniquePermissions.push(permission);
+            }
+        }
+        return uniquePermissions;
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[AuthorizationProvider] ${message}`);
+        }
+    }
+}
+module.exports = { AuthorizationProvider };

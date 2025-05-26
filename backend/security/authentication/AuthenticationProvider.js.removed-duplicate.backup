@@ -1,0 +1,216 @@
+"use strict";
+/**
+ * Authentication Provider
+ *
+ * Provides authentication functionality.
+ *
+ * @version 1.0.0
+ */
+const { TokenManager } = require('./TokenManager');
+/**
+ * Authentication Provider
+ *
+ * Provides authentication functionality.
+ */
+class AuthenticationProvider {
+    /**
+     * Create a new AuthenticationProvider instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Token expiration (in seconds)
+            tokenExpiration: 3600, // 1 hour
+            // Refresh token expiration (in seconds)
+            refreshTokenExpiration: 86400, // 24 hours
+            // Merge with provided options
+            ...options,
+        };
+        // Token manager
+        this.tokenManager = this.config.tokenManager || new TokenManager(this.config);
+        // User repository
+        this.userRepository = this.config.userRepository;
+        // Password hasher
+        this.passwordHasher = this.config.passwordHasher;
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the authentication provider
+     * @private
+     */
+    _init() {
+        this.log('Initializing Authentication Provider');
+        this.log('Authentication Provider initialized');
+    }
+    /**
+     * Authenticate user
+     * @param {string} username - Username
+     * @param {string} password - Password
+     * @returns {Promise<Object>} Authentication result
+     */
+    async authenticate(username, password) {
+        try {
+            // Find user by username
+            const user = await this.userRepository.findByUsername(username);
+            // Check if user exists
+            if (!user) {
+                this.log(`User not found: ${username}`);
+                return {
+                    success: false,
+                    error: 'Invalid username or password',
+                };
+            }
+            // Verify password
+            const passwordValid = await this.passwordHasher.verify(password, user.password);
+            if (!passwordValid) {
+                this.log(`Invalid password for user: ${username}`);
+                return {
+                    success: false,
+                    error: 'Invalid username or password',
+                };
+            }
+            // Generate token
+            const tokenData = {
+                id: user.id,
+                username: user.username,
+                roles: user.roles,
+            };
+            const tokenResult = this.tokenManager.generateToken(tokenData, this.config.tokenExpiration);
+            // Update last login
+            await this.userRepository.updateLastLogin(user.id);
+            // Return authentication result
+            const result = {
+                success: true,
+                token: tokenResult.token,
+                refreshToken: tokenResult.refreshToken,
+                expiresIn: tokenResult.expiresIn,
+                user: {
+                    id: user.id,
+                    username: user.username,
+                    roles: user.roles,
+                },
+            };
+            this.log(`User authenticated: ${username}`);
+            return result;
+        }
+        catch (error) {
+            this.log(`Authentication error: ${error.message}`);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Validate token
+     * @param {string} token - Token to validate
+     * @returns {Promise<Object>} Validation result
+     */
+    async validateToken(token) {
+        try {
+            // Validate token
+            const validationResult = this.tokenManager.validateToken(token);
+            if (!validationResult.valid) {
+                this.log(`Invalid token: ${validationResult.error}`);
+                return validationResult;
+            }
+            // Get user from payload
+            const userId = validationResult.payload.id;
+            // Find user by ID
+            const user = await this.userRepository.findById(userId);
+            // Check if user exists
+            if (!user) {
+                this.log(`User not found: ${userId}`);
+                return {
+                    valid: false,
+                    error: 'User not found',
+                };
+            }
+            // Check if user is active
+            if (user.active === false) {
+                this.log(`User is inactive: ${userId}`);
+                return {
+                    valid: false,
+                    error: 'User is inactive',
+                };
+            }
+            // Return validation result
+            return {
+                valid: true,
+                user,
+            };
+        }
+        catch (error) {
+            this.log(`Token validation error: ${error.message}`);
+            return {
+                valid: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Refresh token
+     * @param {string} refreshToken - Refresh token
+     * @returns {Promise<Object>} Refresh result
+     */
+    async refreshToken(refreshToken) {
+        try {
+            // Refresh token
+            const refreshResult = this.tokenManager.refreshToken(refreshToken, this.config.tokenExpiration);
+            if (!refreshResult.success) {
+                this.log(`Token refresh failed: ${refreshResult.error}`);
+                return refreshResult;
+            }
+            this.log('Token refreshed');
+            return refreshResult;
+        }
+        catch (error) {
+            this.log(`Token refresh error: ${error.message}`);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Logout user
+     * @param {string} token - Token to revoke
+     * @returns {Promise<Object>} Logout result
+     */
+    async logout(token) {
+        try {
+            // Revoke token
+            const revokeResult = this.tokenManager.revokeToken(token);
+            if (!revokeResult.success) {
+                this.log(`Token revocation failed: ${revokeResult.error}`);
+                return revokeResult;
+            }
+            this.log('User logged out');
+            return {
+                success: true,
+            };
+        }
+        catch (error) {
+            this.log(`Logout error: ${error.message}`);
+            return {
+                success: false,
+                error: error.message,
+            };
+        }
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[AuthenticationProvider] ${message}`);
+        }
+    }
+}
+module.exports = { AuthenticationProvider };

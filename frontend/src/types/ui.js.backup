@@ -1,0 +1,8 @@
+/**
+ * UI Types
+ *
+ * This module provides type definitions for UI components.
+ *
+ * @version 1.0.0
+ */
+export {};

@@ -1,0 +1,339 @@
+"use strict";
+/**
+ * Migration Rollback
+ *
+ * Provides rollback capabilities for schema migrations.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Migration Rollback
+ *
+ * Provides rollback capabilities for schema migrations.
+ */
+class MigrationRollback {
+    /**
+     * Create a new MigrationRollback instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Database instance
+            database: null,
+            // Migration manager
+            migrationManager: null,
+            // Rollback collection name
+            rollbackCollection: '_migration_rollbacks',
+            // Batch size for rollbacks
+            batchSize: 100,
+            // Merge with provided options
+            ...options,
+        };
+        // State
+        this.rollbacks = new Map();
+        this.rollbackFunctions = new Map();
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the rollback manager
+     * @private
+     */
+    _init() {
+        this.log('Initializing Migration Rollback');
+        // Set up rollback collection if database is provided
+        if (this.config.database) {
+            this._setupRollbackCollection();
+        }
+        this.log('Migration Rollback initialized');
+    }
+    /**
+     * Set up rollback collection
+     * @private
+     */
+    _setupRollbackCollection() {
+        if (!this.config.database) {
+            return;
+        }
+        // Get or create rollback collection
+        const rollbackCollection = this.config.database.getCollection(this.config.rollbackCollection) ||
+            this.config.database.createCollection(this.config.rollbackCollection);
+        this.log(`Rollback collection set up: ${this.config.rollbackCollection}`);
+    }
+    /**
+     * Set database reference
+     * @param {UnifiedQuantumDatabase} database - Database instance
+     * @returns {MigrationRollback} This instance for chaining
+     */
+    setDatabase(database) {
+        this.config.database = database;
+        this._setupRollbackCollection();
+        this.log('Database reference set');
+        return this;
+    }
+    /**
+     * Set migration manager reference
+     * @param {MigrationManager} migrationManager - Migration manager instance
+     * @returns {MigrationRollback} This instance for chaining
+     */
+    setMigrationManager(migrationManager) {
+        this.config.migrationManager = migrationManager;
+        this.log('Migration manager reference set');
+        return this;
+    }
+    /**
+     * Register a rollback function
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @param {Function} rollbackFn - Rollback function
+     * @returns {Promise<Object>} Registered rollback
+     */
+    async registerRollback(collectionName, fromVersion, toVersion, rollbackFn) {
+        if (!this.config.database) {
+            throw new Error('Database not set');
+        }
+        // Validate parameters
+        if (!collectionName) {
+            throw new Error('Collection name is required');
+        }
+        if (!fromVersion) {
+            throw new Error('From version is required');
+        }
+        if (!toVersion) {
+            throw new Error('To version is required');
+        }
+        if (typeof rollbackFn !== 'function') {
+            throw new Error('Rollback function is required');
+        }
+        // Get rollback collection
+        const rollbackCollection = this.config.database.getCollection(this.config.rollbackCollection);
+        if (!rollbackCollection) {
+            throw new Error(`Rollback collection not found: ${this.config.rollbackCollection}`);
+        }
+        // Check if rollback already exists
+        const existingRollback = await this.getRollback(collectionName, fromVersion, toVersion);
+        if (existingRollback) {
+            // Update existing rollback
+            const updatedRollback = {
+                ...existingRollback,
+                updatedAt: Date.now(),
+            };
+            rollbackCollection.update(existingRollback.id, updatedRollback);
+            // Update cache
+            this._updateRollbackCache(updatedRollback);
+            // Store rollback function
+            this._storeRollbackFunction(collectionName, fromVersion, toVersion, rollbackFn);
+            this.log(`Updated rollback: ${collectionName} (${fromVersion} -> ${toVersion})`);
+            return updatedRollback;
+        }
+        else {
+            // Create new rollback
+            const newRollback = {
+                id: `rollback-${collectionName}-${fromVersion}-${toVersion}`,
+                collectionName,
+                fromVersion,
+                toVersion,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+            };
+            rollbackCollection.insert(newRollback);
+            // Update cache
+            this._updateRollbackCache(newRollback);
+            // Store rollback function
+            this._storeRollbackFunction(collectionName, fromVersion, toVersion, rollbackFn);
+            this.log(`Registered rollback: ${collectionName} (${fromVersion} -> ${toVersion})`);
+            return newRollback;
+        }
+    }
+    /**
+     * Get a rollback
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @returns {Promise<Object>} Rollback
+     */
+    async getRollback(collectionName, fromVersion, toVersion) {
+        // Check cache first
+        const cacheKey = `${collectionName}-${fromVersion}-${toVersion}`;
+        if (this.rollbacks.has(cacheKey)) {
+            return this.rollbacks.get(cacheKey);
+        }
+        if (!this.config.database) {
+            return null;
+        }
+        // Get rollback collection
+        const rollbackCollection = this.config.database.getCollection(this.config.rollbackCollection);
+        if (!rollbackCollection) {
+            return null;
+        }
+        // Find rollback
+        const rollback = rollbackCollection.findOne({
+            collectionName,
+            fromVersion,
+            toVersion,
+        });
+        if (rollback) {
+            // Update cache
+            this._updateRollbackCache(rollback);
+        }
+        return rollback;
+    }
+    /**
+     * Get all rollbacks for a collection
+     * @param {string} collectionName - Collection name
+     * @returns {Promise<Array>} Rollbacks
+     */
+    async getRollbacks(collectionName) {
+        if (!this.config.database) {
+            return [];
+        }
+        // Get rollback collection
+        const rollbackCollection = this.config.database.getCollection(this.config.rollbackCollection);
+        if (!rollbackCollection) {
+            return [];
+        }
+        // Find rollbacks
+        const rollbacks = rollbackCollection.find({ collectionName }, { sort: { fromVersion: 1, toVersion: 1 } });
+        // Update cache
+        for (const rollback of rollbacks) {
+            this._updateRollbackCache(rollback);
+        }
+        return rollbacks;
+    }
+    /**
+     * Rollback a migration
+     * @param {Object} collection - Collection
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @param {Object} options - Rollback options
+     * @returns {Promise<Object>} Rollback result
+     */
+    async rollbackMigration(collection, fromVersion, toVersion, options = {}) {
+        if (!collection) {
+            throw new Error('Collection is required');
+        }
+        if (!fromVersion) {
+            throw new Error('From version is required');
+        }
+        if (!toVersion) {
+            throw new Error('To version is required');
+        }
+        // Get rollback function
+        const rollbackFn = this._getRollbackFunction(collection.name, fromVersion, toVersion);
+        if (!rollbackFn) {
+            throw new Error(`Rollback function not found: ${collection.name} (${fromVersion} -> ${toVersion})`);
+        }
+        // Execute rollback
+        const result = await this._executeRollback(collection, rollbackFn, options);
+        return {
+            success: true,
+            collectionName: collection.name,
+            fromVersion,
+            toVersion,
+            documentsProcessed: result.documentsProcessed,
+            documentsUpdated: result.documentsUpdated,
+        };
+    }
+    /**
+     * Execute a rollback
+     * @param {Object} collection - Collection
+     * @param {Function} rollbackFn - Rollback function
+     * @param {Object} options - Rollback options
+     * @returns {Promise<Object>} Rollback result
+     * @private
+     */
+    async _executeRollback(collection, rollbackFn, options = {}) {
+        // Get all documents
+        const documents = collection.find({});
+        let documentsProcessed = 0;
+        let documentsUpdated = 0;
+        // Process documents in batches
+        const batchSize = options.batchSize || this.config.batchSize;
+        for (let i = 0; i < documents.length; i += batchSize) {
+            const batch = documents.slice(i, i + batchSize);
+            // Process batch
+            for (const document of batch) {
+                try {
+                    // Apply rollback function
+                    const result = await rollbackFn(document);
+                    // Update document if changed
+                    if (result && result !== document) {
+                        collection.update(document.id, result);
+                        documentsUpdated++;
+                    }
+                    documentsProcessed++;
+                }
+                catch (error) {
+                    this.log(`Error rolling back document ${document.id}: ${error.message}`);
+                    // Handle error based on options
+                    if (options.continueOnError) {
+                        documentsProcessed++;
+                    }
+                    else {
+                        throw error;
+                    }
+                }
+            }
+        }
+        return {
+            documentsProcessed,
+            documentsUpdated,
+        };
+    }
+    /**
+     * Update rollback cache
+     * @param {Object} rollback - Rollback
+     * @private
+     */
+    _updateRollbackCache(rollback) {
+        const cacheKey = `${rollback.collectionName}-${rollback.fromVersion}-${rollback.toVersion}`;
+        this.rollbacks.set(cacheKey, rollback);
+    }
+    /**
+     * Store rollback function
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @param {Function} rollbackFn - Rollback function
+     * @private
+     */
+    _storeRollbackFunction(collectionName, fromVersion, toVersion, rollbackFn) {
+        if (!this.rollbackFunctions.has(collectionName)) {
+            this.rollbackFunctions.set(collectionName, new Map());
+        }
+        const collectionRollbacks = this.rollbackFunctions.get(collectionName);
+        const key = `${fromVersion}-${toVersion}`;
+        collectionRollbacks.set(key, rollbackFn);
+    }
+    /**
+     * Get rollback function
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @returns {Function} Rollback function
+     * @private
+     */
+    _getRollbackFunction(collectionName, fromVersion, toVersion) {
+        if (!this.rollbackFunctions.has(collectionName)) {
+            return null;
+        }
+        const collectionRollbacks = this.rollbackFunctions.get(collectionName);
+        const key = `${fromVersion}-${toVersion}`;
+        return collectionRollbacks.get(key) || null;
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[MigrationRollback] ${message}`);
+        }
+    }
+}
+module.exports = { MigrationRollback };

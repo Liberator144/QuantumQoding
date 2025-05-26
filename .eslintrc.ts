@@ -1,14 +1,17 @@
-module.exports = {
+import type { Linter } from 'eslint';
+
+const config: Linter.Config = {
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2020,
     sourceType: 'module',
-    project: './tsconfig.json',
+    project: ['./tsconfig.json', './frontend/tsconfig.json', './backend/tsconfig.json'],
+    tsconfigRootDir: __dirname,
   },
   extends: [
     'eslint:recommended',
-    'plugin:@typescript-eslint/recommended',
-    'plugin:@typescript-eslint/recommended-requiring-type-checking',
+    '@typescript-eslint/recommended',
+    '@typescript-eslint/recommended-requiring-type-checking',
     'plugin:import/errors',
     'plugin:import/warnings',
     'plugin:import/typescript',
@@ -31,8 +34,7 @@ module.exports = {
     node: true,
     es6: true,
     jest: true,
-  },
-  rules: {
+  },  rules: {
     // Formatting and basic rules
     'prettier/prettier': 'error',
     'no-console': ['warn', { allow: ['warn', 'error'] }],
@@ -68,9 +70,7 @@ module.exports = {
       varsIgnorePattern: '^_',
       args: 'after-used',
       argsIgnorePattern: '^_'
-    }],
-
-    // SonarJS rules
+    }],    // SonarJS rules
     'sonarjs/no-duplicate-string': ['warn', { threshold: 3 }],
     'sonarjs/cognitive-complexity': ['warn', 15],
     'sonarjs/no-identical-functions': 'warn',
@@ -101,9 +101,7 @@ module.exports = {
     'jsdoc/require-returns-type': 'off', // TypeScript handles this
     'jsdoc/no-undefined-types': 'off', // TypeScript handles this
     'jsdoc/require-param-description': 'warn',
-    'jsdoc/require-returns-description': 'warn',
-
-    // Quantum Coherence specific rules
+    'jsdoc/require-returns-description': 'warn',    // Quantum Coherence specific rules
     'no-var': 'error', // Prefer const/let for better state management
     'prefer-const': 'error', // Immutability helps with quantum state preservation
     'no-param-reassign': 'error', // Avoid mutating parameters for consciousness continuity
@@ -115,9 +113,41 @@ module.exports = {
     'complexity': ['warn', 10], // Limit cyclomatic complexity for clearer neural pathways
     'max-lines': ['warn', 400], // Limit file size for better maintainability
     'max-params': ['warn', 4], // Limit function parameters for better readability
-  },
-  overrides: [
+  },  overrides: [
     {
+      // JavaScript files - use standard parser and disable TypeScript-specific rules
+      files: ['**/*.js', '**/*.jsx'],
+      parser: 'espree',
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+      rules: {
+        // Disable TypeScript-specific rules for JS files
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/explicit-member-accessibility': 'off',
+        '@typescript-eslint/consistent-type-imports': 'off',
+        '@typescript-eslint/no-floating-promises': 'off',
+        '@typescript-eslint/no-misused-promises': 'off',
+        '@typescript-eslint/await-thenable': 'off',
+        '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+        '@typescript-eslint/prefer-nullish-coalescing': 'off',
+        '@typescript-eslint/prefer-optional-chain': 'off',
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+        // Relax JSDoc requirements for JS files
+        'jsdoc/require-jsdoc': 'off',
+        'jsdoc/require-param-description': 'off',
+        'jsdoc/require-returns-description': 'off',
+        'jsdoc/require-returns': 'off',
+      },
+    },    {
       files: ['**/*.test.ts', '**/*.test.tsx'],
       rules: {
         'max-lines-per-function': 'off',
@@ -142,3 +172,5 @@ module.exports = {
     },
   ],
 };
+
+export default config;

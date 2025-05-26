@@ -1,0 +1,80 @@
+/**
+ * Augment Adapter for Personalization System
+ * Integrates personalization with Augment AI
+ */
+import { InteractionType } from '../types';
+import { AIAdapter } from './ai-adapter';
+/**
+ * Adapter for integrating with Augment AI
+ */
+export class AugmentAdapter extends AIAdapter {
+    constructor(personalizationManager) {
+        super(personalizationManager);
+        this.personalizationManager = personalizationManager;
+    }
+    /**
+     * Process an Augment request
+     */
+    async processRequest(request) {
+        // First apply general AI personalization
+        const personalizedRequest = await super.personalizeRequest(request);
+        // Track Augment-specific interaction data
+        await this.personalizationManager.trackInteraction(request.userId, InteractionType.QUERY, {
+            conversationId: request.conversationId,
+            messageId: request.messageId,
+            isFollowUp: request.isFollowUp,
+            query: request.content,
+        }, { source: 'augment' });
+        return personalizedRequest;
+    }
+    /**
+     * Process an Augment response
+     */
+    async processResponse(response, request) {
+        // First apply general AI personalization
+        const personalizedResponse = (await super.personalizeResponse(response, request));
+        // Personalize code blocks if present
+        if (personalizedResponse.codeBlocks && personalizedResponse.codeBlocks.length > 0) {
+            for (let i = 0; i < personalizedResponse.codeBlocks.length; i++) {
+                const codeBlock = personalizedResponse.codeBlocks[i];
+                // Personalize each code block
+                const personalizedCode = await this.personalizationManager.personalizeContent(request.userId, codeBlock.code, 'code');
+                personalizedResponse.codeBlocks[i] = {
+                    ...codeBlock,
+                    code: personalizedCode,
+                };
+            }
+        }
+        // Track response interaction
+        await this.personalizationManager.trackInteraction(request.userId, InteractionType.FEEDBACK, {
+            conversationId: request.conversationId,
+            messageId: response.messageId,
+            responseType: response.responseType,
+            hasCodeBlocks: !!response.codeBlocks,
+            codeBlockCount: response.codeBlocks?.length || 0,
+        }, { source: 'augment' });
+        return personalizedResponse;
+    }
+    /**
+     * Track user feedback on an Augment response
+     */
+    async trackFeedback(userId, messageId, feedback, details) {
+        await this.personalizationManager.trackInteraction(userId, InteractionType.FEEDBACK, {
+            messageId,
+            feedback,
+            details,
+        }, { source: 'augment-feedback' });
+    }
+    /**
+     * Track code execution from Augment
+     */
+    async trackCodeExecution(userId, code, language, success, output) {
+        await this.personalizationManager.trackInteraction(userId, InteractionType.CUSTOM, {
+            action: 'code-execution',
+            language,
+            codeLength: code.length,
+            success,
+            hasOutput: !!output,
+        }, { source: 'augment-execution' });
+    }
+}

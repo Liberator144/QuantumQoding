@@ -1,136 +1,137 @@
 /**
  * Neural Types
- * 
- * This module provides type definitions for neural fabric management.
- * 
+ *
+ * This module provides type definitions for neural network management.
+ *
  * @version 1.0.0
  */
 
-/**
- * Neural node interface
- */
-export interface NeuralNode {
-  id: string;
+// Neural Network Types
+export interface NeuralNetwork {
+  readonly id: string;
   name: string;
-  type: 'consciousness' | 'data' | 'processing' | 'interface' | 'storage';
-  activationLevel: number;
-  properties: Record<string, any>;
-  createdAt: number;
-  updatedAt: number;
-}
-
-/**
- * Neural connection interface
- */
-export interface NeuralConnection {
-  id: string;
-  sourceNodeId: string;
-  targetNodeId: string;
-  strength: number;
-  type: 'direct' | 'indirect' | 'bidirectional' | 'temporal';
-  properties: Record<string, any>;
-  createdAt: number;
-  updatedAt: number;
-}
-
-/**
- * Neural pathway interface
- */
-export interface NeuralPathway {
-  id: string;
-  name: string;
-  nodeIds: string[];
-  connectionIds: string[];
-  properties: Record<string, any>;
-  createdAt: number;
-  updatedAt: number;
-}
-
-/**
- * Neural fabric interface
- */
-export interface NeuralFabric {
-  id: string;
-  name: string;
-  nodes: NeuralNode[];
+  architecture: NetworkArchitecture;
+  layers: NeuralLayer[];
   connections: NeuralConnection[];
-  pathways: NeuralPathway[];
-  properties: Record<string, any>;
-  createdAt: number;
-  updatedAt: number;
+  weights: WeightMatrix;
+  biases: BiasVector;
+  activationFunction: ActivationFunction;
+  learningRate: number;
+  isTraining: boolean;
+  performance: NetworkPerformance;
+  quantumEnhanced: boolean;
 }
 
-/**
- * Neural fabric verification result interface
- */
-export interface FabricVerificationResult {
-  isIntact: boolean;
-  integrityScore: number;
-  pathwayCoherenceScores: Record<string, number>;
-  issues?: {
-    type: string;
-    description: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    location: string;
-  }[];
-  recommendations?: {
-    type: string;
-    description: string;
-    priority: 'low' | 'medium' | 'high' | 'critical';
-    action: string;
-  }[];
+export interface NetworkArchitecture {
+  inputSize: number;
+  hiddenLayers: number[];
+  outputSize: number;
+  networkType: NetworkType;
+  topology: NetworkTopology;
 }
 
-/**
- * Neural fabric checkpoint interface
- */
-export interface NeuralFabricCheckpoint {
-  id: string;
-  fabricId: string;
-  timestamp: number;
-  nodes: NeuralNode[];
-  connections: NeuralConnection[];
-  pathways: NeuralPathway[];
+export enum NetworkType {
+  FEEDFORWARD = 'feedforward',
+  RECURRENT = 'recurrent',
+  CONVOLUTIONAL = 'convolutional',
+  TRANSFORMER = 'transformer',
+  QUANTUM_NEURAL = 'quantum_neural'
 }
 
-/**
- * Neural fabric restoration result interface
- */
-export interface FabricRestorationResult {
-  success: boolean;
-  fabricId: string;
-  checkpointId: string;
-  timestamp: number;
-  integrityScore: number;
-  error?: string;
+export enum NetworkTopology {
+  DENSE = 'dense',
+  SPARSE = 'sparse',
+  RESIDUAL = 'residual',
+  ATTENTION = 'attention',
+  QUANTUM_ENTANGLED = 'quantum_entangled'
 }
 
-/**
- * Neural fabric optimization options interface
- */
-export interface OptimizationOptions {
-  strategy: 'performance' | 'coherence' | 'balanced';
-  targetActivationLevel: number;
-  targetConnectionStrength: number;
-  pruneWeakConnections: boolean;
-  weakConnectionThreshold: number;
-  maxIterations: number;
+export interface NeuralLayer {
+  readonly id: string;
+  type: LayerType;
+  size: number;
+  neurons: Neuron[];
+  activationFunction: ActivationFunction;
+  dropoutRate?: number;
+  quantumCoherence?: number;
 }
 
-/**
- * Neural fabric optimization result interface
- */
-export interface OptimizationResult {
-  id: string;
-  fabricId: string;
-  status: 'pending' | 'completed' | 'failed';
-  timestamp: number;
-  completedTimestamp?: number;
-  iterations: number;
-  performanceScore: number;
-  coherenceScore: number;
-  nodesOptimized: number;
-  connectionsOptimized: number;
-  pathwaysOptimized: number;
-  error?: string;
+export enum LayerType {
+  INPUT = 'input',
+  HIDDEN = 'hidden',
+  OUTPUT = 'output',
+  CONVOLUTIONAL = 'convolutional',
+  POOLING = 'pooling',
+  ATTENTION = 'attention',
+  QUANTUM = 'quantum'
 }
+
+export interface Neuron {
+  readonly id: string;
+  value: number;
+  bias: number;
+  gradient: number;
+  connections: Connection[];
+  activationFunction: ActivationFunction;
+  quantumState?: QuantumNeuronState;
+}
+
+export interface Connection {
+  readonly id: string;
+  fromNeuron: string;
+  toNeuron: string;
+  weight: number;
+  gradient: number;
+  isActive: boolean;
+}
+
+export interface QuantumNeuronState {
+  superposition: number[];
+  entanglement: string[];
+  coherence: number;
+  phase: number;
+}
+
+export enum ActivationFunction {
+  SIGMOID = 'sigmoid',
+  TANH = 'tanh',
+  RELU = 'relu',
+  LEAKY_RELU = 'leaky_relu',
+  SOFTMAX = 'softmax',
+  LINEAR = 'linear',
+  QUANTUM_ACTIVATION = 'quantum_activation'
+}
+
+// Training Types
+export interface TrainingConfig {
+  epochs: number;
+  batchSize: number;
+  learningRate: number;
+  optimizer: string;
+  lossFunction: string;
+  validationSplit: number;
+  earlyStoppingPatience?: number;
+  quantumEnhancement: boolean;
+}
+
+// Performance Types
+export interface NetworkPerformance {
+  accuracy: number;
+  loss: number;
+  precision: number;
+  recall: number;
+  f1Score: number;
+  trainingTime: number;
+  inferenceTime: number;
+  quantumCoherence?: number;
+}
+
+// Type Guards
+export const isNeuralNetwork = (obj: unknown): obj is NeuralNetwork => {
+  return typeof obj === 'object' && obj !== null && 
+         'id' in obj && 'architecture' in obj && 'layers' in obj;
+};
+
+export const isValidActivationFunction = (fn: string): fn is ActivationFunction => {
+  return Object.values(ActivationFunction).includes(fn as ActivationFunction);
+};

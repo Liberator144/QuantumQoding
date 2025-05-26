@@ -1,0 +1,320 @@
+"use strict";
+/**
+ * Schema Visualizer
+ *
+ * Provides visualization capabilities for schema structures and evolution.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Schema Visualizer
+ *
+ * Provides visualization capabilities for schema structures and evolution.
+ */
+class SchemaVisualizer {
+    /**
+     * Create a new SchemaVisualizer instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Schema registry
+            schemaRegistry: null,
+            // Branch manager
+            branchManager: null,
+            // Indentation for text-based visualizations
+            indentation: 2,
+            // Maximum depth for nested objects
+            maxDepth: 10,
+            // Merge with provided options
+            ...options,
+        };
+        // Initialize
+        this._init();
+    }
+    /**
+     * Initialize the visualizer
+     * @private
+     */
+    _init() {
+        this.log('Initializing Schema Visualizer');
+        this.log('Schema Visualizer initialized');
+    }
+    /**
+     * Set schema registry reference
+     * @param {SchemaRegistry} schemaRegistry - Schema registry instance
+     * @returns {SchemaVisualizer} This instance for chaining
+     */
+    setSchemaRegistry(schemaRegistry) {
+        this.config.schemaRegistry = schemaRegistry;
+        this.log('Schema registry reference set');
+        return this;
+    }
+    /**
+     * Set branch manager reference
+     * @param {SchemaBranch} branchManager - Branch manager instance
+     * @returns {SchemaVisualizer} This instance for chaining
+     */
+    setBranchManager(branchManager) {
+        this.config.branchManager = branchManager;
+        this.log('Branch manager reference set');
+        return this;
+    }
+    /**
+     * Visualize a schema as text
+     * @param {Object} schema - Schema to visualize
+     * @param {Object} options - Visualization options
+     * @returns {string} Text visualization
+     */
+    visualizeSchemaAsText(schema, options = {}) {
+        if (!schema) {
+            return 'No schema provided';
+        }
+        const indent = ' '.repeat(options.indentation || this.config.indentation);
+        const maxDepth = options.maxDepth || this.config.maxDepth;
+        return this._visualizeObjectAsText(schema.schema, 0, indent, maxDepth);
+    }
+    /**
+     * Visualize an object as text
+     * @param {Object} obj - Object to visualize
+     * @param {number} depth - Current depth
+     * @param {string} indent - Indentation string
+     * @param {number} maxDepth - Maximum depth
+     * @returns {string} Text visualization
+     * @private
+     */
+    _visualizeObjectAsText(obj, depth, indent, maxDepth) {
+        if (depth > maxDepth) {
+            return indent.repeat(depth) + '...';
+        }
+        if (!obj || typeof obj !== 'object') {
+            return indent.repeat(depth) + String(obj);
+        }
+        let result = '';
+        // Handle special schema properties
+        if (obj.type) {
+            result += indent.repeat(depth) + `Type: ${obj.type}\n`;
+        }
+        if (obj.required && Array.isArray(obj.required)) {
+            result += indent.repeat(depth) + `Required: ${obj.required.join(', ')}\n`;
+        }
+        // Handle properties
+        if (obj.properties && typeof obj.properties === 'object') {
+            result += indent.repeat(depth) + 'Properties:\n';
+            for (const [propName, propDef] of Object.entries(obj.properties)) {
+                result += indent.repeat(depth + 1) + `${propName}:\n`;
+                result += this._visualizePropertyAsText(propDef, depth + 2, indent, maxDepth);
+            }
+        }
+        // Handle other properties
+        for (const [key, value] of Object.entries(obj)) {
+            if (key !== 'type' && key !== 'required' && key !== 'properties') {
+                result += indent.repeat(depth) + `${key}: `;
+                if (typeof value === 'object' && value !== null) {
+                    result += '\n' + this._visualizeObjectAsText(value, depth + 1, indent, maxDepth);
+                }
+                else {
+                    result += String(value) + '\n';
+                }
+            }
+        }
+        return result;
+    }
+    /**
+     * Visualize a property as text
+     * @param {Object} propDef - Property definition
+     * @param {number} depth - Current depth
+     * @param {string} indent - Indentation string
+     * @param {number} maxDepth - Maximum depth
+     * @returns {string} Text visualization
+     * @private
+     */
+    _visualizePropertyAsText(propDef, depth, indent, maxDepth) {
+        let result = '';
+        if (propDef.type) {
+            result += indent.repeat(depth) + `Type: ${propDef.type}\n`;
+        }
+        if (propDef.description) {
+            result += indent.repeat(depth) + `Description: ${propDef.description}\n`;
+        }
+        // Handle nested objects
+        if (propDef.type === 'object' && propDef.properties) {
+            result += indent.repeat(depth) + 'Properties:\n';
+            for (const [nestedPropName, nestedPropDef] of Object.entries(propDef.properties)) {
+                result += indent.repeat(depth + 1) + `${nestedPropName}:\n`;
+                result += this._visualizePropertyAsText(nestedPropDef, depth + 2, indent, maxDepth);
+            }
+        }
+        // Handle arrays
+        if (propDef.type === 'array' && propDef.items) {
+            result += indent.repeat(depth) + 'Items:\n';
+            result += this._visualizePropertyAsText(propDef.items, depth + 1, indent, maxDepth);
+        }
+        return result;
+    }
+    /**
+     * Visualize schema differences between versions
+     * @param {string} collectionName - Collection name
+     * @param {string} fromVersion - From version
+     * @param {string} toVersion - To version
+     * @param {string} branch - Branch name
+     * @returns {Promise<string>} Differences visualization
+     */
+    async visualizeSchemaDiff(collectionName, fromVersion, toVersion, branch = 'main') {
+        if (!this.config.schemaRegistry) {
+            throw new Error('Schema registry not set');
+        }
+        // Get schemas
+        const fromSchema = await this.config.schemaRegistry.getSchema(collectionName, fromVersion, branch);
+        const toSchema = await this.config.schemaRegistry.getSchema(collectionName, toVersion, branch);
+        if (!fromSchema) {
+            throw new Error(`Schema not found: ${collectionName} (${fromVersion})`);
+        }
+        if (!toSchema) {
+            throw new Error(`Schema not found: ${collectionName} (${toVersion})`);
+        }
+        return this._visualizeSchemaDiffAsText(fromSchema, toSchema);
+    }
+    /**
+     * Visualize schema differences as text
+     * @param {Object} fromSchema - From schema
+     * @param {Object} toSchema - To schema
+     * @returns {string} Differences visualization
+     * @private
+     */
+    _visualizeSchemaDiffAsText(fromSchema, toSchema) {
+        let result = `Schema Diff: ${fromSchema.collectionName}\n`;
+        result += `From version: ${fromSchema.version}\n`;
+        result += `To version: ${toSchema.version}\n\n`;
+        // Compare required fields
+        const fromRequired = new Set(fromSchema.schema.required || []);
+        const toRequired = new Set(toSchema.schema.required || []);
+        const addedRequired = [...toRequired].filter(field => !fromRequired.has(field));
+        const removedRequired = [...fromRequired].filter(field => !toRequired.has(field));
+        if (addedRequired.length > 0) {
+            result += 'Added required fields:\n';
+            for (const field of addedRequired) {
+                result += `  + ${field}\n`;
+            }
+            result += '\n';
+        }
+        if (removedRequired.length > 0) {
+            result += 'Removed required fields:\n';
+            for (const field of removedRequired) {
+                result += `  - ${field}\n`;
+            }
+            result += '\n';
+        }
+        // Compare properties
+        const fromProps = fromSchema.schema.properties || {};
+        const toProps = toSchema.schema.properties || {};
+        const addedProps = Object.keys(toProps).filter(prop => !fromProps[prop]);
+        const removedProps = Object.keys(fromProps).filter(prop => !toProps[prop]);
+        const changedProps = Object.keys(fromProps).filter(prop => toProps[prop] && JSON.stringify(fromProps[prop]) !== JSON.stringify(toProps[prop]));
+        if (addedProps.length > 0) {
+            result += 'Added properties:\n';
+            for (const prop of addedProps) {
+                result += `  + ${prop}: ${JSON.stringify(toProps[prop])}\n`;
+            }
+            result += '\n';
+        }
+        if (removedProps.length > 0) {
+            result += 'Removed properties:\n';
+            for (const prop of removedProps) {
+                result += `  - ${prop}: ${JSON.stringify(fromProps[prop])}\n`;
+            }
+            result += '\n';
+        }
+        if (changedProps.length > 0) {
+            result += 'Changed properties:\n';
+            for (const prop of changedProps) {
+                result += `  ~ ${prop}:\n`;
+                result += `    From: ${JSON.stringify(fromProps[prop])}\n`;
+                result += `    To:   ${JSON.stringify(toProps[prop])}\n`;
+            }
+            result += '\n';
+        }
+        return result;
+    }
+    /**
+     * Visualize branch relationships
+     * @returns {Promise<string>} Branch relationships visualization
+     */
+    async visualizeBranches() {
+        if (!this.config.branchManager) {
+            throw new Error('Branch manager not set');
+        }
+        // Get all branches
+        const branches = await this.config.branchManager.getBranches();
+        if (!branches || branches.length === 0) {
+            return 'No branches found';
+        }
+        return this._visualizeBranchesAsText(branches);
+    }
+    /**
+     * Visualize branch relationships as text
+     * @param {Array} branches - Branches
+     * @returns {string} Branch relationships visualization
+     * @private
+     */
+    _visualizeBranchesAsText(branches) {
+        let result = 'Branch Relationships:\n\n';
+        // Group branches by base branch
+        const branchGroups = {};
+        for (const branch of branches) {
+            const baseBranch = branch.baseBranch || 'root';
+            if (!branchGroups[baseBranch]) {
+                branchGroups[baseBranch] = [];
+            }
+            branchGroups[baseBranch].push(branch);
+        }
+        // Build tree
+        const mainBranch = branches.find(b => b.isDefault) || branches[0];
+        result += this._buildBranchTree(mainBranch, branchGroups, 0);
+        return result;
+    }
+    /**
+     * Build branch tree
+     * @param {Object} branch - Branch
+     * @param {Object} branchGroups - Branch groups
+     * @param {number} depth - Current depth
+     * @param {Set} visitedBranches - Set of visited branches to prevent cycles
+     * @returns {string} Branch tree
+     * @private
+     */
+    _buildBranchTree(branch, branchGroups, depth, visitedBranches = new Set()) {
+        // Prevent infinite recursion due to circular dependencies
+        if (visitedBranches.has(branch.name)) {
+            const indent = '  '.repeat(depth);
+            return `${indent}${branch.name} (circular reference)\n`;
+        }
+        // Mark branch as visited
+        visitedBranches.add(branch.name);
+        const indent = '  '.repeat(depth);
+        let result = `${indent}${branch.name}`;
+        if (branch.isDefault) {
+            result += ' (default)';
+        }
+        result += '\n';
+        // Add children
+        const children = branchGroups[branch.name] || [];
+        for (const child of children) {
+            result += this._buildBranchTree(child, branchGroups, depth + 1, new Set(visitedBranches));
+        }
+        return result;
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[SchemaVisualizer] ${message}`);
+        }
+    }
+}
+module.exports = { SchemaVisualizer };

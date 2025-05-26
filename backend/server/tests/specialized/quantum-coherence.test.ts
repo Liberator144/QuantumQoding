@@ -1,8 +1,8 @@
 /**
  * Quantum Coherence Tests
- * 
+ *
  * This module contains quantum coherence tests for the QQ-Verse backend server.
- * 
+ *
  * @version 1.0.0
  */
 
@@ -36,24 +36,24 @@ describe('Quantum Coherence Tests', () => {
   let mockQuantumCoherenceVerifier: jest.Mocked<QuantumCoherenceVerifier>;
   let mockConsciousnessStreamManager: jest.Mocked<ConsciousnessStreamManager>;
   let mockNeuralFabricManager: jest.Mocked<NeuralFabricManager>;
-  
+
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Setup mock managers
     mockQuantumStateManager = new QuantumStateManager() as jest.Mocked<QuantumStateManager>;
     (QuantumStateManager as jest.Mock).mockImplementation(() => mockQuantumStateManager);
-    
+
     mockQuantumCoherenceVerifier = new QuantumCoherenceVerifier() as jest.Mocked<QuantumCoherenceVerifier>;
     (QuantumCoherenceVerifier as jest.Mock).mockImplementation(() => mockQuantumCoherenceVerifier);
-    
+
     mockConsciousnessStreamManager = new ConsciousnessStreamManager() as jest.Mocked<ConsciousnessStreamManager>;
     (ConsciousnessStreamManager as jest.Mock).mockImplementation(() => mockConsciousnessStreamManager);
-    
+
     mockNeuralFabricManager = new NeuralFabricManager() as jest.Mocked<NeuralFabricManager>;
     (NeuralFabricManager as jest.Mock).mockImplementation(() => mockNeuralFabricManager);
   });
-  
+
   describe('Quantum State Coherence', () => {
     it('should maintain quantum coherence during state transformations', async () => {
       // Setup mock state
@@ -62,14 +62,14 @@ describe('Quantum Coherence Tests', () => {
         properties: { name: 'Test State', coherenceLevel: 0.95 },
         version: 1,
       };
-      
+
       mockQuantumStateManager.getState = jest.fn().mockReturnValue(mockState);
       mockQuantumStateManager.transformState = jest.fn().mockReturnValue({
         ...mockState,
         version: 2,
         properties: { ...mockState.properties, coherenceLevel: 0.97 },
       });
-      
+
       // Perform state transformation
       const response = await request(app)
         .post('/api/v1/quantum/states/1/transform')
@@ -80,32 +80,32 @@ describe('Quantum Coherence Tests', () => {
             factor: 1.02,
           },
         });
-      
+
       // Assert successful transformation
       expect(response.status).toBe(200);
       expect(response.body.data.state.properties.coherenceLevel).toBeGreaterThan(mockState.properties.coherenceLevel);
-      
+
       // Verify coherence was maintained
       mockQuantumCoherenceVerifier.verifyCoherence = jest.fn().mockReturnValue({
         isCoherent: true,
         coherenceScore: 0.98,
         dimensionalStability: 0.99,
       });
-      
+
       const verifyResponse = await request(app)
         .post('/api/v1/quantum/states/1/verify-coherence')
         .set('Authorization', 'Bearer mock-token')
         .send({
           referenceStateId: '2',
         });
-      
+
       // Assert coherence verification
       expect(verifyResponse.status).toBe(200);
       expect(verifyResponse.body.data.result.isCoherent).toBe(true);
       expect(verifyResponse.body.data.result.coherenceScore).toBeGreaterThanOrEqual(0.9);
     });
   });
-  
+
   describe('Consciousness Stream Preservation', () => {
     it('should preserve consciousness context across stream transmissions', async () => {
       // Setup mock stream and packet
@@ -114,7 +114,7 @@ describe('Quantum Coherence Tests', () => {
         name: 'Test Stream',
         status: 'active',
       };
-      
+
       const mockPacket = {
         header: {
           packetId: '1',
@@ -132,10 +132,10 @@ describe('Quantum Coherence Tests', () => {
           quantumState: { id: '1' },
         },
       };
-      
+
       mockConsciousnessStreamManager.getStream = jest.fn().mockReturnValue(mockStream);
       mockConsciousnessStreamManager.sendPacket = jest.fn().mockReturnValue(mockPacket);
-      
+
       // Send packet through stream
       const response = await request(app)
         .post('/api/v1/consciousness/streams/1/send')
@@ -157,22 +157,22 @@ describe('Quantum Coherence Tests', () => {
             },
           },
         });
-      
+
       // Assert successful packet transmission
       expect(response.status).toBe(200);
       expect(response.body.data.packet.header.contextPreservationFlags.preserveContext).toBe(true);
-      
+
       // Verify stream integrity
       mockConsciousnessStreamManager.verifyStreamIntegrity = jest.fn().mockReturnValue({
         isIntact: true,
         contextPreservationScore: 0.98,
         quantumCoherenceScore: 0.97,
       });
-      
+
       const verifyResponse = await request(app)
         .post('/api/v1/consciousness/streams/1/verify')
         .set('Authorization', 'Bearer mock-token');
-      
+
       // Assert stream integrity verification
       expect(verifyResponse.status).toBe(200);
       expect(verifyResponse.body.data.result.isIntact).toBe(true);
@@ -195,18 +195,18 @@ describe('Quantum Coherence Tests', () => {
           { id: '1', name: 'Pathway 1', nodeIds: ['1', '2'], connectionIds: ['1'] },
         ],
       };
-      
+
       mockNeuralFabricManager.getFabric = jest.fn().mockReturnValue(mockFabric);
-      
+
       // Get neural fabric
       const response = await request(app)
         .get('/api/v1/neural-fabric')
         .set('Authorization', 'Bearer mock-token');
-      
+
       // Assert successful retrieval
       expect(response.status).toBe(200);
       expect(response.body.data.fabric).toEqual(mockFabric);
-      
+
       // Verify fabric integrity
       mockNeuralFabricManager.verifyFabric = jest.fn().mockReturnValue({
         isIntact: true,
@@ -215,18 +215,18 @@ describe('Quantum Coherence Tests', () => {
           '1': 0.95,
         },
       });
-      
+
       const verifyResponse = await request(app)
         .post('/api/v1/neural-fabric/verify')
         .set('Authorization', 'Bearer mock-token');
-      
+
       // Assert fabric integrity verification
       expect(verifyResponse.status).toBe(200);
       expect(verifyResponse.body.data.result.isIntact).toBe(true);
       expect(verifyResponse.body.data.result.integrityScore).toBeGreaterThanOrEqual(0.9);
     });
   });
-  
+
   describe('Dimensional Harmony', () => {
     it('should maintain dimensional harmony during boundary crossings', async () => {
       // Setup mock dimensions and boundary
@@ -240,7 +240,7 @@ describe('Quantum Coherence Tests', () => {
         type: 'permeable',
         state: 'open',
       };
-      
+
       // Mock boundary crossing
       const mockCrossing = {
         id: '1',
@@ -251,7 +251,7 @@ describe('Quantum Coherence Tests', () => {
         quantumStateId: '1',
         harmonyScore: 0.97,
       };
-      
+
       // Perform boundary crossing
       const response = await request(app)
         .post('/api/v1/dimensional/boundaries/1/cross')
@@ -260,11 +260,11 @@ describe('Quantum Coherence Tests', () => {
           sourceId: 'entity-1',
           quantumStateId: '1',
         });
-      
+
       // Assert successful crossing
       expect(response.status).toBe(200);
       expect(response.body.data.crossing.harmonyScore).toBeGreaterThanOrEqual(0.9);
-      
+
       // Verify dimensional harmony
       const harmonyVerification = {
         isHarmonious: true,
@@ -272,7 +272,7 @@ describe('Quantum Coherence Tests', () => {
         dimensionalStabilityScore: 0.98,
         boundaryIntegrityScore: 0.99,
       };
-      
+
       // Assert harmony verification
       expect(harmonyVerification.isHarmonious).toBe(true);
       expect(harmonyVerification.harmonyScore).toBeGreaterThanOrEqual(0.9);
@@ -280,7 +280,7 @@ describe('Quantum Coherence Tests', () => {
       expect(harmonyVerification.boundaryIntegrityScore).toBeGreaterThanOrEqual(0.9);
     });
   });
-  
+
   describe('End-to-End Quantum Coherence', () => {
     it('should maintain quantum coherence across the entire system', async () => {
       // Setup mock system state
@@ -308,11 +308,11 @@ describe('Quantum Coherence Tests', () => {
         },
         recommendations: [],
       };
-      
+
       // Assert system coherence
       expect(systemCoherenceReport.isCoherent).toBe(true);
       expect(systemCoherenceReport.overallCoherenceScore).toBeGreaterThanOrEqual(0.9);
-      
+
       // Check individual component coherence
       Object.values(systemCoherenceReport.components).forEach(component => {
         expect(component.coherenceScore).toBeGreaterThanOrEqual(0.9);

@@ -1,0 +1,237 @@
+/**
+ * Adaptive Scoring for Predictive Knowledge Recommendation
+ * Adjusts recommendation scoring based on user feedback
+ */
+import { FeedbackEvent } from './feedback-analyzer';
+/**
+ * Default scoring adjustment factors
+ */
+export const DEFAULT_SCORING_ADJUSTMENT_FACTORS = {
+    knowledgeTypeFactors: {
+        CODE_PATTERN: 1.0,
+        BEST_PRACTICE: 1.0,
+        SOLUTION: 1.0,
+        ARCHITECTURE: 1.0,
+        ALGORITHM: 1.0,
+    },
+    contextFactors: {
+        CODE_EDITING: 1.0,
+        DEBUGGING: 1.0,
+        ARCHITECTURE: 1.0,
+        TESTING: 1.0,
+        DOCUMENTATION: 1.0,
+        PERFORMANCE: 1.0,
+        SECURITY: 1.0,
+        GENERAL: 1.0,
+    },
+    triggerFactors: {
+        FILE_EDIT: 1.0,
+        FILE_CREATE: 1.0,
+        FILE_VIEW: 1.0,
+        COMMAND_RUN: 1.0,
+        ERROR_ENCOUNTER: 1.0,
+        SEARCH: 1.0,
+        PERIODIC: 1.0,
+        MANUAL: 1.0,
+        CUSTOM: 1.0,
+    },
+    languageMatchFactor: 1.0,
+    frameworkMatchFactor: 1.0,
+    patternMatchFactor: 1.0,
+    keywordMatchFactor: 1.0,
+    errorMatchFactor: 1.0,
+    codeSimilarityFactor: 1.0,
+};
+/**
+ * Default adaptive scoring configuration
+ */
+export const DEFAULT_ADAPTIVE_SCORING_CONFIG = {
+    enabled: true,
+    learningRate: 0.1,
+    minAdjustmentFactor: 0.5,
+    maxAdjustmentFactor: 2.0,
+    minFeedbackEntries: 10,
+    adaptKnowledgeType: true,
+    adaptContext: true,
+    adaptTrigger: true,
+    adaptMatchingFactors: true,
+};
+/**
+ * Adjusts recommendation scoring based on user feedback
+ */
+export class AdaptiveScoring {
+    constructor(feedbackAnalyzer, config = {}) {
+        this.feedbackAnalyzer = feedbackAnalyzer;
+        this.adjustmentFactors = { ...DEFAULT_SCORING_ADJUSTMENT_FACTORS };
+        this.config = {
+            ...DEFAULT_ADAPTIVE_SCORING_CONFIG,
+            ...config,
+        };
+        // Set up event listeners
+        this.setupEventListeners();
+    }
+    /**
+     * Set up event listeners
+     */
+    setupEventListeners() {
+        // Listen for analysis completed event
+        this.feedbackAnalyzer.on(FeedbackEvent.ANALYSIS_COMPLETED, this.handleAnalysisCompleted.bind(this));
+    }
+    /**
+     * Handle analysis completed event
+     */
+    handleAnalysisCompleted(analysisResult) {
+        // Skip if adaptive scoring is disabled
+        if (!this.config.enabled) {
+            return;
+        }
+        // Skip if not enough feedback entries
+        if (this.feedbackAnalyzer.getAllFeedback().length < this.config.minFeedbackEntries) {
+            return;
+        }
+        // Update adjustment factors
+        this.updateAdjustmentFactors(analysisResult);
+    }
+    /**
+     * Update adjustment factors based on analysis result
+     */
+    updateAdjustmentFactors(analysisResult) {
+        // Update knowledge type factors
+        if (this.config.adaptKnowledgeType) {
+            for (const [type, score] of Object.entries(analysisResult.scoresByKnowledgeType)) {
+                this.updateFactor('knowledgeTypeFactors', type, score);
+            }
+        }
+        // Update context factors
+        if (this.config.adaptContext) {
+            for (const [context, score] of Object.entries(analysisResult.scoresByContext)) {
+                this.updateFactor('contextFactors', context, score);
+            }
+        }
+        // Update trigger factors
+        if (this.config.adaptTrigger) {
+            for (const [trigger, score] of Object.entries(analysisResult.scoresByTrigger)) {
+                this.updateFactor('triggerFactors', trigger, score);
+            }
+        }
+        // Update matching factors based on keywords
+        if (this.config.adaptMatchingFactors) {
+            // Positive keywords indicate good matching
+            if (analysisResult.positiveKeywords.some(keyword => keyword.includes('language') || keyword.includes('code') || keyword.includes('syntax'))) {
+                this.adjustmentFactors.languageMatchFactor = this.adjustFactor(this.adjustmentFactors.languageMatchFactor, 0.1);
+            }
+            if (analysisResult.positiveKeywords.some(keyword => keyword.includes('framework') ||
+                keyword.includes('library') ||
+                keyword.includes('react') ||
+                keyword.includes('angular') ||
+                keyword.includes('vue'))) {
+                this.adjustmentFactors.frameworkMatchFactor = this.adjustFactor(this.adjustmentFactors.frameworkMatchFactor, 0.1);
+            }
+            if (analysisResult.positiveKeywords.some(keyword => keyword.includes('pattern') ||
+                keyword.includes('design') ||
+                keyword.includes('architecture'))) {
+                this.adjustmentFactors.patternMatchFactor = this.adjustFactor(this.adjustmentFactors.patternMatchFactor, 0.1);
+            }
+            if (analysisResult.positiveKeywords.some(keyword => keyword.includes('keyword') || keyword.includes('search') || keyword.includes('find'))) {
+                this.adjustmentFactors.keywordMatchFactor = this.adjustFactor(this.adjustmentFactors.keywordMatchFactor, 0.1);
+            }
+            if (analysisResult.positiveKeywords.some(keyword => keyword.includes('error') ||
+                keyword.includes('exception') ||
+                keyword.includes('bug') ||
+                keyword.includes('fix'))) {
+                this.adjustmentFactors.errorMatchFactor = this.adjustFactor(this.adjustmentFactors.errorMatchFactor, 0.1);
+            }
+            if (analysisResult.positiveKeywords.some(keyword => keyword.includes('similar') || keyword.includes('like') || keyword.includes('same'))) {
+                this.adjustmentFactors.codeSimilarityFactor = this.adjustFactor(this.adjustmentFactors.codeSimilarityFactor, 0.1);
+            }
+            // Negative keywords indicate poor matching
+            if (analysisResult.negativeKeywords.some(keyword => keyword.includes('language') || keyword.includes('code') || keyword.includes('syntax'))) {
+                this.adjustmentFactors.languageMatchFactor = this.adjustFactor(this.adjustmentFactors.languageMatchFactor, -0.1);
+            }
+            if (analysisResult.negativeKeywords.some(keyword => keyword.includes('framework') ||
+                keyword.includes('library') ||
+                keyword.includes('react') ||
+                keyword.includes('angular') ||
+                keyword.includes('vue'))) {
+                this.adjustmentFactors.frameworkMatchFactor = this.adjustFactor(this.adjustmentFactors.frameworkMatchFactor, -0.1);
+            }
+        }
+    }
+    /**
+     * Update a specific factor
+     */
+    updateFactor(factorType, key, score) {
+        // Skip if factor doesn't exist
+        if (!(key in this.adjustmentFactors[factorType])) {
+            return;
+        }
+        // Calculate adjustment
+        const currentFactor = this.adjustmentFactors[factorType][key];
+        const targetFactor = score * 2; // Convert 0-1 score to 0-2 factor
+        const adjustment = (targetFactor - currentFactor) * this.config.learningRate;
+        // Apply adjustment
+        this.adjustmentFactors[factorType][key] = this.adjustFactor(currentFactor, adjustment);
+    }
+    /**
+     * Adjust a factor value
+     */
+    adjustFactor(currentFactor, adjustment) {
+        const newFactor = currentFactor + adjustment;
+        // Clamp to min/max range
+        return Math.max(this.config.minAdjustmentFactor, Math.min(this.config.maxAdjustmentFactor, newFactor));
+    }
+    /**
+     * Apply adjustment factors to a relevance score
+     */
+    applyAdjustmentFactors(baseScore, knowledge, analysis, context) {
+        // Skip if adaptive scoring is disabled
+        if (!this.config.enabled) {
+            return baseScore;
+        }
+        let adjustedScore = baseScore;
+        // Apply knowledge type factor
+        if (this.adjustmentFactors.knowledgeTypeFactors[knowledge.type]) {
+            adjustedScore *= this.adjustmentFactors.knowledgeTypeFactors[knowledge.type];
+        }
+        // Apply context factor
+        if (this.adjustmentFactors.contextFactors[analysis.context]) {
+            adjustedScore *= this.adjustmentFactors.contextFactors[analysis.context];
+        }
+        // Apply trigger factor
+        if (this.adjustmentFactors.triggerFactors[analysis.trigger]) {
+            adjustedScore *= this.adjustmentFactors.triggerFactors[analysis.trigger];
+        }
+        // Clamp to 0-1 range
+        return Math.max(0, Math.min(1, adjustedScore));
+    }
+    /**
+     * Get current adjustment factors
+     */
+    getAdjustmentFactors() {
+        return { ...this.adjustmentFactors };
+    }
+    /**
+     * Set adjustment factors
+     */
+    setAdjustmentFactors(factors) {
+        this.adjustmentFactors = {
+            ...this.adjustmentFactors,
+            ...factors,
+        };
+    }
+    /**
+     * Reset adjustment factors to defaults
+     */
+    resetAdjustmentFactors() {
+        this.adjustmentFactors = { ...DEFAULT_SCORING_ADJUSTMENT_FACTORS };
+    }
+    /**
+     * Update configuration
+     */
+    updateConfig(config) {
+        this.config = {
+            ...this.config,
+            ...config,
+        };
+    }
+}

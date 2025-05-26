@@ -1,0 +1,345 @@
+/**
+ * Unified Quantum Database
+ *
+ * A comprehensive database system that follows the Unified Singularity Approach,
+ * ensuring absolute clarity and preventing quantum fragmentation.
+ *
+ * This system provides:
+ * 1. A unified interface for all data operations
+ * 2. Pluggable storage adapters (LocalStorage, IndexedDB, Memory, File, SQLite)
+ * 3. Schema definition and validation
+ * 4. Event-based architecture
+ * 5. Quantum coherence verification
+ *
+ * @version 1.0.0
+ */
+import { Collection } from './Collection';
+class UnifiedQuantumDatabase {
+    /**
+     * Create a new UnifiedQuantumDatabase instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Default adapter
+            defaultAdapter: 'localStorage',
+            // Storage prefix
+            storagePrefix: 'quantum-db-',
+            // Auto-sync
+            autoSync: true,
+            // Sync interval (ms)
+            syncInterval: 5000,
+            // Debug mode
+            debugMode: false,
+            // Schema validation
+            validateSchema: true,
+            // Coherence verification
+            verifyCoherence: true,
+            // Merge with provided options
+            ...options,
+        };
+        // State
+        this.initialized = false;
+        this.adapters = new Map();
+        this.schemas = new Map();
+        this.collections = new Map();
+        this.eventListeners = new Map();
+        this._syncInterval = null;
+        // Initialize if not deferred
+        if (!this.config.deferInitialization) {
+            // We can't use await in constructor, so we call _init and handle any errors
+            this._init().catch(error => {
+                this.log(`Error during initialization: ${error.message}`);
+            });
+        }
+    }
+    /**
+     * Initialize the database
+     * @returns {Promise<void>}
+     */
+    async init() {
+        if (this.initialized)
+            return;
+        return this._init();
+    }
+    /**
+     * Initialize the database
+     * @private
+     * @returns {Promise<void>}
+     */
+    async _init() {
+        if (this.initialized)
+            return;
+        this.log('Initializing Unified Quantum Database');
+        try {
+            // Register built-in adapters
+            this._registerBuiltInAdapters();
+            // Register built-in schemas
+            this._registerBuiltInSchemas();
+            // Set up auto-sync
+            if (this.config.autoSync) {
+                this._setupAutoSync();
+            }
+            // Set initialized flag
+            this.initialized = true;
+            this.log('Unified Quantum Database initialized');
+            // Emit initialized event
+            this._emit('initialized', null);
+        }
+        catch (error) {
+            this.log(`Error initializing database: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Register built-in adapters
+     * @private
+     */
+    _registerBuiltInAdapters() {
+        // Register adapters based on environment
+        if (typeof window !== 'undefined') {
+            // Browser environment
+            // Register LocalStorage adapter
+            if (typeof localStorage !== 'undefined') {
+                import { LocalStorageAdapter } from '../adapters/LocalStorageAdapter';
+                this.registerAdapter('localStorage', new LocalStorageAdapter({
+                    prefix: this.config.storagePrefix,
+                }));
+            }
+            // Register IndexedDB adapter if available
+            if (typeof indexedDB !== 'undefined') {
+                import { IndexedDBAdapter } from '../adapters/IndexedDBAdapter';
+                this.registerAdapter('indexedDB', new IndexedDBAdapter({
+                    dbName: `${this.config.storagePrefix}db`,
+                    version: 1,
+                }));
+            }
+        }
+        else {
+            // Node.js environment
+            // Register FileAdapter
+            import { FileAdapter } from '../adapters/FileAdapter';
+            this.registerAdapter('file', new FileAdapter({
+                directory: this.config.storageDirectory || './data',
+            }));
+        }
+        // Register Memory adapter (always available)
+        import { MemoryAdapter } from '../adapters/MemoryAdapter';
+        this.registerAdapter('memory', new MemoryAdapter());
+        this.log(`Registered ${this.adapters.size} built-in adapters`);
+    }
+    /**
+     * Register built-in schemas
+     * @private
+     */
+    _registerBuiltInSchemas() {
+        // Load schema definitions
+        const { taskSchema, settingsSchema, statisticsSchema, queryAnalyticsSchema, } = require('../schemas');
+        // Register schemas
+        this.registerSchema('task', taskSchema);
+        this.registerSchema('settings', settingsSchema);
+        this.registerSchema('statistics', statisticsSchema);
+        this.registerSchema('query_analytics', queryAnalyticsSchema);
+        this.log(`Registered ${this.schemas.size} built-in schemas`);
+    }
+    /**
+     * Set up auto-sync
+     * @private
+     */
+    _setupAutoSync() {
+        // Clear existing interval
+        if (this._syncInterval) {
+            clearInterval(this._syncInterval);
+        }
+        // Set up new interval
+        this._syncInterval = setInterval(() => {
+            this.sync().catch(error => {
+                this.log(`Auto-sync error: ${error.message}`);
+            });
+        }, this.config.syncInterval);
+        this.log(`Auto-sync enabled with interval: ${this.config.syncInterval}ms`);
+    }
+    /**
+     * Register an adapter
+     * @param {string} name - Adapter name
+     * @param {Object} adapter - Adapter instance
+     * @returns {UnifiedQuantumDatabase} This instance for chaining
+     */
+    registerAdapter(name, adapter) {
+        if (!name || !adapter) {
+            throw new Error('Adapter name and instance are required');
+        }
+        this.adapters.set(name, adapter);
+        this.log(`Registered adapter: ${name}`);
+        return this;
+    }
+    /**
+     * Register a schema
+     * @param {string} name - Schema name
+     * @param {Object} schema - Schema definition
+     * @returns {UnifiedQuantumDatabase} This instance for chaining
+     */
+    registerSchema(name, schema) {
+        if (!name || !schema) {
+            throw new Error('Schema name and definition are required');
+        }
+        this.schemas.set(name, schema);
+        this.log(`Registered schema: ${name}`);
+        return this;
+    }
+    /**
+     * Create a collection
+     * @param {string} name - Collection name
+     * @param {Object} options - Collection options
+     * @returns {Collection} The created collection
+     */
+    createCollection(name, options = {}) {
+        if (!name) {
+            throw new Error('Collection name is required');
+        }
+        // Check if collection already exists
+        if (this.collections.has(name)) {
+            return this.collections.get(name);
+        }
+        // Merge options with defaults
+        const collectionOptions = {
+            adapter: this.config.defaultAdapter,
+            schema: name,
+            validateSchema: this.config.validateSchema,
+            ...options,
+        };
+        // Create collection
+        const collection = new Collection(name, this, collectionOptions);
+        // Store collection
+        this.collections.set(name, collection);
+        this.log(`Created collection: ${name}`);
+        return collection;
+    }
+    /**
+     * Get a collection
+     * @param {string} name - Collection name
+     * @returns {Collection} The collection
+     */
+    getCollection(name) {
+        if (!this.collections.has(name)) {
+            throw new Error(`Collection not found: ${name}`);
+        }
+        return this.collections.get(name);
+    }
+    /**
+     * Synchronize all collections
+     * @returns {Promise<Object>} Sync results
+     */
+    async sync() {
+        this.log('Syncing all collections');
+        const results = {};
+        // Sync each collection
+        for (const [name, collection] of this.collections.entries()) {
+            try {
+                results[name] = await collection.sync();
+            }
+            catch (error) {
+                console.error(`Error syncing collection ${name}:`, error);
+                results[name] = { error: error.message };
+            }
+        }
+        // Emit sync event
+        this._emit('sync', results);
+        return results;
+    }
+    /**
+     * Add event listener
+     * @param {string} event - Event name
+     * @param {Function} listener - Event listener
+     * @returns {UnifiedQuantumDatabase} This instance for chaining
+     */
+    on(event, listener) {
+        if (!this.eventListeners.has(event)) {
+            this.eventListeners.set(event, []);
+        }
+        this.eventListeners.get(event).push(listener);
+        return this;
+    }
+    /**
+     * Remove event listener
+     * @param {string} event - Event name
+     * @param {Function} listener - Event listener
+     * @returns {UnifiedQuantumDatabase} This instance for chaining
+     */
+    off(event, listener) {
+        if (!this.eventListeners.has(event)) {
+            return this;
+        }
+        const listeners = this.eventListeners.get(event);
+        const index = listeners.indexOf(listener);
+        if (index !== -1) {
+            listeners.splice(index, 1);
+        }
+        return this;
+    }
+    /**
+     * Emit event
+     * @param {string} event - Event name
+     * @param {*} data - Event data
+     * @private
+     */
+    _emit(event, data) {
+        if (!this.eventListeners.has(event)) {
+            return;
+        }
+        const listeners = this.eventListeners.get(event);
+        for (const listener of listeners) {
+            try {
+                listener(data);
+            }
+            catch (error) {
+                console.error(`Error in event listener for ${event}:`, error);
+            }
+        }
+    }
+    /**
+     * Close the database and clean up resources
+     * @returns {Promise<boolean>} Success
+     */
+    async close() {
+        try {
+            this.log('Closing Unified Quantum Database');
+            // Stop auto-sync if enabled
+            if (this._syncInterval) {
+                clearInterval(this._syncInterval);
+                this._syncInterval = null;
+            }
+            // Sync all collections one last time
+            if (this.config.syncOnClose) {
+                await this.sync();
+            }
+            // Close all collections
+            for (const [name, collection] of this.collections) {
+                this.log(`Closing collection: ${name}`);
+                if (typeof collection.close === 'function') {
+                    await collection.close();
+                }
+            }
+            // Clear collections
+            this.collections.clear();
+            this.log('Unified Quantum Database closed');
+            return true;
+        }
+        catch (error) {
+            this.log(`Error closing database: ${error.message}`);
+            return false;
+        }
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[UnifiedQuantumDatabase] ${message}`);
+        }
+    }
+}
+export { UnifiedQuantumDatabase };

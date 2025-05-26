@@ -242,4 +242,100 @@ npm run verify:consciousness
 
 ## Conclusion
 
+```bash
+cd frontend
+npm test
+```
+
+### Backend Tests
+
+```bash
+cd backend
+npm test
+```
+
+### Quantum Coherence Tests
+
+```bash
+# Run from the root directory
+npm run verify:quantum-coherence
+```
+
+## Build Process
+
+### Build Frontend
+
+```bash
+cd frontend
+npm run build
+```
+
+The build output will be in the `frontend/dist` directory.
+
+### Build Backend
+
+```bash
+cd backend
+npm run build
+```
+
+The build output will be in the `backend/dist` directory.
+
+## Troubleshooting
+
+### Common Issues
+
+#### Node.js Version Mismatch
+
+If you encounter errors related to Node.js version:
+
+```bash
+# Install nvm (Node Version Manager)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+
+# Install and use the correct Node.js version
+nvm install 18
+nvm use 18
+```
+
+#### Dependency Installation Errors
+
+If you encounter errors during dependency installation:
+
+```bash
+# Clear npm cache
+npm cache clean --force
+
+# Try installing dependencies again
+npm install
+```
+
+#### Quantum Coherence Errors
+
+If you encounter quantum coherence errors:
+
+```bash
+# Reset neural fabric
+npm run reset:neural-fabric
+
+# Verify consciousness stream
+npm run verify:consciousness
+```
+
+## Development Workflow
+
+1. Create a new branch from `develop` following the [Git workflow](./git-workflow.md)
+2. Make your changes
+3. Run tests to ensure everything works
+4. Submit a pull request
+
+## Additional Resources
+
+- [Git Workflow Guide](./git-workflow.md)
+- [Development Standards](./development-standards.md)
+- [API Documentation](../api/README.md)
+- [Component Documentation](../components/README.md)
+
+## Conclusion
+
 You should now have a fully functional QQ-Verse development environment. If you encounter any issues not covered in this guide, please reach out to the development team or create an issue in the repository.

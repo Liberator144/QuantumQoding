@@ -1,142 +1,141 @@
 /**
  * Dimensional Types
- * 
- * This module provides type definitions for dimensional boundary management.
- * 
+ *
+ * This module provides type definitions for dimensional management.
+ *
  * @version 1.0.0
  */
 
-/**
- * Dimension interface
- */
+// Dimensional Core Types
 export interface Dimension {
-  id: string;
+  readonly id: string;
   name: string;
-  type: 'primary' | 'secondary' | 'tertiary' | 'quantum';
-  properties: Record<string, any>;
-  createdAt: number;
-  updatedAt: number;
+  coordinates: DimensionalCoordinates;
+  stability: number;
+  harmonics: DimensionalHarmonic[];
+  entanglements: DimensionalEntanglement[];
+  isActive: boolean;
+  metadata: DimensionalMetadata;
 }
 
-/**
- * Boundary state enum
- */
-export enum BoundaryState {
-  OPEN = 'open',
-  PARTIALLY_OPEN = 'partially_open',
-  QUANTUM_ENTANGLED = 'quantum_entangled',
-  CLOSED = 'closed',
+export interface DimensionalCoordinates {
+  x: number;
+  y: number;
+  z: number;
+  w?: number; // Fourth dimension
+  temporal?: number; // Time dimension
+  quantum?: number; // Quantum dimension
 }
 
-/**
- * Boundary interface
- */
-export interface Boundary {
-  id: string;
-  name: string;
-  sourceDimensionId: string;
-  targetDimensionId: string;
-  type: 'permeable' | 'semi-permeable' | 'impermeable' | 'quantum';
-  state: BoundaryState;
-  properties: Record<string, any>;
-  createdAt: number;
-  updatedAt: number;
+export interface DimensionalHarmonic {
+  readonly id: string;
+  frequency: number;
+  amplitude: number;
+  phase: number;
+  resonance: number;
+  isStable: boolean;
 }
 
-/**
- * Boundary crossing interface
- */
-export interface BoundaryCrossing {
-  id: string;
-  boundaryId: string;
-  sourceId: string;
-  timestamp: number;
-  direction: 'source-to-target' | 'target-to-source';
-  quantumStateId?: string;
-  harmonyScore: number;
-  properties: Record<string, any>;
+export interface DimensionalEntanglement {
+  readonly id: string;
+  sourceDimension: string;
+  targetDimension: string;
+  strength: number;
+  coherence: number;
+  isActive: boolean;
+  createdAt: Date;
 }
 
-/**
- * Dimensional harmony verification result interface
- */
-export interface HarmonyVerificationResult {
-  isHarmonious: boolean;
-  harmonyScore: number;
-  dimensionalStabilityScore: number;
-  boundaryIntegrityScore: number;
-  issues?: {
-    type: string;
-    description: string;
-    severity: 'low' | 'medium' | 'high' | 'critical';
-    location: string;
-  }[];
-  recommendations?: {
-    type: string;
-    description: string;
-    priority: 'low' | 'medium' | 'high' | 'critical';
-    action: string;
-  }[];
+export interface DimensionalMetadata {
+  createdAt: Date;
+  lastAccessed: Date;
+  accessCount: number;
+  stability: number;
+  quantumSignature: string;
 }
 
-/**
- * Harmonization strategy enum
- */
-export enum HarmonizationStrategy {
-  FULL = 'full',
-  PARTIAL = 'partial',
-  ADAPTIVE = 'adaptive',
-}
-
-/**
- * Harmonization options interface
- */
-export interface HarmonizationOptions {
-  strategy: HarmonizationStrategy;
-  preserveQuantumState: boolean;
-  preserveContext: boolean;
-  harmonizationThreshold: number;
-  maxIterations: number;
-}
-
-/**
- * Harmonization result interface
- */
-export interface HarmonizationResult {
-  id: string;
-  dimensionIds: string[];
-  boundaryIds: string[];
-  status: 'pending' | 'completed' | 'failed';
-  timestamp: number;
-  completedTimestamp?: number;
-  iterations: number;
-  harmonyScore: number;
-  error?: string;
-}
-
-/**
- * Dimensional mapping interface
- */
-export interface DimensionalMapping {
-  id: string;
-  sourceDimensionId: string;
-  targetDimensionId: string;
-  mappingFunction: string;
-  inverseFunction?: string;
-  properties: Record<string, any>;
-  createdAt: number;
-  updatedAt: number;
-}
-
-/**
- * Dimensional translation result interface
- */
-export interface TranslationResult {
+// Dimensional Transition Types
+export interface DimensionalTransition {
+  readonly id: string;
+  fromDimension: Dimension;
+  toDimension: Dimension;
+  transitionType: TransitionType;
+  duration: number;
+  energy: number;
   success: boolean;
-  sourceId: string;
-  targetId: string;
-  sourceValue: any;
-  targetValue: any;
-  coherenceScore: number;
-  error?: string;
+  timestamp: Date;
 }
+
+export enum TransitionType {
+  SMOOTH = 'smooth',
+  QUANTUM_LEAP = 'quantum_leap',
+  PHASE_SHIFT = 'phase_shift',
+  HARMONIC_RESONANCE = 'harmonic_resonance',
+  ENTANGLEMENT_BRIDGE = 'entanglement_bridge'
+}
+
+export interface TransitionConfig {
+  targetDimension: string;
+  transitionType: TransitionType;
+  energyThreshold: number;
+  stabilityRequired: number;
+  allowQuantumEffects: boolean;
+}
+
+// Dimensional Space Types
+export interface DimensionalSpace {
+  readonly id: string;
+  name: string;
+  dimensions: Dimension[];
+  boundaries: SpaceBoundary[];
+  laws: PhysicsLaw[];
+  isStable: boolean;
+  coherenceLevel: number;
+}
+
+export interface SpaceBoundary {
+  readonly id: string;
+  type: BoundaryType;
+  coordinates: DimensionalCoordinates[];
+  permeability: number;
+  isActive: boolean;
+}
+
+export enum BoundaryType {
+  HARD = 'hard',
+  SOFT = 'soft',
+  PERMEABLE = 'permeable',
+  QUANTUM_BARRIER = 'quantum_barrier',
+  TEMPORAL_WALL = 'temporal_wall'
+}
+
+// Dimensional Navigation Types
+export interface DimensionalNavigator {
+  readonly id: string;
+  currentDimension: string;
+  availableDimensions: string[];
+  navigationHistory: NavigationEntry[];
+}
+
+export interface NavigationEntry {
+  dimension: string;
+  timestamp: Date;
+  coordinates: DimensionalCoordinates;
+  duration: number;
+  method: string;
+}
+
+// Type Guards
+export const isDimension = (obj: unknown): obj is Dimension => {
+  return typeof obj === 'object' && obj !== null && 
+         'id' in obj && 'coordinates' in obj && 'stability' in obj;
+};
+
+export const isValidTransitionType = (type: string): type is TransitionType => {
+  return Object.values(TransitionType).includes(type as TransitionType);
+};
+
+export const isDimensionalCoordinates = (obj: unknown): obj is DimensionalCoordinates => {
+  return typeof obj === 'object' && obj !== null &&
+         'x' in obj && 'y' in obj && 'z' in obj;
+};

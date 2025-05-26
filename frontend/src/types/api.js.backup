@@ -1,0 +1,8 @@
+/**
+ * API Types
+ *
+ * This module provides type definitions for API interactions.
+ *
+ * @version 1.0.0
+ */
+export {};

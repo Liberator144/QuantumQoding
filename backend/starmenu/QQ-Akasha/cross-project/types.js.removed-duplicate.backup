@@ -1,0 +1,28 @@
+/**
+ * Types for the Cross-Project Knowledge Transfer System
+ */
+/**
+ * Knowledge types that can be transferred between projects
+ */
+export var KnowledgeType;
+(function (KnowledgeType) {
+    KnowledgeType["CODE_PATTERN"] = "code_pattern";
+    KnowledgeType["ARCHITECTURE"] = "architecture";
+    KnowledgeType["BEST_PRACTICE"] = "best_practice";
+    KnowledgeType["SOLUTION"] = "solution";
+    KnowledgeType["ALGORITHM"] = "algorithm";
+    KnowledgeType["CONFIGURATION"] = "configuration";
+    KnowledgeType["DEPENDENCY"] = "dependency";
+    KnowledgeType["CUSTOM"] = "custom";
+})(KnowledgeType || (KnowledgeType = {}));
+/**
+ * Default knowledge transfer configuration
+ */
+export const DEFAULT_KNOWLEDGE_TRANSFER_CONFIG = {
+    minSimilarityScore: 0.7,
+    autoExtractKnowledge: true,
+    maxAutoExtractCount: 10,
+    trackApplications: true,
+    proactiveSuggestions: true,
+    maxSuggestions: 5,
+};

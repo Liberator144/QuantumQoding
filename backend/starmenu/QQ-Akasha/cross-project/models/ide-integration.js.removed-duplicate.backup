@@ -1,0 +1,212 @@
+/**
+ * IDE Integration for Cross-Project Knowledge Transfer
+ * Provides integration with development environments
+ */
+import { EventEmitter } from 'events';
+/**
+ * IDE integration events
+ */
+export var IDEIntegrationEvent;
+(function (IDEIntegrationEvent) {
+    IDEIntegrationEvent["SUGGESTION_CREATED"] = "suggestion-created";
+    IDEIntegrationEvent["SUGGESTION_ACCEPTED"] = "suggestion-accepted";
+    IDEIntegrationEvent["SUGGESTION_REJECTED"] = "suggestion-rejected";
+    IDEIntegrationEvent["KNOWLEDGE_APPLIED"] = "knowledge-applied";
+    IDEIntegrationEvent["KNOWLEDGE_EXTRACTED"] = "knowledge-extracted";
+})(IDEIntegrationEvent || (IDEIntegrationEvent = {}));
+/**
+ * Default suggestion display options
+ */
+const DEFAULT_DISPLAY_OPTIONS = {
+    showInline: true,
+    showInPanel: true,
+    highlightRelatedCode: true,
+    showDiffPreview: true,
+    showCompatibility: true,
+};
+/**
+ * Provides integration with development environments
+ */
+export class IDEIntegration {
+    constructor(transferManager, projectManager, displayOptions = {}) {
+        this.activeSuggestions = new Map();
+        this.transferManager = transferManager;
+        this.projectManager = projectManager;
+        this.eventEmitter = new EventEmitter();
+        this.displayOptions = {
+            ...DEFAULT_DISPLAY_OPTIONS,
+            ...displayOptions,
+        };
+        // Set up event listeners
+        this.setupEventListeners();
+    }
+    /**
+     * Process IDE context to generate suggestions
+     */
+    async processDEContext(context) {
+        // Set active project
+        this.projectManager.setActiveProject(context.projectId);
+        // Generate suggestions based on context
+        const suggestions = await this.transferManager.suggestKnowledge(context.projectId, {
+            filePath: context.filePath,
+            content: context.selection?.text || context.content,
+        });
+        // Store active suggestions
+        for (const suggestion of suggestions) {
+            const suggestionId = `${suggestion.knowledge.id}-${Date.now()}`;
+            this.activeSuggestions.set(suggestionId, suggestion);
+            // Emit event
+            this.eventEmitter.emit(IDEIntegrationEvent.SUGGESTION_CREATED, {
+                suggestionId,
+                suggestion,
+                context,
+            });
+        }
+        return suggestions;
+    }
+    /**
+     * Accept a suggestion
+     */
+    async acceptSuggestion(suggestionId, options = {}) {
+        const suggestion = this.activeSuggestions.get(suggestionId);
+        if (!suggestion) {
+            throw new Error(`Suggestion with ID ${suggestionId} not found`);
+        }
+        // Record knowledge application
+        await this.transferManager.applyKnowledge(suggestion.knowledge.id, suggestion.context.projectContext, {
+            filePath: suggestion.context.filePath,
+            modifications: options.modifications,
+            notes: options.notes,
+        });
+        // Emit event
+        this.eventEmitter.emit(IDEIntegrationEvent.SUGGESTION_ACCEPTED, {
+            suggestionId,
+            suggestion,
+            options,
+        });
+        // Remove from active suggestions
+        this.activeSuggestions.delete(suggestionId);
+    }
+    /**
+     * Reject a suggestion
+     */
+    async rejectSuggestion(suggestionId, reason) {
+        const suggestion = this.activeSuggestions.get(suggestionId);
+        if (!suggestion) {
+            throw new Error(`Suggestion with ID ${suggestionId} not found`);
+        }
+        // Emit event
+        this.eventEmitter.emit(IDEIntegrationEvent.SUGGESTION_REJECTED, {
+            suggestionId,
+            suggestion,
+            reason,
+        });
+        // Remove from active suggestions
+        this.activeSuggestions.delete(suggestionId);
+    }
+    /**
+     * Extract knowledge from IDE selection
+     */
+    async extractFromSelection(context, options = {}) {
+        if (!context.selection) {
+            throw new Error('No selection provided');
+        }
+        // Extract knowledge from selection
+        const extractedKnowledge = await this.transferManager.extractKnowledge(context.selection.text, context.filePath, context.projectId);
+        // If user provided metadata, update the first knowledge entity
+        if (extractedKnowledge.length > 0 &&
+            (options.title || options.description || options.type || options.tags)) {
+            const knowledge = extractedKnowledge[0];
+            const updates = {};
+            if (options.title) {
+                updates.title = options.title;
+            }
+            if (options.description) {
+                updates.description = options.description;
+            }
+            if (options.type) {
+                updates.type = options.type;
+            }
+            if (options.tags) {
+                updates.tags = [...knowledge.tags, ...options.tags];
+            }
+            await this.transferManager.updateKnowledge(knowledge.id, updates);
+        }
+        // Emit event
+        this.eventEmitter.emit(IDEIntegrationEvent.KNOWLEDGE_EXTRACTED, {
+            knowledge: extractedKnowledge,
+            context,
+        });
+        return extractedKnowledge;
+    }
+    /**
+     * Apply knowledge to current file
+     */
+    async applyKnowledgeToFile(knowledgeId, context, options = {}) {
+        // Get knowledge
+        const knowledge = await this.transferManager.getKnowledge(knowledgeId);
+        if (!knowledge) {
+            throw new Error(`Knowledge with ID ${knowledgeId} not found`);
+        }
+        // Record knowledge application
+        await this.transferManager.applyKnowledge(knowledgeId, context.projectId, {
+            filePath: context.filePath,
+            modifications: options.modifications,
+            notes: options.notes,
+        });
+        // Emit event
+        this.eventEmitter.emit(IDEIntegrationEvent.KNOWLEDGE_APPLIED, {
+            knowledge,
+            context,
+            options,
+        });
+    }
+    /**
+     * Get active suggestions
+     */
+    getActiveSuggestions() {
+        return Array.from(this.activeSuggestions.values());
+    }
+    /**
+     * Get display options
+     */
+    getDisplayOptions() {
+        return { ...this.displayOptions };
+    }
+    /**
+     * Update display options
+     */
+    updateDisplayOptions(options) {
+        this.displayOptions = {
+            ...this.displayOptions,
+            ...options,
+        };
+    }
+    /**
+     * Subscribe to IDE integration events
+     */
+    on(event, listener) {
+        this.eventEmitter.on(event, listener);
+    }
+    /**
+     * Unsubscribe from IDE integration events
+     */
+    off(event, listener) {
+        this.eventEmitter.off(event, listener);
+    }
+    /**
+     * Set up event listeners
+     */
+    setupEventListeners() {
+        // Example: Log suggestion events
+        this.eventEmitter.on(IDEIntegrationEvent.SUGGESTION_CREATED, data => {
+            console.log(`Suggestion created: ${data.suggestion.knowledge.title}`);
+        });
+        this.eventEmitter.on(IDEIntegrationEvent.SUGGESTION_ACCEPTED, data => {
+            console.log(`Suggestion accepted: ${data.suggestion.knowledge.title}`);
+        });
+        this.eventEmitter.on(IDEIntegrationEvent.SUGGESTION_REJECTED, data => {
+            console.log(`Suggestion rejected: ${data.suggestion.knowledge.title}`);
+        });
+    }
+}

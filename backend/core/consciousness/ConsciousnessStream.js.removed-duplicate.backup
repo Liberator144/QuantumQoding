@@ -1,0 +1,352 @@
+"use strict";
+/**
+ * ConsciousnessStream
+ *
+ * The ConsciousnessStream provides a way to manage data flows that maintain
+ * quantum coherence.
+ *
+ * @version 1.0.0
+ */
+const { EventEmitter } = require('events');
+/**
+ * ConsciousnessStream class
+ *
+ * Manages data flows that maintain quantum coherence.
+ */
+class ConsciousnessStream extends EventEmitter {
+    /**
+     * Create a new ConsciousnessStream instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        super();
+        // Configuration
+        this.config = {
+            // Stream name
+            name: options.name || 'ConsciousnessStream',
+            // Debug mode
+            debugMode: options.debugMode || false,
+            // Maximum buffer size
+            maxBufferSize: options.maxBufferSize || 1000,
+            // Whether to automatically process data
+            autoProcess: options.autoProcess !== undefined ? options.autoProcess : true,
+            // Processing interval in milliseconds
+            processInterval: options.processInterval || 100,
+            // Data processors
+            processors: options.processors || [],
+        };
+        // State
+        this.state = {
+            // Data buffer
+            buffer: [],
+            // Processed data
+            processed: [],
+            // Processing status
+            processing: false,
+            // Processing timer
+            processingTimer: null,
+            // Stream status
+            status: 'idle', // 'idle', 'active', 'paused', 'closed'
+            // Stream statistics
+            stats: {
+                // Total data items received
+                received: 0,
+                // Total data items processed
+                processed: 0,
+                // Total data items dropped
+                dropped: 0,
+                // Total processing time in milliseconds
+                processingTime: 0,
+                // Average processing time in milliseconds
+                averageProcessingTime: 0,
+            },
+        };
+        // Initialize
+        this._initialize();
+    }
+    /**
+     * Initialize the consciousness stream
+     * @private
+     */
+    _initialize() {
+        // Start processing timer if auto-process is enabled
+        if (this.config.autoProcess) {
+            this.state.processingTimer = setInterval(() => {
+                this._processBuffer();
+            }, this.config.processInterval);
+        }
+        // Set status to active
+        this.state.status = 'active';
+        // Log initialization
+        this.log(`Consciousness stream "${this.config.name}" initialized`);
+        // Emit initialized event
+        this.emit('initialized', { name: this.config.name });
+    }
+    /**
+     * Write data to the stream
+     * @param {any} data - Data to write
+     * @returns {ConsciousnessStream} This instance for chaining
+     */
+    write(data) {
+        // Check if stream is active
+        if (this.state.status !== 'active') {
+            this.log(`Cannot write to ${this.state.status} stream`);
+            return this;
+        }
+        // Check if buffer is full
+        if (this.state.buffer.length >= this.config.maxBufferSize) {
+            // Drop oldest data
+            this.state.buffer.shift();
+            this.state.stats.dropped++;
+            // Log buffer overflow
+            this.log('Buffer overflow, dropped oldest data');
+            // Emit overflow event
+            this.emit('overflow', {
+                name: this.config.name,
+                bufferSize: this.state.buffer.length,
+                maxBufferSize: this.config.maxBufferSize,
+            });
+        }
+        // Add data to buffer
+        this.state.buffer.push({
+            data,
+            timestamp: Date.now(),
+            processed: false,
+        });
+        // Update statistics
+        this.state.stats.received++;
+        // Log data write
+        this.log(`Data written to stream (buffer size: ${this.state.buffer.length})`);
+        // Emit data event
+        this.emit('data', {
+            name: this.config.name,
+            data,
+            bufferSize: this.state.buffer.length,
+        });
+        // Process buffer immediately if auto-process is disabled
+        if (!this.config.autoProcess) {
+            this._processBuffer();
+        }
+        return this;
+    }
+    /**
+     * Read processed data from the stream
+     * @param {number} count - Number of data items to read
+     * @param {boolean} remove - Whether to remove read data
+     * @returns {Array} Array of processed data items
+     */
+    read(count = 1, remove = true) {
+        // Check if stream is closed
+        if (this.state.status === 'closed') {
+            this.log('Cannot read from closed stream');
+            return [];
+        }
+        // Get processed data
+        const data = this.state.processed.slice(0, count);
+        // Remove data if requested
+        if (remove && data.length > 0) {
+            this.state.processed = this.state.processed.slice(data.length);
+            // Log data read
+            this.log(`Read ${data.length} data items from stream (${this.state.processed.length} remaining)`);
+            // Emit read event
+            this.emit('read', {
+                name: this.config.name,
+                count: data.length,
+                remaining: this.state.processed.length,
+            });
+        }
+        // Return data
+        return data;
+    }
+    /**
+     * Process the data buffer
+     * @returns {number} Number of processed data items
+     * @private
+     */
+    _processBuffer() {
+        // Check if stream is active
+        if (this.state.status !== 'active') {
+            return 0;
+        }
+        // Check if already processing
+        if (this.state.processing) {
+            return 0;
+        }
+        // Check if buffer is empty
+        if (this.state.buffer.length === 0) {
+            return 0;
+        }
+        // Set processing flag
+        this.state.processing = true;
+        // Start processing time
+        const startTime = Date.now();
+        // Process buffer
+        let processedCount = 0;
+        for (let i = 0; i < this.state.buffer.length; i++) {
+            const item = this.state.buffer[i];
+            // Skip already processed items
+            if (item.processed) {
+                continue;
+            }
+            // Process data
+            let processedData = item.data;
+            for (const processor of this.config.processors) {
+                try {
+                    processedData = processor(processedData, item.timestamp);
+                }
+                catch (error) {
+                    // Log processing error
+                    this.log(`Processing error: ${error.message}`);
+                    // Emit error event
+                    this.emit('error', {
+                        name: this.config.name,
+                        error,
+                        data: item.data,
+                    });
+                    // Skip to next processor
+                    continue;
+                }
+            }
+            // Mark as processed
+            item.processed = true;
+            // Add to processed data
+            this.state.processed.push({
+                data: processedData,
+                originalData: item.data,
+                timestamp: item.timestamp,
+                processedAt: Date.now(),
+            });
+            // Update statistics
+            this.state.stats.processed++;
+            processedCount++;
+            // Emit processed event
+            this.emit('processed', {
+                name: this.config.name,
+                data: processedData,
+                originalData: item.data,
+            });
+        }
+        // Remove processed items from buffer
+        this.state.buffer = this.state.buffer.filter(item => !item.processed);
+        // End processing time
+        const endTime = Date.now();
+        const processingTime = endTime - startTime;
+        // Update statistics
+        this.state.stats.processingTime += processingTime;
+        if (this.state.stats.processed > 0) {
+            this.state.stats.averageProcessingTime =
+                this.state.stats.processingTime / this.state.stats.processed;
+        }
+        // Clear processing flag
+        this.state.processing = false;
+        // Log processing
+        if (processedCount > 0) {
+            this.log(`Processed ${processedCount} data items in ${processingTime}ms`);
+        }
+        return processedCount;
+    }
+    /**
+     * Add a data processor
+     * @param {Function} processor - Data processor function
+     * @returns {ConsciousnessStream} This instance for chaining
+     */
+    addProcessor(processor) {
+        if (typeof processor !== 'function') {
+            throw new Error('Processor must be a function');
+        }
+        this.config.processors.push(processor);
+        // Log processor addition
+        this.log(`Added processor (total: ${this.config.processors.length})`);
+        return this;
+    }
+    /**
+     * Remove a data processor
+     * @param {Function} processor - Data processor function
+     * @returns {boolean} Whether the processor was removed
+     */
+    removeProcessor(processor) {
+        const index = this.config.processors.indexOf(processor);
+        if (index === -1) {
+            return false;
+        }
+        this.config.processors.splice(index, 1);
+        // Log processor removal
+        this.log(`Removed processor (total: ${this.config.processors.length})`);
+        return true;
+    }
+    /**
+     * Pause the stream
+     * @returns {ConsciousnessStream} This instance for chaining
+     */
+    pause() {
+        if (this.state.status === 'active') {
+            this.state.status = 'paused';
+            // Log pause
+            this.log('Stream paused');
+            // Emit pause event
+            this.emit('paused', { name: this.config.name });
+        }
+        return this;
+    }
+    /**
+     * Resume the stream
+     * @returns {ConsciousnessStream} This instance for chaining
+     */
+    resume() {
+        if (this.state.status === 'paused') {
+            this.state.status = 'active';
+            // Log resume
+            this.log('Stream resumed');
+            // Emit resume event
+            this.emit('resumed', { name: this.config.name });
+        }
+        return this;
+    }
+    /**
+     * Close the stream
+     * @returns {ConsciousnessStream} This instance for chaining
+     */
+    close() {
+        // Process remaining data
+        this._processBuffer();
+        // Clear processing timer
+        if (this.state.processingTimer) {
+            clearInterval(this.state.processingTimer);
+            this.state.processingTimer = null;
+        }
+        // Set status to closed
+        this.state.status = 'closed';
+        // Log close
+        this.log('Stream closed');
+        // Emit close event
+        this.emit('closed', {
+            name: this.config.name,
+            stats: this.state.stats,
+        });
+        return this;
+    }
+    /**
+     * Get the stream state
+     * @returns {Object} Stream state
+     */
+    getState() {
+        return {
+            name: this.config.name,
+            status: this.state.status,
+            bufferSize: this.state.buffer.length,
+            processedSize: this.state.processed.length,
+            stats: { ...this.state.stats },
+        };
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[ConsciousnessStream:${this.config.name}] ${message}`);
+        }
+    }
+}
+module.exports = { ConsciousnessStream };

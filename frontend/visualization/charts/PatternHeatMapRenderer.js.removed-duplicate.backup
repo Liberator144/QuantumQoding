@@ -1,0 +1,402 @@
+/**
+ * Pattern Heat Map Renderer
+ *
+ * Renders a heat map visualization of query patterns.
+ *
+ * @version 1.0.0
+ */
+import { BaseRenderer } from './BaseRenderer';
+import { colorUtils } from '../utils/colorUtils';
+/**
+ * Pattern Heat Map Renderer
+ */
+class PatternHeatMapRenderer extends BaseRenderer {
+    /**
+     * Create a new PatternHeatMapRenderer instance
+     * @param options - Renderer options
+     */
+    constructor(options = {}) {
+        super({
+            // Default cell size
+            cellSize: 20,
+            // Default padding
+            padding: 5,
+            // Default margin
+            margin: {
+                top: 40,
+                right: 40,
+                bottom: 60,
+                left: 60,
+            },
+            // Default color range
+            colorRange: ['#f7fbff', '#08306b'],
+            // Default animation duration
+            animationDuration: 500,
+            // Default tooltip enabled
+            tooltipEnabled: true,
+            // Default legend enabled
+            legendEnabled: true,
+            // Default axis labels
+            axisLabels: {
+                x: 'Time',
+                y: 'Patterns',
+            },
+            // Merge with provided options
+            ...options,
+        });
+        // Set renderer name
+        this.name = 'patternHeatMap';
+    }
+    /**
+     * Initialize the renderer
+     * @param options - Initialization options
+     */
+    initialize(options = {}) {
+        // Merge options
+        this.options = {
+            ...this.options,
+            ...options,
+        };
+        this.log('Pattern Heat Map Renderer initialized');
+    }
+    /**
+     * Render the visualization
+     * @param element - DOM element to render into
+     * @param data - Visualization data
+     * @param options - Render options
+     */
+    render(element, data, options = {}) {
+        // Merge options
+        this.options = {
+            ...this.options,
+            ...options,
+        };
+        // Store last data
+        this.lastData = data;
+        // Check data
+        if (!data || !data.patterns || !Array.isArray(data.patterns)) {
+            throw new Error('Valid pattern data is required');
+        }
+        // Clear element
+        element.innerHTML = '';
+        // Create container
+        const container = document.createElement('div');
+        container.className = 'quantum-pattern-heatmap';
+        container.style.position = 'relative';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.overflow = 'hidden';
+        // Apply theme
+        this._applyTheme(container);
+        // Create SVG element
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.style.overflow = 'visible';
+        // Add SVG to container
+        container.appendChild(svg);
+        // Process data
+        const processedData = this._processData(data);
+        // Calculate dimensions
+        const dimensions = this._calculateDimensions(element, processedData);
+        // Create scales
+        const scales = this._createScales(processedData, dimensions);
+        // Create axes
+        this._createAxes(svg, scales, dimensions);
+        // Create cells
+        this._createCells(svg, processedData, scales, dimensions);
+        // Create legend
+        if (this.options.legendEnabled) {
+            this._createLegend(svg, scales, dimensions);
+        }
+        // Create tooltip
+        let tooltip = null;
+        if (this.options.tooltipEnabled) {
+            tooltip = this._createTooltip(container);
+        }
+        // Add event listeners
+        if (tooltip) {
+            this._addEventListeners(svg, tooltip, processedData, scales);
+        }
+        // Add to element
+        element.appendChild(container);
+        this.log('Pattern Heat Map rendered');
+    }
+    /**
+     * Process data for visualization
+     * @param data - Raw data
+     * @returns Processed data
+     * @private
+     */
+    _processData(data) {
+        // Extract patterns and time intervals
+        const patterns = data.patterns.map(p => p.name || p.id || `Pattern ${p.index || 0}`);
+        const timeIntervals = data.timeIntervals || this._generateTimeIntervals(data);
+        // Create matrix
+        const matrix = [];
+        const values = [];
+        for (let i = 0; i < patterns.length; i++) {
+            const row = [];
+            for (let j = 0; j < timeIntervals.length; j++) {
+                // Get value from data or default to 0
+                const value = data.patterns[i].values?.[j] || 0;
+                row.push({
+                    pattern: patterns[i],
+                    time: timeIntervals[j],
+                    value,
+                    row: i,
+                    col: j,
+                });
+                values.push(value);
+            }
+            matrix.push(row);
+        }
+        // Calculate min and max values
+        const minValue = Math.min(...values);
+        const maxValue = Math.max(...values);
+        return {
+            patterns,
+            timeIntervals,
+            matrix,
+            minValue,
+            maxValue,
+        };
+    }
+    /**
+     * Generate time intervals if not provided
+     * @param data - Raw data
+     * @returns Time intervals
+     * @private
+     */
+    _generateTimeIntervals(data) {
+        // Default to 24 hours
+        const intervals = [];
+        const now = new Date();
+        for (let i = 23; i >= 0; i--) {
+            const date = new Date(now);
+            date.setHours(now.getHours() - i);
+            intervals.push(date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+        }
+        return intervals;
+    }
+    /**
+     * Calculate dimensions for the visualization
+     * @param element - Container element
+     * @param data - Processed data
+     * @returns Dimensions
+     * @private
+     */
+    _calculateDimensions(element, data) {
+        // Get container dimensions
+        const containerWidth = element.clientWidth;
+        const containerHeight = element.clientHeight;
+        // Get margin
+        const margin = this.options.margin;
+        // Calculate available space
+        const availableWidth = containerWidth - margin.left - margin.right;
+        const availableHeight = containerHeight - margin.top - margin.bottom;
+        // Calculate cell size
+        const cellWidth = Math.min(this.options.cellSize, availableWidth / data.timeIntervals.length);
+        const cellHeight = Math.min(this.options.cellSize, availableHeight / data.patterns.length);
+        // Calculate total dimensions
+        const width = cellWidth * data.timeIntervals.length;
+        const height = cellHeight * data.patterns.length;
+        return {
+            containerWidth,
+            containerHeight,
+            width,
+            height,
+            cellWidth,
+            cellHeight,
+        };
+    }
+    /**
+     * Create scales for the visualization
+     * @param data - Processed data
+     * @param dimensions - Visualization dimensions
+     * @returns Scales
+     * @private
+     */
+    _createScales(data, dimensions) {
+        // Create color scale
+        const colorScale = (value) => {
+            // Normalize value between 0 and 1
+            const normalized = (value - data.minValue) / (data.maxValue - data.minValue || 1);
+            // Interpolate color
+            return colorUtils.interpolateColor(this.options.colorRange[0], this.options.colorRange[1], normalized);
+        };
+        return {
+            colorScale,
+        };
+    }
+    /**
+     * Create axes for the visualization
+     * @param svg - SVG element
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createAxes(svg, scales, dimensions) {
+        // Create group for axes
+        const axesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        axesGroup.setAttribute('class', 'axes');
+        // Add to SVG
+        svg.appendChild(axesGroup);
+    }
+    /**
+     * Create cells for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createCells(svg, data, scales, dimensions) {
+        // Create group for cells
+        const cellsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        cellsGroup.setAttribute('class', 'cells');
+        const margin = this.options.margin;
+        cellsGroup.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
+        // Create cells
+        for (let i = 0; i < data.matrix.length; i++) {
+            for (let j = 0; j < data.matrix[i].length; j++) {
+                const cell = data.matrix[i][j];
+                // Create rect
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', (j * dimensions.cellWidth).toString());
+                rect.setAttribute('y', (i * dimensions.cellHeight).toString());
+                rect.setAttribute('width', (dimensions.cellWidth - this.options.padding).toString());
+                rect.setAttribute('height', (dimensions.cellHeight - this.options.padding).toString());
+                rect.setAttribute('fill', scales.colorScale(cell.value));
+                rect.setAttribute('data-row', i.toString());
+                rect.setAttribute('data-col', j.toString());
+                rect.setAttribute('data-value', cell.value.toString());
+                rect.setAttribute('data-pattern', cell.pattern);
+                rect.setAttribute('data-time', cell.time);
+                // Add to group
+                cellsGroup.appendChild(rect);
+            }
+        }
+        // Add to SVG
+        svg.appendChild(cellsGroup);
+    }
+    /**
+     * Create legend for the visualization
+     * @param svg - SVG element
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createLegend(svg, scales, dimensions) {
+        // Create group for legend
+        const legendGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        legendGroup.setAttribute('class', 'legend');
+        // Add to SVG
+        svg.appendChild(legendGroup);
+    }
+    /**
+     * Create tooltip for the visualization
+     * @param container - Container element
+     * @returns Tooltip element
+     * @private
+     */
+    _createTooltip(container) {
+        // Create tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'quantum-tooltip';
+        tooltip.style.position = 'absolute';
+        tooltip.style.display = 'none';
+        tooltip.style.padding = '8px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '1000';
+        // Apply theme
+        this._applyTooltipTheme(tooltip);
+        // Add to container
+        container.appendChild(tooltip);
+        return tooltip;
+    }
+    /**
+     * Add event listeners to the visualization
+     * @param svg - SVG element
+     * @param tooltip - Tooltip element
+     * @param data - Processed data
+     * @param scales - Visualization scales
+     * @private
+     */
+    _addEventListeners(svg, tooltip, data, scales) {
+        // Get all cells
+        const cells = svg.querySelectorAll('.cells rect');
+        // Add mouse events
+        cells.forEach(cell => {
+            // Mouse enter
+            cell.addEventListener('mouseenter', event => {
+                // Get data
+                const row = parseInt(cell.getAttribute('data-row') || '0');
+                const col = parseInt(cell.getAttribute('data-col') || '0');
+                const value = parseFloat(cell.getAttribute('data-value') || '0');
+                const pattern = cell.getAttribute('data-pattern') || '';
+                const time = cell.getAttribute('data-time') || '';
+                // Update tooltip
+                tooltip.innerHTML = `
+          <div><strong>Pattern:</strong> ${pattern}</div>
+          <div><strong>Time:</strong> ${time}</div>
+          <div><strong>Value:</strong> ${value}</div>
+        `;
+                // Show tooltip
+                tooltip.style.display = 'block';
+                // Position tooltip
+                const rect = cell.getBoundingClientRect();
+                const containerRect = svg.getBoundingClientRect();
+                tooltip.style.left = `${rect.left - containerRect.left + rect.width / 2}px`;
+                tooltip.style.top = `${rect.top - containerRect.top - tooltip.offsetHeight - 5}px`;
+                // Highlight cell
+                cell.setAttribute('stroke', '#000');
+                cell.setAttribute('stroke-width', '2');
+            });
+            // Mouse leave
+            cell.addEventListener('mouseleave', event => {
+                // Hide tooltip
+                tooltip.style.display = 'none';
+                // Remove highlight
+                cell.setAttribute('stroke', 'none');
+            });
+        });
+    }
+    /**
+     * Apply theme to the visualization
+     * @param container - Container element
+     * @private
+     */
+    _applyTheme(container) {
+        // Apply theme based on options
+        if (this.options.theme === 'dark') {
+            container.style.backgroundColor = '#1a1a1a';
+            container.style.color = '#ffffff';
+        }
+        else {
+            container.style.backgroundColor = '#ffffff';
+            container.style.color = '#333333';
+        }
+    }
+    /**
+     * Apply theme to the tooltip
+     * @param tooltip - Tooltip element
+     * @private
+     */
+    _applyTooltipTheme(tooltip) {
+        // Apply theme based on options
+        if (this.options.theme === 'dark') {
+            tooltip.style.backgroundColor = '#333333';
+            tooltip.style.color = '#ffffff';
+            tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.5)';
+        }
+        else {
+            tooltip.style.backgroundColor = '#ffffff';
+            tooltip.style.color = '#333333';
+            tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+        }
+    }
+}
+export { PatternHeatMapRenderer };

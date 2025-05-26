@@ -1,45 +1,38 @@
 /**
+ * TypeScript Migration
+ * Migrated from: HelpScreen.js
+ * @version 2.0.0
+ */
+/**
  * Help Screen Component
- * 
+ *
  * This component provides the help and documentation interface for the QQ-Verse project,
  * offering guidance on using the quantum universe.
- * 
+ *
  * @version 1.0.0
  */
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
-
-// Help topic interface
-interface HelpTopic {
-  id: string;
-  title: string;
-  content: string;
-}
-
 /**
  * Help screen component
  */
-const HelpScreen: React.FC = () => {
-  // State for selected topic
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  
-  // Get audio
-  const audio = useAudio();
-  
-  // Handle topic selection
-  const handleTopicSelect = (topicId: string) => {
-    audio.play('click', { volume: 0.3 });
-    setSelectedTopic(topicId);
-  };
-  
-  // Help topics
-  const helpTopics: HelpTopic[] = [
-    {
-      id: 'getting-started',
-      title: 'Getting Started',
-      content: `
+const HelpScreen = () => {
+    // State for selected topic
+    const [selectedTopic, setSelectedTopic] = useState(null);
+    // Get audio
+    const audio = useAudio();
+    // Handle topic selection
+    const handleTopicSelect = (topicId) => {
+        audio.play('click', { volume: 0.3 });
+        setSelectedTopic(topicId);
+    };
+    // Help topics
+    const helpTopics = [
+        {
+            id: 'getting-started',
+            title: 'Getting Started',
+            content: `
         <h3>Welcome to QQ-Verse</h3>
         <p>QQ-Verse is a quantum-coherent universe that allows you to navigate between different star systems and features.</p>
         <p>To get started, use the central Quantum Sphere to navigate to different star systems. Each star represents a different module or feature set.</p>
@@ -50,11 +43,11 @@ const HelpScreen: React.FC = () => {
           <li><strong>Dimensional Boundaries</strong>: Transitions between different star systems</li>
         </ul>
       `
-    },
-    {
-      id: 'navigation',
-      title: 'Navigation',
-      content: `
+        },
+        {
+            id: 'navigation',
+            title: 'Navigation',
+            content: `
         <h3>Navigating the Quantum Universe</h3>
         <p>QQ-Verse uses a unique navigation system based on a cosmic metaphor.</p>
         <h4>Hub Navigation</h4>
@@ -68,11 +61,11 @@ const HelpScreen: React.FC = () => {
           <li><strong>1-9</strong>: Quick access to star systems</li>
         </ul>
       `
-    },
-    {
-      id: 'star-systems',
-      title: 'Star Systems',
-      content: `
+        },
+        {
+            id: 'star-systems',
+            title: 'Star Systems',
+            content: `
         <h3>Star Systems Overview</h3>
         <p>QQ-Verse contains multiple star systems, each representing a different module or feature set.</p>
         <h4>Inner Orbit</h4>
@@ -94,11 +87,11 @@ const HelpScreen: React.FC = () => {
           <li><strong>QQ-UnityPortal</strong>: Community ecosystem</li>
         </ul>
       `
-    },
-    {
-      id: 'account',
-      title: 'Account Management',
-      content: `
+        },
+        {
+            id: 'account',
+            title: 'Account Management',
+            content: `
         <h3>Managing Your Quantum Identity</h3>
         <p>Your quantum identity is your profile within the QQ-Verse.</p>
         <h4>Profile</h4>
@@ -108,11 +101,11 @@ const HelpScreen: React.FC = () => {
         <h4>Security</h4>
         <p>We recommend using a strong password and enabling two-factor authentication for your account.</p>
       `
-    },
-    {
-      id: 'troubleshooting',
-      title: 'Troubleshooting',
-      content: `
+        },
+        {
+            id: 'troubleshooting',
+            title: 'Troubleshooting',
+            content: `
         <h3>Common Issues and Solutions</h3>
         <h4>Quantum Decoherence</h4>
         <p>If you experience "quantum decoherence" (unexpected behavior), try the following:</p>
@@ -127,22 +120,14 @@ const HelpScreen: React.FC = () => {
         <h4>Contact Support</h4>
         <p>If you continue to experience issues, please contact our support team at support@qq-verse.com.</p>
       `
-    }
-  ];
-  
-  // Get selected topic
-  const selectedTopicData = selectedTopic
-    ? helpTopics.find(topic => topic.id === selectedTopic)
-    : null;
-  
-  return (
-    <div className="flex w-full h-full bg-gray-900">
-      <motion.div
-        className="w-full max-w-6xl p-8 mx-auto bg-gray-800 rounded-lg shadow-lg"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
+        }
+    ];
+    // Get selected topic
+    const selectedTopicData = selectedTopic
+        ? helpTopics.find(topic => topic.id === selectedTopic)
+        : null;
+    return (<div className="flex w-full h-full bg-gray-900">
+      <motion.div className="w-full max-w-6xl p-8 mx-auto bg-gray-800 rounded-lg shadow-lg" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
         <div className="mb-6">
           <h2 className="text-3xl font-extrabold text-white">
             Quantum Guidance
@@ -157,44 +142,28 @@ const HelpScreen: React.FC = () => {
           <div className="w-1/4 pr-4">
             <h3 className="mb-4 text-lg font-medium text-gray-300">Topics</h3>
             <ul className="space-y-2">
-              {helpTopics.map(topic => (
-                <li key={topic.id}>
-                  <button
-                    onClick={() => handleTopicSelect(topic.id)}
-                    className={`w-full px-3 py-2 text-left rounded-md ${
-                      selectedTopic === topic.id
-                        ? 'bg-blue-600 text-white'
-                        : 'text-gray-300 hover:bg-gray-700'
-                    }`}
-                  >
+              {helpTopics.map(topic => (<li key={topic.id}>
+                  <button onClick={() => handleTopicSelect(topic.id)} className={`w-full px-3 py-2 text-left rounded-md ${selectedTopic === topic.id
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-300 hover:bg-gray-700'}`}>
                     {topic.title}
                   </button>
-                </li>
-              ))}
+                </li>))}
             </ul>
           </div>
           
           {/* Content area */}
           <div className="w-3/4 pl-4 border-l border-gray-700">
-            {selectedTopicData ? (
-              <div>
+            {selectedTopicData ? (<div>
                 <h2 className="mb-4 text-2xl font-bold text-white">{selectedTopicData.title}</h2>
-                <div 
-                  className="prose prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: selectedTopicData.content }}
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center">
+                <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: selectedTopicData.content }}/>
+              </div>) : (<div className="flex flex-col items-center justify-center h-full text-center">
                 <h3 className="text-xl font-medium text-gray-300">Select a topic to get started</h3>
                 <p className="mt-2 text-gray-400">Choose a topic from the sidebar to view help content</p>
-              </div>
-            )}
+              </div>)}
           </div>
         </div>
       </motion.div>
-    </div>
-  );
+    </div>);
 };
-
 export default HelpScreen;

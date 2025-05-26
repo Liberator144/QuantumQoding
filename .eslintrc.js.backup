@@ -1,0 +1,179 @@
+module.exports = {
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 2020,
+    sourceType: 'module',
+    project: ['./tsconfig.json', './frontend/tsconfig.json', './backend/tsconfig.json'],
+    tsconfigRootDir: __dirname,
+  },
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+    'plugin:@typescript-eslint/recommended-requiring-type-checking',
+    'plugin:import/errors',
+    'plugin:import/warnings',
+    'plugin:import/typescript',
+    'plugin:sonarjs/recommended',
+    'plugin:promise/recommended',
+    'plugin:jsdoc/recommended',
+    'prettier',
+  ],
+  plugins: [
+    '@typescript-eslint',
+    'prettier',
+    'import',
+    'sonarjs',
+    'promise',
+    'jsdoc',
+    'unused-imports',
+  ],
+  env: {
+    browser: true,
+    node: true,
+    es6: true,
+    jest: true,
+  },
+  rules: {
+    // Formatting and basic rules
+    'prettier/prettier': 'error',
+    'no-console': ['warn', { allow: ['warn', 'error'] }],
+
+    // TypeScript rules
+    '@typescript-eslint/explicit-function-return-type': ['warn', {
+      allowExpressions: true,
+      allowTypedFunctionExpressions: true,
+      allowHigherOrderFunctions: true,
+    }],
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unused-vars': 'off', // Using unused-imports instead
+    '@typescript-eslint/explicit-member-accessibility': ['warn', { accessibility: 'explicit' }],
+    '@typescript-eslint/consistent-type-imports': 'error',
+    '@typescript-eslint/no-floating-promises': 'error',
+    '@typescript-eslint/no-misused-promises': 'error',
+    '@typescript-eslint/await-thenable': 'error',
+    '@typescript-eslint/no-unnecessary-type-assertion': 'error',
+    '@typescript-eslint/prefer-nullish-coalescing': 'warn',
+    '@typescript-eslint/prefer-optional-chain': 'warn',
+
+    // Import rules
+    'import/first': 'error',
+    'import/no-duplicates': 'error',
+    'import/order': ['error', {
+      'groups': ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
+      'newlines-between': 'always',
+      'alphabetize': { order: 'asc', caseInsensitive: true }
+    }],
+    'unused-imports/no-unused-imports': 'error',
+    'unused-imports/no-unused-vars': ['error', {
+      vars: 'all',
+      varsIgnorePattern: '^_',
+      args: 'after-used',
+      argsIgnorePattern: '^_'
+    }],
+
+    // SonarJS rules
+    'sonarjs/no-duplicate-string': ['warn', { threshold: 3 }],
+    'sonarjs/cognitive-complexity': ['warn', 15],
+    'sonarjs/no-identical-functions': 'warn',
+    'sonarjs/no-collapsible-if': 'error',
+    'sonarjs/prefer-immediate-return': 'warn',
+
+    // Promise rules
+    'promise/always-return': 'warn',
+    'promise/no-return-wrap': 'error',
+    'promise/param-names': 'error',
+    'promise/catch-or-return': 'error',
+    'promise/no-nesting': 'warn',
+    'promise/no-promise-in-callback': 'warn',
+    'promise/no-callback-in-promise': 'warn',
+
+    // JSDoc rules
+    'jsdoc/require-jsdoc': ['warn', {
+      publicOnly: true,
+      require: {
+        FunctionDeclaration: true,
+        MethodDefinition: true,
+        ClassDeclaration: true,
+        ArrowFunctionExpression: false,
+        FunctionExpression: false
+      }
+    }],
+    'jsdoc/require-param-type': 'off', // TypeScript handles this
+    'jsdoc/require-returns-type': 'off', // TypeScript handles this
+    'jsdoc/no-undefined-types': 'off', // TypeScript handles this
+    'jsdoc/require-param-description': 'warn',
+    'jsdoc/require-returns-description': 'warn',
+
+    // Quantum Coherence specific rules
+    'no-var': 'error', // Prefer const/let for better state management
+    'prefer-const': 'error', // Immutability helps with quantum state preservation
+    'no-param-reassign': 'error', // Avoid mutating parameters for consciousness continuity
+    'no-shadow': 'error', // Avoid variable shadowing for dimensional harmony
+
+    // Neural Fabric specific rules
+    'max-depth': ['warn', 4], // Limit nesting depth for better neural fabric structure
+    'max-lines-per-function': ['warn', 100], // Keep functions focused for better neural connections
+    'complexity': ['warn', 10], // Limit cyclomatic complexity for clearer neural pathways
+    'max-lines': ['warn', 400], // Limit file size for better maintainability
+    'max-params': ['warn', 4], // Limit function parameters for better readability
+  },
+  overrides: [
+    {
+      // JavaScript files - use standard parser and disable TypeScript-specific rules
+      files: ['**/*.js', '**/*.jsx'],
+      parser: 'espree',
+      parserOptions: {
+        ecmaVersion: 2020,
+        sourceType: 'module',
+        ecmaFeatures: {
+          jsx: true,
+        },
+      },
+      rules: {
+        // Disable TypeScript-specific rules for JS files
+        '@typescript-eslint/explicit-function-return-type': 'off',
+        '@typescript-eslint/no-explicit-any': 'off',
+        '@typescript-eslint/explicit-member-accessibility': 'off',
+        '@typescript-eslint/consistent-type-imports': 'off',
+        '@typescript-eslint/no-floating-promises': 'off',
+        '@typescript-eslint/no-misused-promises': 'off',
+        '@typescript-eslint/await-thenable': 'off',
+        '@typescript-eslint/no-unnecessary-type-assertion': 'off',
+        '@typescript-eslint/prefer-nullish-coalescing': 'off',
+        '@typescript-eslint/prefer-optional-chain': 'off',
+        '@typescript-eslint/no-unsafe-assignment': 'off',
+        '@typescript-eslint/no-unsafe-member-access': 'off',
+        '@typescript-eslint/no-unsafe-call': 'off',
+        '@typescript-eslint/no-unsafe-return': 'off',
+        // Relax JSDoc requirements for JS files
+        'jsdoc/require-jsdoc': 'off',
+        'jsdoc/require-param-description': 'off',
+        'jsdoc/require-returns-description': 'off',
+        'jsdoc/require-returns': 'off',
+      },
+    },
+    {
+      files: ['**/*.test.ts', '**/*.test.tsx'],
+      rules: {
+        'max-lines-per-function': 'off',
+        'sonarjs/no-duplicate-string': 'off',
+        'sonarjs/no-identical-functions': 'off',
+        'jsdoc/require-jsdoc': 'off',
+        'max-lines': 'off',
+      },
+    },
+    {
+      files: ['**/tools/**/*.ts'],
+      rules: {
+        'max-lines': 'off',
+        'max-lines-per-function': ['warn', 200],
+      },
+    },
+    {
+      files: ['**/scripts/**/*.ts'],
+      rules: {
+        'no-console': 'off',
+      },
+    },
+  ],
+};

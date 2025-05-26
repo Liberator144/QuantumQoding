@@ -1,0 +1,25 @@
+"use strict";
+/**
+ * Cost Model Module
+ *
+ * Provides cost estimation models for query optimization.
+ *
+ * @version 1.0.0
+ */
+// Core
+const { CostModelEngine } = require('./CostModelEngine');
+// Models
+const { StatisticalModel } = require('./StatisticalModel');
+const { IndexAwareModel } = require('./IndexAwareModel');
+const { AdaptiveModel } = require('./AdaptiveModel');
+const { MemoryAwareModel } = require('./MemoryAwareModel');
+// Export all components
+module.exports = {
+    // Core
+    CostModelEngine,
+    // Models
+    StatisticalModel,
+    IndexAwareModel,
+    AdaptiveModel,
+    MemoryAwareModel,
+};

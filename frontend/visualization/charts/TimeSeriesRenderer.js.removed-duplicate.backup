@@ -1,0 +1,673 @@
+/**
+ * Time Series Renderer
+ *
+ * Renders a time series visualization of query patterns over time.
+ *
+ * @version 1.0.0
+ */
+import { BaseRenderer } from './BaseRenderer';
+/**
+ * Time Series Renderer
+ */
+class TimeSeriesRenderer extends BaseRenderer {
+    /**
+     * Create a new TimeSeriesRenderer instance
+     * @param options - Renderer options
+     */
+    constructor(options = {}) {
+        super({
+            // Default margin
+            margin: {
+                top: 20,
+                right: 30,
+                bottom: 30,
+                left: 50,
+            },
+            // Default line width
+            lineWidth: 2,
+            // Default point radius
+            pointRadius: 3,
+            // Default animation duration
+            animationDuration: 500,
+            // Default tooltip enabled
+            tooltipEnabled: true,
+            // Default legend enabled
+            legendEnabled: true,
+            // Default grid enabled
+            gridEnabled: true,
+            // Default axis labels
+            axisLabels: {
+                x: 'Time',
+                y: 'Value',
+            },
+            // Default curve type
+            curveType: 'linear',
+            // Default area fill
+            areaFill: false,
+            // Default area opacity
+            areaOpacity: 0.1,
+            // Merge with provided options
+            ...options,
+        });
+        /** Last rendered data */
+        this.lastData = null;
+        // Set renderer name
+        this.name = 'timeSeries';
+    }
+    /**
+     * Initialize the renderer
+     * @param options - Initialization options
+     */
+    initialize(options = {}) {
+        // Merge options
+        this.options = {
+            ...this.options,
+            ...options,
+        };
+        this.log('Time Series Renderer initialized');
+    }
+    /**
+     * Render the visualization
+     * @param element - DOM element to render into
+     * @param data - Visualization data
+     * @param options - Render options
+     */
+    render(element, data, options = {}) {
+        // Merge options
+        this.options = {
+            ...this.options,
+            ...options,
+        };
+        // Check data
+        if (!data || !data.series || !Array.isArray(data.series)) {
+            throw new Error('Valid time series data is required');
+        }
+        // Store last data
+        this.lastData = data;
+        // Clear element
+        element.innerHTML = '';
+        // Create container
+        const container = document.createElement('div');
+        container.className = 'quantum-time-series';
+        container.style.position = 'relative';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.overflow = 'hidden';
+        // Apply theme
+        this._applyTheme(container);
+        // Create SVG element
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.style.overflow = 'visible';
+        // Add SVG to container
+        container.appendChild(svg);
+        // Process data
+        const processedData = this._processData(data);
+        // Calculate dimensions
+        const dimensions = this._calculateDimensions(element, processedData);
+        // Create scales
+        const scales = this._createScales(processedData, dimensions);
+        // Create axes
+        this._createAxes(svg, scales, dimensions);
+        // Create grid
+        if (this.options.gridEnabled) {
+            this._createGrid(svg, scales, dimensions);
+        }
+        // Create lines
+        this._createLines(svg, processedData, scales, dimensions);
+        // Create points
+        this._createPoints(svg, processedData, scales, dimensions);
+        // Create areas
+        if (this.options.areaFill) {
+            this._createAreas(svg, processedData, scales, dimensions);
+        }
+        // Create legend
+        if (this.options.legendEnabled) {
+            this._createLegend(svg, processedData, dimensions);
+        }
+        // Create tooltip
+        let tooltip = null;
+        if (this.options.tooltipEnabled) {
+            tooltip = this._createTooltip(container);
+        }
+        // Add event listeners
+        if (tooltip) {
+            this._addEventListeners(svg, tooltip, processedData, scales, dimensions);
+        }
+        // Add to element
+        element.appendChild(container);
+        this.log('Time Series rendered');
+    }
+    /**
+     * Process data for visualization
+     * @param data - Raw data
+     * @returns Processed data
+     * @private
+     */
+    _processData(data) {
+        // Extract series
+        const series = data.series.map((s, index) => {
+            // Ensure series has name
+            if (!s.name) {
+                s.name = `Series ${index + 1}`;
+            }
+            // Ensure series has data
+            if (!s.data || !Array.isArray(s.data)) {
+                s.data = [];
+            }
+            // Ensure series has color
+            if (!s.color) {
+                s.color = this.getColor(index);
+            }
+            return s;
+        });
+        // Extract all x values
+        const allXValues = [];
+        series.forEach(s => {
+            s.data.forEach(point => {
+                if (point.x !== undefined) {
+                    allXValues.push(point.x);
+                }
+            });
+        });
+        // Extract all y values
+        const allYValues = [];
+        series.forEach(s => {
+            s.data.forEach(point => {
+                if (point.y !== undefined) {
+                    allYValues.push(point.y);
+                }
+            });
+        });
+        // Calculate min and max values
+        const xMin = Math.min(...allXValues);
+        const xMax = Math.max(...allXValues);
+        const yMin = Math.min(...allYValues);
+        const yMax = Math.max(...allYValues);
+        return {
+            series,
+            xMin,
+            xMax,
+            yMin,
+            yMax,
+        };
+    }
+    /**
+     * Calculate dimensions for the visualization
+     * @param element - Container element
+     * @param data - Processed data
+     * @returns Dimensions
+     * @private
+     */
+    _calculateDimensions(element, data) {
+        // Get container dimensions
+        const containerWidth = element.clientWidth;
+        const containerHeight = element.clientHeight;
+        // Calculate available space
+        const width = containerWidth - (this.options.margin?.left || 0) - (this.options.margin?.right || 0);
+        const height = containerHeight - (this.options.margin?.top || 0) - (this.options.margin?.bottom || 0);
+        return {
+            containerWidth,
+            containerHeight,
+            width,
+            height,
+        };
+    }
+    /**
+     * Create scales for the visualization
+     * @param data - Processed data
+     * @param dimensions - Visualization dimensions
+     * @returns Scales
+     * @private
+     */
+    _createScales(data, dimensions) {
+        // Create x scale
+        const xScale = (x) => {
+            const range = data.xMax - data.xMin;
+            const normalizedX = (x - data.xMin) / range;
+            return (this.options.margin?.left || 0) + normalizedX * dimensions.width;
+        };
+        // Create y scale
+        const yScale = (y) => {
+            const range = data.yMax - data.yMin;
+            const normalizedY = (y - data.yMin) / range;
+            return dimensions.height + (this.options.margin?.top || 0) - normalizedY * dimensions.height;
+        };
+        return {
+            xScale,
+            yScale,
+            xMin: data.xMin,
+            xMax: data.xMax,
+            yMin: data.yMin,
+            yMax: data.yMax,
+        };
+    }
+    /**
+     * Create axes for the visualization
+     * @param svg - SVG element
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createAxes(svg, scales, dimensions) {
+        // Create group for axes
+        const axesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        axesGroup.setAttribute('class', 'axes');
+        // Create x axis
+        const xAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        xAxis.setAttribute('x1', String(this.options.margin?.left || 0));
+        xAxis.setAttribute('y1', String(dimensions.height + (this.options.margin?.top || 0)));
+        xAxis.setAttribute('x2', String((this.options.margin?.left || 0) + dimensions.width));
+        xAxis.setAttribute('y2', String(dimensions.height + (this.options.margin?.top || 0)));
+        xAxis.setAttribute('stroke', '#999');
+        xAxis.setAttribute('stroke-width', '1');
+        // Create y axis
+        const yAxis = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        yAxis.setAttribute('x1', String(this.options.margin?.left || 0));
+        yAxis.setAttribute('y1', String(this.options.margin?.top || 0));
+        xAxis.setAttribute('x2', String(this.options.margin?.left || 0));
+        yAxis.setAttribute('y2', String(dimensions.height + (this.options.margin?.top || 0)));
+        yAxis.setAttribute('stroke', '#999');
+        yAxis.setAttribute('stroke-width', '1');
+        // Add to group
+        axesGroup.appendChild(xAxis);
+        axesGroup.appendChild(yAxis);
+        // Create x axis label
+        const xLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        xLabel.setAttribute('x', String((this.options.margin?.left || 0) + dimensions.width / 2));
+        xLabel.setAttribute('y', String(dimensions.height + (this.options.margin?.top || 0) + 30));
+        xLabel.setAttribute('text-anchor', 'middle');
+        xLabel.setAttribute('font-size', '12px');
+        xLabel.textContent = this.options.axisLabels?.x || 'X';
+        // Create y axis label
+        const yLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        yLabel.setAttribute('x', String(-(this.options.margin?.top || 0) - dimensions.height / 2));
+        yLabel.setAttribute('y', '15');
+        yLabel.setAttribute('text-anchor', 'middle');
+        yLabel.setAttribute('font-size', '12px');
+        yLabel.setAttribute('transform', 'rotate(-90)');
+        yLabel.textContent = this.options.axisLabels?.y || 'Y';
+        // Add to group
+        axesGroup.appendChild(xLabel);
+        axesGroup.appendChild(yLabel);
+        // Create x axis ticks
+        const xTicks = 5;
+        const xTickStep = (scales.xMax - scales.xMin) / (xTicks - 1);
+        for (let i = 0; i < xTicks; i++) {
+            const value = scales.xMin + i * xTickStep;
+            const x = scales.xScale(value);
+            // Create tick line
+            const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tickLine.setAttribute('x1', String(x));
+            tickLine.setAttribute('y1', String(dimensions.height + (this.options.margin?.top || 0)));
+            tickLine.setAttribute('x2', String(x));
+            tickLine.setAttribute('y2', String(dimensions.height + (this.options.margin?.top || 0) + 5));
+            tickLine.setAttribute('stroke', '#999');
+            tickLine.setAttribute('stroke-width', '1');
+            // Create tick label
+            const tickLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            tickLabel.setAttribute('x', String(x));
+            tickLabel.setAttribute('y', String(dimensions.height + (this.options.margin?.top || 0) + 15));
+            tickLabel.setAttribute('text-anchor', 'middle');
+            tickLabel.setAttribute('font-size', '10px');
+            tickLabel.textContent = this.formatValue(value, 'number');
+            // Add to group
+            axesGroup.appendChild(tickLine);
+            axesGroup.appendChild(tickLabel);
+        }
+        // Create y axis ticks
+        const yTicks = 5;
+        const yTickStep = (scales.yMax - scales.yMin) / (yTicks - 1);
+        for (let i = 0; i < yTicks; i++) {
+            const value = scales.yMin + i * yTickStep;
+            const y = scales.yScale(value);
+            // Create tick line
+            const tickLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            tickLine.setAttribute('x1', String(this.options.margin?.left || 0));
+            tickLine.setAttribute('y1', String(y));
+            tickLine.setAttribute('x2', String((this.options.margin?.left || 0) - 5));
+            tickLine.setAttribute('y2', String(y));
+            tickLine.setAttribute('stroke', '#999');
+            tickLine.setAttribute('stroke-width', '1');
+            // Create tick label
+            const tickLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            tickLabel.setAttribute('x', String((this.options.margin?.left || 0) - 10));
+            tickLabel.setAttribute('y', String(y + 4));
+            tickLabel.setAttribute('text-anchor', 'end');
+            tickLabel.setAttribute('font-size', '10px');
+            tickLabel.textContent = this.formatValue(value, 'number');
+            // Add to group
+            axesGroup.appendChild(tickLine);
+            axesGroup.appendChild(tickLabel);
+        }
+        // Add to SVG
+        svg.appendChild(axesGroup);
+    }
+    /**
+     * Create grid for the visualization
+     * @param svg - SVG element
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createGrid(svg, scales, dimensions) {
+        // Create group for grid
+        const gridGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        gridGroup.setAttribute('class', 'grid');
+        // Create x grid lines
+        const xTicks = 5;
+        const xTickStep = (scales.xMax - scales.xMin) / (xTicks - 1);
+        for (let i = 0; i < xTicks; i++) {
+            const value = scales.xMin + i * xTickStep;
+            const x = scales.xScale(value);
+            // Create grid line
+            const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            gridLine.setAttribute('x1', String(x));
+            gridLine.setAttribute('y1', String(this.options.margin?.top || 0));
+            gridLine.setAttribute('x2', String(x));
+            gridLine.setAttribute('y2', String(dimensions.height + (this.options.margin?.top || 0)));
+            gridLine.setAttribute('stroke', '#eee');
+            gridLine.setAttribute('stroke-width', '1');
+            gridLine.setAttribute('stroke-dasharray', '3,3');
+            // Add to group
+            gridGroup.appendChild(gridLine);
+        }
+        // Create y grid lines
+        const yTicks = 5;
+        const yTickStep = (scales.yMax - scales.yMin) / (yTicks - 1);
+        for (let i = 0; i < yTicks; i++) {
+            const value = scales.yMin + i * yTickStep;
+            const y = scales.yScale(value);
+            // Create grid line
+            const gridLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            gridLine.setAttribute('x1', String(this.options.margin?.left || 0));
+            gridLine.setAttribute('y1', String(y));
+            gridLine.setAttribute('x2', String((this.options.margin?.left || 0) + dimensions.width));
+            gridLine.setAttribute('y2', String(y));
+            gridLine.setAttribute('stroke', '#eee');
+            gridLine.setAttribute('stroke-width', '1');
+            gridLine.setAttribute('stroke-dasharray', '3,3');
+            // Add to group
+            gridGroup.appendChild(gridLine);
+        }
+        // Add to SVG
+        svg.appendChild(gridGroup);
+    }
+    /**
+     * Create lines for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createLines(svg, data, scales, dimensions) {
+        // Create group for lines
+        const linesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        linesGroup.setAttribute('class', 'lines');
+        // Create lines
+        data.series.forEach((series, index) => {
+            // Create path
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke', series.color || '');
+            path.setAttribute('stroke-width', String(this.options.lineWidth || 1));
+            path.setAttribute('data-series', series.name);
+            // Create path data
+            let pathData = '';
+            series.data.forEach((point, i) => {
+                const x = scales.xScale(point.x);
+                const y = scales.yScale(point.y);
+                if (i === 0) {
+                    pathData += `M ${x} ${y}`;
+                }
+                else {
+                    pathData += ` L ${x} ${y}`;
+                }
+            });
+            path.setAttribute('d', pathData);
+            // Add to group
+            linesGroup.appendChild(path);
+        });
+        // Add to SVG
+        svg.appendChild(linesGroup);
+    }
+    /**
+     * Create points for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createPoints(svg, data, scales, dimensions) {
+        // Create group for points
+        const pointsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        pointsGroup.setAttribute('class', 'points');
+        // Create points
+        data.series.forEach((series, seriesIndex) => {
+            series.data.forEach((point, pointIndex) => {
+                const x = scales.xScale(point.x);
+                const y = scales.yScale(point.y);
+                // Create circle
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', String(x));
+                circle.setAttribute('cy', String(y));
+                circle.setAttribute('r', String(this.options.pointRadius || 3));
+                circle.setAttribute('fill', series.color || '');
+                circle.setAttribute('data-series', series.name);
+                circle.setAttribute('data-index', String(pointIndex));
+                circle.setAttribute('data-x', String(point.x));
+                circle.setAttribute('data-y', String(point.y));
+                // Add to group
+                pointsGroup.appendChild(circle);
+            });
+        });
+        // Add to SVG
+        svg.appendChild(pointsGroup);
+    }
+    /**
+     * Create areas for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createAreas(svg, data, scales, dimensions) {
+        // Create group for areas
+        const areasGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        areasGroup.setAttribute('class', 'areas');
+        // Create areas
+        data.series.forEach((series, index) => {
+            // Create path
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('fill', series.color || '');
+            path.setAttribute('fill-opacity', String(this.options.areaOpacity || 0.1));
+            path.setAttribute('stroke', 'none');
+            path.setAttribute('data-series', series.name);
+            // Create path data
+            let pathData = '';
+            // Start at baseline
+            const baselineY = scales.yScale(scales.yMin);
+            const firstX = scales.xScale(series.data[0].x);
+            pathData += `M ${firstX} ${baselineY}`;
+            // Add points
+            series.data.forEach((point, i) => {
+                const x = scales.xScale(point.x);
+                const y = scales.yScale(point.y);
+                pathData += ` L ${x} ${y}`;
+            });
+            // Close path
+            const lastX = scales.xScale(series.data[series.data.length - 1].x);
+            pathData += ` L ${lastX} ${baselineY} Z`;
+            path.setAttribute('d', pathData);
+            // Add to group
+            areasGroup.appendChild(path);
+        });
+        // Add to SVG
+        svg.appendChild(areasGroup);
+    }
+    /**
+     * Create legend for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _createLegend(svg, data, dimensions) {
+        // Create group for legend
+        const legendGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        legendGroup.setAttribute('class', 'legend');
+        // Calculate legend position
+        const legendX = (this.options.margin?.left || 0) + 10;
+        const legendY = (this.options.margin?.top || 0) + 10;
+        // Create legend background
+        const legendBackground = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        legendBackground.setAttribute('x', String(legendX));
+        legendBackground.setAttribute('y', String(legendY));
+        legendBackground.setAttribute('width', '150');
+        legendBackground.setAttribute('height', String(data.series.length * 20 + 10));
+        legendBackground.setAttribute('fill', 'white');
+        legendBackground.setAttribute('fill-opacity', '0.8');
+        legendBackground.setAttribute('rx', '5');
+        legendBackground.setAttribute('ry', '5');
+        // Add to group
+        legendGroup.appendChild(legendBackground);
+        // Create legend items
+        data.series.forEach((series, index) => {
+            // Create group for item
+            const itemGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            itemGroup.setAttribute('transform', `translate(${legendX + 10}, ${legendY + 15 + index * 20})`);
+            // Create line
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', '0');
+            line.setAttribute('y1', '0');
+            line.setAttribute('x2', '20');
+            line.setAttribute('y2', '0');
+            line.setAttribute('stroke', series.color || '');
+            line.setAttribute('stroke-width', String(this.options.lineWidth || 1));
+            // Create text
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', '30');
+            text.setAttribute('y', '4');
+            text.setAttribute('font-size', '12px');
+            text.textContent = series.name;
+            // Add to group
+            itemGroup.appendChild(line);
+            itemGroup.appendChild(text);
+            // Add to legend group
+            legendGroup.appendChild(itemGroup);
+        });
+        // Add to SVG
+        svg.appendChild(legendGroup);
+    }
+    /**
+     * Create tooltip for the visualization
+     * @param container - Container element
+     * @returns Tooltip element
+     * @private
+     */
+    _createTooltip(container) {
+        // Create tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'quantum-tooltip';
+        tooltip.style.position = 'absolute';
+        tooltip.style.display = 'none';
+        tooltip.style.padding = '8px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '1000';
+        // Apply theme
+        this._applyTooltipTheme(tooltip);
+        // Add to container
+        container.appendChild(tooltip);
+        return tooltip;
+    }
+    /**
+     * Add event listeners to the visualization
+     * @param svg - SVG element
+     * @param tooltip - Tooltip element
+     * @param data - Processed data
+     * @param scales - Visualization scales
+     * @param dimensions - Visualization dimensions
+     * @private
+     */
+    _addEventListeners(svg, tooltip, data, scales, dimensions) {
+        // Get all points
+        const points = svg.querySelectorAll('.points circle');
+        // Add mouse events
+        points.forEach(point => {
+            // Mouse enter
+            point.addEventListener('mouseenter', event => {
+                // Get data
+                const series = point.getAttribute('data-series');
+                const index = parseInt(point.getAttribute('data-index') || '0');
+                const x = parseFloat(point.getAttribute('data-x') || '0');
+                const y = parseFloat(point.getAttribute('data-y') || '0');
+                // Update tooltip
+                tooltip.innerHTML = `
+          <div><strong>Series:</strong> ${series}</div>
+          <div><strong>X:</strong> ${this.formatValue(x, 'number')}</div>
+          <div><strong>Y:</strong> ${this.formatValue(y, 'number')}</div>
+        `;
+                // Show tooltip
+                tooltip.style.display = 'block';
+                // Position tooltip
+                const rect = point.getBoundingClientRect();
+                const containerRect = svg.getBoundingClientRect();
+                tooltip.style.left = `${rect.left - containerRect.left + rect.width / 2}px`;
+                tooltip.style.top = `${rect.top - containerRect.top - tooltip.offsetHeight - 5}px`;
+                // Highlight point
+                point.setAttribute('r', String((this.options.pointRadius || 3) * 1.5));
+                point.setAttribute('stroke', '#000');
+                point.setAttribute('stroke-width', '1');
+            });
+            // Mouse leave
+            point.addEventListener('mouseleave', event => {
+                // Hide tooltip
+                tooltip.style.display = 'none';
+                // Remove highlight
+                point.setAttribute('r', String(this.options.pointRadius || 3));
+                point.setAttribute('stroke', 'none');
+            });
+        });
+    }
+    /**
+     * Apply theme to the visualization
+     * @param container - Container element
+     * @private
+     */
+    _applyTheme(container) {
+        // Apply theme based on options
+        if (this.options.theme === 'dark') {
+            container.style.backgroundColor = '#1a1a1a';
+            container.style.color = '#ffffff';
+        }
+        else {
+            container.style.backgroundColor = '#ffffff';
+            container.style.color = '#333333';
+        }
+    }
+    /**
+     * Apply theme to the tooltip
+     * @param tooltip - Tooltip element
+     * @private
+     */
+    _applyTooltipTheme(tooltip) {
+        // Apply theme based on options
+        if (this.options.theme === 'dark') {
+            tooltip.style.backgroundColor = '#333333';
+            tooltip.style.color = '#ffffff';
+            tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.5)';
+        }
+        else {
+            tooltip.style.backgroundColor = '#ffffff';
+            tooltip.style.color = '#333333';
+            tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+        }
+    }
+}
+export { TimeSeriesRenderer };

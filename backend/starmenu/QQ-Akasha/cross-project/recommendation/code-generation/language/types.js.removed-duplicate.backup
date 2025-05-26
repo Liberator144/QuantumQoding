@@ -1,0 +1,55 @@
+/**
+ * Types for language-specific code generation
+ */
+/**
+ * Default language style
+ */
+export const DEFAULT_LANGUAGE_STYLE = {
+    indentType: 'space',
+    indentSize: 2,
+    maxLineLength: 80,
+    useSemicolons: true,
+    quoteStyle: 'single',
+    braceStyle: 'same-line',
+    arrayBracketSpacing: true,
+    objectCurlySpacing: true,
+    trailingCommas: 'es5',
+};
+/**
+ * Language processor registry
+ */
+export class LanguageProcessorRegistry {
+    constructor() {
+        this.processors = new Map();
+    }
+    /**
+     * Register a language processor
+     */
+    registerProcessor(processor) {
+        this.processors.set(processor.language, processor);
+    }
+    /**
+     * Get a language processor
+     */
+    getProcessor(language) {
+        return this.processors.get(language);
+    }
+    /**
+     * Check if a language is supported
+     */
+    isLanguageSupported(language) {
+        return this.processors.has(language);
+    }
+    /**
+     * Get all supported languages
+     */
+    getSupportedLanguages() {
+        return Array.from(this.processors.keys());
+    }
+    /**
+     * Get all registered processors
+     */
+    getAllProcessors() {
+        return Array.from(this.processors.values());
+    }
+}

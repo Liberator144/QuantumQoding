@@ -1,0 +1,572 @@
+"use strict";
+/**
+ * Index-Aware Cost Model
+ *
+ * A cost model that takes indexes into account for query cost estimation.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Index-Aware Cost Model
+ *
+ * Uses index information to estimate query costs.
+ */
+class IndexAwareModel {
+    /**
+     * Create a new IndexAwareModel instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        // Configuration
+        this.config = {
+            // Debug mode
+            debugMode: false,
+            // Base costs
+            baseCosts: {
+                scan: {
+                    full: 1.0,
+                    index: 0.1,
+                },
+                seek: {
+                    index: 0.01,
+                    noIndex: 1.0,
+                },
+                join: {
+                    nested: 10.0,
+                    hash: 5.0,
+                    merge: 3.0,
+                },
+                sort: {
+                    inMemory: 1.0,
+                    external: 10.0,
+                },
+                filter: {
+                    index: 0.1,
+                    noIndex: 1.0,
+                },
+            },
+            // Index effectiveness thresholds
+            indexEffectiveness: {
+                perfect: 0.9, // > 90% selectivity
+                high: 0.7, // > 70% selectivity
+                medium: 0.4, // > 40% selectivity
+                low: 0.1, // > 10% selectivity
+            },
+            // Default index information
+            defaultIndexInfo: {
+                collections: {},
+            },
+            // Merge with provided options
+            ...options,
+        };
+        // State
+        this.state = {
+            indexInfo: { ...this.config.defaultIndexInfo },
+            initialized: true,
+        };
+        this.log('Index-Aware Cost Model initialized');
+    }
+    /**
+     * Estimate the cost of a query
+     * @param {Object} query - Query to estimate
+     * @param {Object} context - Estimation context
+     * @returns {Promise<Object>} Cost estimate
+     */
+    async estimateQueryCost(query, context = {}) {
+        try {
+            // Parse query
+            const parsedQuery = this._parseQuery(query);
+            // Get index information
+            const indexInfo = this._getIndexInfo(parsedQuery, context);
+            // Estimate costs
+            const costs = this._estimateCosts(parsedQuery, indexInfo, context);
+            // Calculate total cost
+            const totalCost = Object.values(costs).reduce((sum, cost) => sum + cost, 0);
+            return {
+                totalCost,
+                costs,
+                query: parsedQuery,
+                indexInfo,
+            };
+        }
+        catch (error) {
+            this.log(`Error estimating query cost: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Estimate the cost of an execution plan
+     * @param {Object} plan - Execution plan to estimate
+     * @param {Object} statistics - Statistics for estimation
+     * @param {Object} context - Estimation context
+     * @returns {Promise<Object>} Cost estimate
+     */
+    async estimatePlanCost(plan, statistics = {}, context = {}) {
+        try {
+            // Merge index information
+            const mergedIndexInfo = {
+                ...this.state.indexInfo,
+                ...statistics.indexInfo,
+            };
+            // Estimate node costs
+            const nodeCosts = this._estimateNodeCosts(plan, mergedIndexInfo, context);
+            // Calculate total cost
+            const totalCost = this._calculateTotalCost(nodeCosts);
+            return {
+                totalCost,
+                nodeCosts,
+                plan,
+                indexInfo: mergedIndexInfo,
+            };
+        }
+        catch (error) {
+            this.log(`Error estimating plan cost: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Update the model with actual metrics
+     * @param {Object} plan - Execution plan
+     * @param {Object} actualMetrics - Actual execution metrics
+     * @param {Object} context - Update context
+     * @returns {Promise<boolean>} Success
+     */
+    async update(plan, actualMetrics, context = {}) {
+        try {
+            // Get estimated metrics
+            const estimatedMetrics = await this.estimatePlanCost(plan, context.statistics || {}, context);
+            // Calculate error
+            const error = this._calculateError(actualMetrics, estimatedMetrics);
+            // Update index information
+            this._updateIndexInfo(plan, error, context.learningRate || 0.1);
+            this.log(`Updated index-aware model with error: ${error.totalError}`);
+            return true;
+        }
+        catch (error) {
+            this.log(`Error updating index-aware model: ${error.message}`);
+            return false;
+        }
+    }
+    /**
+     * Set index information
+     * @param {Object} indexInfo - Index information
+     * @returns {IndexAwareModel} This instance for chaining
+     */
+    setIndexInfo(indexInfo) {
+        this.state.indexInfo = {
+            ...this.state.indexInfo,
+            ...indexInfo,
+        };
+        this.log('Index information set');
+        return this;
+    }
+    /**
+     * Parse a query
+     * @param {Object} query - Query to parse
+     * @returns {Object} Parsed query
+     * @private
+     */
+    _parseQuery(query) {
+        // Simple query parsing
+        // In a real implementation, this would parse the query into operations
+        // Default operations
+        const operations = {
+            scan: {
+                type: 'full',
+                collection: null,
+            },
+            filter: {
+                fields: [],
+                conditions: [],
+            },
+            join: {
+                type: 'nested',
+                collections: [],
+            },
+            sort: {
+                fields: [],
+                type: 'inMemory',
+            },
+        };
+        // Parse query
+        if (typeof query === 'object') {
+            // Get collection
+            operations.scan.collection = query.collection || query.from || 'unknown';
+            // Check for filter
+            if (query.filter || query.where) {
+                const filter = query.filter || query.where;
+                if (typeof filter === 'object') {
+                    operations.filter.fields = Object.keys(filter);
+                    operations.filter.conditions = Object.entries(filter).map(([field, value]) => ({
+                        field,
+                        value,
+                        operator: typeof value === 'object' ? Object.keys(value)[0] : 'eq',
+                    }));
+                }
+            }
+            // Check for join
+            if (query.join) {
+                if (Array.isArray(query.join)) {
+                    operations.join.collections = query.join;
+                }
+                else if (typeof query.join === 'object') {
+                    operations.join.collections = Object.keys(query.join);
+                    operations.join.type = query.join.type || 'nested';
+                }
+                else if (typeof query.join === 'string') {
+                    operations.join.collections = [query.join];
+                }
+            }
+            // Check for sort
+            if (query.sort || query.orderBy) {
+                const sort = query.sort || query.orderBy;
+                if (Array.isArray(sort)) {
+                    operations.sort.fields = sort;
+                }
+                else if (typeof sort === 'object') {
+                    operations.sort.fields = Object.keys(sort);
+                }
+                else if (typeof sort === 'string') {
+                    operations.sort.fields = [sort];
+                }
+                // Check if sort is in memory or external
+                operations.sort.type = query.externalSort ? 'external' : 'inMemory';
+            }
+        }
+        return {
+            original: query,
+            operations,
+        };
+    }
+    /**
+     * Get index information for a query
+     * @param {Object} query - Parsed query
+     * @param {Object} context - Estimation context
+     * @returns {Object} Index information
+     * @private
+     */
+    _getIndexInfo(query, context = {}) {
+        // Get collection name
+        const collectionName = query.operations.scan.collection;
+        // Get collection index information
+        const collectionIndexInfo = this.state.indexInfo.collections[collectionName] || {
+            indexes: [],
+        };
+        // Get filter fields
+        const filterFields = query.operations.filter.fields;
+        // Find matching indexes
+        const matchingIndexes = collectionIndexInfo.indexes.filter(index => {
+            // Check if index fields match filter fields
+            const indexFields = index.fields || [];
+            // Check if all filter fields are covered by the index
+            return filterFields.every(field => indexFields.includes(field));
+        });
+        // Calculate index effectiveness
+        let indexEffectiveness = 0;
+        if (matchingIndexes.length > 0) {
+            // Get best matching index
+            const bestIndex = matchingIndexes.reduce((best, index) => {
+                // Calculate match score
+                const matchScore = this._calculateIndexMatchScore(index, filterFields);
+                // Return best match
+                return matchScore > best.matchScore ? { index, matchScore } : best;
+            }, { index: null, matchScore: 0 }).index;
+            // Calculate effectiveness
+            indexEffectiveness = bestIndex.selectivity || 0.5;
+        }
+        // Determine index type
+        let indexType = 'none';
+        if (indexEffectiveness >= this.config.indexEffectiveness.perfect) {
+            indexType = 'perfect';
+        }
+        else if (indexEffectiveness >= this.config.indexEffectiveness.high) {
+            indexType = 'high';
+        }
+        else if (indexEffectiveness >= this.config.indexEffectiveness.medium) {
+            indexType = 'medium';
+        }
+        else if (indexEffectiveness >= this.config.indexEffectiveness.low) {
+            indexType = 'low';
+        }
+        return {
+            collectionName,
+            matchingIndexes,
+            indexEffectiveness,
+            indexType,
+        };
+    }
+    /**
+     * Calculate index match score
+     * @param {Object} index - Index
+     * @param {Array} filterFields - Filter fields
+     * @returns {number} Match score
+     * @private
+     */
+    _calculateIndexMatchScore(index, filterFields) {
+        // Get index fields
+        const indexFields = index.fields || [];
+        // Calculate match score
+        let matchScore = 0;
+        // Check if index fields match filter fields
+        for (let i = 0; i < Math.min(indexFields.length, filterFields.length); i++) {
+            if (indexFields[i] === filterFields[i]) {
+                // Exact match at the same position
+                matchScore += 1;
+            }
+            else if (filterFields.includes(indexFields[i])) {
+                // Field is in the filter but at a different position
+                matchScore += 0.5;
+            }
+        }
+        // Normalize score
+        return matchScore / Math.max(1, indexFields.length);
+    }
+    /**
+     * Estimate costs for a query
+     * @param {Object} query - Parsed query
+     * @param {Object} indexInfo - Index information
+     * @param {Object} context - Estimation context
+     * @returns {Object} Cost estimates
+     * @private
+     */
+    _estimateCosts(query, indexInfo, context = {}) {
+        const costs = {};
+        const operations = query.operations;
+        // Get row count
+        const rowCount = context.rowCount || 1000;
+        // Calculate scan cost
+        if (indexInfo.indexType !== 'none') {
+            costs.scan = this.config.baseCosts.scan.index * rowCount * (1 - indexInfo.indexEffectiveness);
+        }
+        else {
+            costs.scan = this.config.baseCosts.scan.full * rowCount;
+        }
+        // Calculate filter cost
+        if (operations.filter.fields.length > 0) {
+            if (indexInfo.indexType !== 'none') {
+                costs.filter =
+                    this.config.baseCosts.filter.index * rowCount * (1 - indexInfo.indexEffectiveness);
+            }
+            else {
+                costs.filter = this.config.baseCosts.filter.noIndex * rowCount;
+            }
+        }
+        // Calculate join cost
+        if (operations.join.collections.length > 0) {
+            const joinType = operations.join.type;
+            const joinCost = this.config.baseCosts.join[joinType] || this.config.baseCosts.join.nested;
+            costs.join = joinCost * rowCount * operations.join.collections.length;
+        }
+        // Calculate sort cost
+        if (operations.sort.fields.length > 0) {
+            const sortType = operations.sort.type;
+            const sortCost = this.config.baseCosts.sort[sortType] || this.config.baseCosts.sort.inMemory;
+            costs.sort = sortCost * rowCount * Math.log2(Math.max(2, rowCount));
+        }
+        return costs;
+    }
+    /**
+     * Estimate costs for execution plan nodes
+     * @param {Object} plan - Execution plan
+     * @param {Object} indexInfo - Index information
+     * @param {Object} context - Estimation context
+     * @returns {Object} Node costs
+     * @private
+     */
+    _estimateNodeCosts(plan, indexInfo, context = {}) {
+        // Simple node cost estimation
+        // In a real implementation, this would recursively estimate costs for each node
+        const nodeCosts = {};
+        // Check if plan has nodes
+        if (plan.nodes && Array.isArray(plan.nodes)) {
+            // Estimate cost for each node
+            plan.nodes.forEach((node, index) => {
+                // Get node type
+                const nodeType = node.type || 'unknown';
+                // Get collection name
+                const collectionName = node.collection || 'unknown';
+                // Get collection index information
+                const collectionIndexInfo = indexInfo.collections[collectionName] || {
+                    indexes: [],
+                };
+                // Get node fields
+                const nodeFields = node.fields || [];
+                // Find matching indexes
+                const matchingIndexes = collectionIndexInfo.indexes.filter(index => {
+                    // Check if index fields match node fields
+                    const indexFields = index.fields || [];
+                    // Check if all node fields are covered by the index
+                    return nodeFields.every(field => indexFields.includes(field));
+                });
+                // Calculate index effectiveness
+                let indexEffectiveness = 0;
+                if (matchingIndexes.length > 0) {
+                    // Get best matching index
+                    const bestIndex = matchingIndexes.reduce((best, index) => {
+                        // Calculate match score
+                        const matchScore = this._calculateIndexMatchScore(index, nodeFields);
+                        // Return best match
+                        return matchScore > best.matchScore ? { index, matchScore } : best;
+                    }, { index: null, matchScore: 0 }).index;
+                    // Calculate effectiveness
+                    indexEffectiveness = bestIndex.selectivity || 0.5;
+                }
+                // Determine index type
+                let indexType = 'none';
+                if (indexEffectiveness >= this.config.indexEffectiveness.perfect) {
+                    indexType = 'perfect';
+                }
+                else if (indexEffectiveness >= this.config.indexEffectiveness.high) {
+                    indexType = 'high';
+                }
+                else if (indexEffectiveness >= this.config.indexEffectiveness.medium) {
+                    indexType = 'medium';
+                }
+                else if (indexEffectiveness >= this.config.indexEffectiveness.low) {
+                    indexType = 'low';
+                }
+                // Get row count
+                const rowCount = node.rowCount || 1000;
+                // Calculate node cost
+                let nodeCost = 0;
+                switch (nodeType) {
+                    case 'scan':
+                        nodeCost =
+                            indexType !== 'none'
+                                ? this.config.baseCosts.scan.index * rowCount * (1 - indexEffectiveness)
+                                : this.config.baseCosts.scan.full * rowCount;
+                        break;
+                    case 'filter':
+                        nodeCost =
+                            indexType !== 'none'
+                                ? this.config.baseCosts.filter.index * rowCount * (1 - indexEffectiveness)
+                                : this.config.baseCosts.filter.noIndex * rowCount;
+                        break;
+                    case 'join':
+                        const joinType = node.joinType || 'nested';
+                        const joinCost = this.config.baseCosts.join[joinType] || this.config.baseCosts.join.nested;
+                        nodeCost = joinCost * rowCount;
+                        break;
+                    case 'sort':
+                        const sortType = node.sortType || 'inMemory';
+                        const sortCost = this.config.baseCosts.sort[sortType] || this.config.baseCosts.sort.inMemory;
+                        nodeCost = sortCost * rowCount * Math.log2(Math.max(2, rowCount));
+                        break;
+                    default:
+                        nodeCost = rowCount;
+                }
+                // Store node cost
+                nodeCosts[`node-${index}`] = {
+                    type: nodeType,
+                    cost: nodeCost,
+                    rowCount,
+                    indexType,
+                    indexEffectiveness,
+                };
+                // Recursively estimate costs for child nodes
+                if (node.children && Array.isArray(node.children)) {
+                    const childCosts = this._estimateNodeCosts({ nodes: node.children }, indexInfo, context);
+                    // Add child costs
+                    Object.entries(childCosts).forEach(([childKey, childCost]) => {
+                        nodeCosts[`${nodeType}-${index}-${childKey}`] = childCost;
+                    });
+                }
+            });
+        }
+        return nodeCosts;
+    }
+    /**
+     * Calculate total cost from node costs
+     * @param {Object} nodeCosts - Node costs
+     * @returns {number} Total cost
+     * @private
+     */
+    _calculateTotalCost(nodeCosts) {
+        return Object.values(nodeCosts).reduce((sum, node) => sum + node.cost, 0);
+    }
+    /**
+     * Calculate error between actual and estimated metrics
+     * @param {Object} actualMetrics - Actual metrics
+     * @param {Object} estimatedMetrics - Estimated metrics
+     * @returns {Object} Error metrics
+     * @private
+     */
+    _calculateError(actualMetrics, estimatedMetrics) {
+        // Calculate total error
+        const totalError = Math.abs(actualMetrics.totalCost - estimatedMetrics.totalCost) /
+            Math.max(1, actualMetrics.totalCost);
+        // Calculate node errors
+        const nodeErrors = {};
+        if (actualMetrics.nodeCosts && estimatedMetrics.nodeCosts) {
+            Object.keys(actualMetrics.nodeCosts).forEach(nodeKey => {
+                if (estimatedMetrics.nodeCosts[nodeKey]) {
+                    const actualCost = actualMetrics.nodeCosts[nodeKey].cost;
+                    const estimatedCost = estimatedMetrics.nodeCosts[nodeKey].cost;
+                    const error = Math.abs(actualCost - estimatedCost) / Math.max(1, actualCost);
+                    nodeErrors[nodeKey] = error;
+                }
+            });
+        }
+        return {
+            totalError,
+            nodeErrors,
+        };
+    }
+    /**
+     * Update index information based on error
+     * @param {Object} plan - Execution plan
+     * @param {Object} error - Error metrics
+     * @param {number} learningRate - Learning rate
+     * @private
+     */
+    _updateIndexInfo(plan, error, learningRate) {
+        // Simple index information update
+        // In a real implementation, this would use more sophisticated methods
+        // Check if plan has nodes
+        if (plan.nodes && Array.isArray(plan.nodes)) {
+            // Update index information for each node
+            plan.nodes.forEach((node, index) => {
+                // Get node key
+                const nodeKey = `node-${index}`;
+                // Get node error
+                const nodeError = error.nodeErrors[nodeKey] || error.totalError;
+                // Get collection name
+                const collectionName = node.collection || 'unknown';
+                // Get collection index information
+                const collectionIndexInfo = this.state.indexInfo.collections[collectionName] || {
+                    indexes: [],
+                };
+                // Get node fields
+                const nodeFields = node.fields || [];
+                // Find matching indexes
+                const matchingIndexes = collectionIndexInfo.indexes.filter(index => {
+                    // Check if index fields match node fields
+                    const indexFields = index.fields || [];
+                    // Check if all node fields are covered by the index
+                    return nodeFields.every(field => indexFields.includes(field));
+                });
+                // Update matching indexes
+                matchingIndexes.forEach(index => {
+                    // Update selectivity
+                    if (index.selectivity !== undefined) {
+                        // Adjust selectivity based on error
+                        index.selectivity = Math.max(0, Math.min(1, index.selectivity * (1 - nodeError * learningRate)));
+                    }
+                });
+                // Update collection index information
+                this.state.indexInfo.collections[collectionName] = collectionIndexInfo;
+            });
+        }
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.config.debugMode) {
+            console.log(`[IndexAwareModel] ${message}`);
+        }
+    }
+}
+module.exports = { IndexAwareModel };

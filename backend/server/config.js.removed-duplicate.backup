@@ -1,0 +1,91 @@
+/**
+ * Server Configuration
+ *
+ * This module defines the configuration for the QQ-Verse backend server.
+ *
+ * @version 1.0.0
+ */
+import dotenv from 'dotenv';
+import path from 'path';
+// Load environment variables
+dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+/**
+ * Environment
+ */
+const environment = process.env.NODE_ENV || 'development';
+/**
+ * Server configuration
+ */
+export const config = {
+    // Environment
+    environment,
+    isDevelopment: environment === 'development',
+    isProduction: environment === 'production',
+    isTest: environment === 'test',
+    // Server
+    port: parseInt(process.env.PORT || '3000', 10),
+    host: process.env.HOST || 'localhost',
+    // CORS
+    corsOrigins: process.env.CORS_ORIGINS ?
+        process.env.CORS_ORIGINS.split(',') :
+        ['http://localhost:3000', 'http://localhost:8080'],
+    // Authentication
+    jwtSecret: process.env.JWT_SECRET || 'quantum-secret-key',
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '1d',
+    // Database
+    database: {
+        // MongoDB
+        mongodb: {
+            uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/qq-verse',
+            options: {
+                useNewUrlParser: true,
+                useUnifiedTopology: true,
+            },
+        },
+        // Supabase
+        supabase: {
+            url: process.env.SUPABASE_URL || '',
+            key: process.env.SUPABASE_KEY || '',
+            serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
+        },
+        // GitHub
+        github: {
+            token: process.env.GITHUB_TOKEN || '',
+            owner: process.env.GITHUB_OWNER || '',
+            repo: process.env.GITHUB_REPO || '',
+        },
+    },
+    // Logging
+    logging: {
+        level: process.env.LOG_LEVEL || 'info',
+        format: process.env.LOG_FORMAT || 'json',
+    },
+    // Rate limiting
+    rateLimit: {
+        windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000', 10), // 1 minute
+        max: parseInt(process.env.RATE_LIMIT_MAX || '100', 10), // 100 requests per minute
+    },
+    // File uploads
+    uploads: {
+        maxSize: parseInt(process.env.UPLOAD_MAX_SIZE || '5242880', 10), // 5MB
+        directory: process.env.UPLOAD_DIRECTORY || 'uploads',
+    },
+    // Quantum settings
+    quantum: {
+        coherenceThreshold: parseFloat(process.env.QUANTUM_COHERENCE_THRESHOLD || '0.75'),
+        entanglementStrength: parseFloat(process.env.QUANTUM_ENTANGLEMENT_STRENGTH || '0.85'),
+        dimensionalStability: parseFloat(process.env.QUANTUM_DIMENSIONAL_STABILITY || '0.9'),
+    },
+    // Neural fabric settings
+    neuralFabric: {
+        connectionStrength: parseFloat(process.env.NEURAL_FABRIC_CONNECTION_STRENGTH || '0.8'),
+        pathwayIntegrity: parseFloat(process.env.NEURAL_FABRIC_PATHWAY_INTEGRITY || '0.85'),
+        activationThreshold: parseFloat(process.env.NEURAL_FABRIC_ACTIVATION_THRESHOLD || '0.7'),
+    },
+    // Consciousness stream settings
+    consciousnessStream: {
+        packetSize: parseInt(process.env.CONSCIOUSNESS_STREAM_PACKET_SIZE || '1024', 10),
+        streamTimeout: parseInt(process.env.CONSCIOUSNESS_STREAM_TIMEOUT || '30000', 10), // 30 seconds
+        contextPreservation: parseFloat(process.env.CONSCIOUSNESS_CONTEXT_PRESERVATION || '0.95'),
+    },
+};

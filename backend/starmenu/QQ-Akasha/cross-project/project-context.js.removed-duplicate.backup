@@ -1,0 +1,382 @@
+/**
+ * Project Context Manager for Cross-Project Knowledge Transfer
+ */
+import { EventEmitter } from 'events';
+/**
+ * Events emitted by the project context manager
+ */
+export var ProjectContextEvent;
+(function (ProjectContextEvent) {
+    ProjectContextEvent["PROJECT_ADDED"] = "project-added";
+    ProjectContextEvent["PROJECT_UPDATED"] = "project-updated";
+    ProjectContextEvent["PROJECT_REMOVED"] = "project-removed";
+    ProjectContextEvent["ACTIVE_PROJECT_CHANGED"] = "active-project-changed";
+})(ProjectContextEvent || (ProjectContextEvent = {}));
+/**
+ * Manages project contexts for knowledge transfer
+ */
+export class ProjectContextManager {
+    constructor() {
+        this.projects = new Map();
+        this.activeProjectId = null;
+        this.eventEmitter = new EventEmitter();
+    }
+    /**
+     * Add a new project
+     */
+    addProject(project) {
+        this.projects.set(project.id, project);
+        this.eventEmitter.emit(ProjectContextEvent.PROJECT_ADDED, project);
+        // If this is the first project, make it active
+        if (this.projects.size === 1) {
+            this.setActiveProject(project.id);
+        }
+    }
+    /**
+     * Update a project
+     */
+    updateProject(projectId, updates) {
+        const project = this.projects.get(projectId);
+        if (!project) {
+            return null;
+        }
+        const updatedProject = {
+            ...project,
+            ...updates,
+            updatedAt: new Date(),
+        };
+        this.projects.set(projectId, updatedProject);
+        this.eventEmitter.emit(ProjectContextEvent.PROJECT_UPDATED, updatedProject);
+        return updatedProject;
+    }
+    /**
+     * Remove a project
+     */
+    removeProject(projectId) {
+        const project = this.projects.get(projectId);
+        if (!project) {
+            return false;
+        }
+        this.projects.delete(projectId);
+        this.eventEmitter.emit(ProjectContextEvent.PROJECT_REMOVED, project);
+        // If the active project was removed, set a new active project
+        if (this.activeProjectId === projectId) {
+            const nextProject = this.projects.keys().next().value;
+            this.setActiveProject(nextProject || null);
+        }
+        return true;
+    }
+    /**
+     * Get a project by ID
+     */
+    getProject(projectId) {
+        return this.projects.get(projectId) || null;
+    }
+    /**
+     * Get all projects
+     */
+    getAllProjects() {
+        return Array.from(this.projects.values());
+    }
+    /**
+     * Set the active project
+     */
+    setActiveProject(projectId) {
+        if (projectId !== null && !this.projects.has(projectId)) {
+            throw new Error(`Project with ID ${projectId} not found`);
+        }
+        const oldActiveProjectId = this.activeProjectId;
+        this.activeProjectId = projectId;
+        if (oldActiveProjectId !== projectId) {
+            this.eventEmitter.emit(ProjectContextEvent.ACTIVE_PROJECT_CHANGED, {
+                oldProjectId: oldActiveProjectId,
+                newProjectId: projectId,
+            });
+        }
+    }
+    /**
+     * Get the active project
+     */
+    getActiveProject() {
+        if (!this.activeProjectId) {
+            return null;
+        }
+        return this.projects.get(this.activeProjectId) || null;
+    }
+    /**
+     * Get the active project ID
+     */
+    getActiveProjectId() {
+        return this.activeProjectId;
+    }
+    /**
+     * Find projects by tag
+     */
+    findProjectsByTag(tag) {
+        return Array.from(this.projects.values()).filter(project => project.tags.includes(tag));
+    }
+    /**
+     * Find projects by language
+     */
+    findProjectsByLanguage(language) {
+        return Array.from(this.projects.values()).filter(project => project.languages.includes(language));
+    }
+    /**
+     * Find projects by framework
+     */
+    findProjectsByFramework(framework) {
+        return Array.from(this.projects.values()).filter(project => project.frameworks.includes(framework));
+    }
+    /**
+     * Find projects by dependency
+     */
+    findProjectsByDependency(dependency) {
+        return Array.from(this.projects.values()).filter(project => Object.keys(project.dependencies).includes(dependency));
+    }
+    /**
+     * Find similar projects to a given project
+     */
+    findSimilarProjects(projectId, options = {}) {
+        const { considerLanguages = true, considerFrameworks = true, considerDependencies = true, considerTags = true, minSimilarityScore = 0.3, } = options;
+        const sourceProject = this.projects.get(projectId);
+        if (!sourceProject) {
+            return [];
+        }
+        const results = [];
+        for (const targetProject of this.projects.values()) {
+            // Skip the source project
+            if (targetProject.id === projectId) {
+                continue;
+            }
+            let totalScore = 0;
+            let totalFactors = 0;
+            // Compare languages
+            if (considerLanguages && sourceProject.languages.length > 0) {
+                totalFactors++;
+                const commonLanguages = sourceProject.languages.filter(lang => targetProject.languages.includes(lang));
+                totalScore += commonLanguages.length / sourceProject.languages.length;
+            }
+            // Compare frameworks
+            if (considerFrameworks && sourceProject.frameworks.length > 0) {
+                totalFactors++;
+                const commonFrameworks = sourceProject.frameworks.filter(framework => targetProject.frameworks.includes(framework));
+                totalScore += commonFrameworks.length / sourceProject.frameworks.length;
+            }
+            // Compare dependencies
+            if (considerDependencies && Object.keys(sourceProject.dependencies).length > 0) {
+                totalFactors++;
+                const sourceDeps = Object.keys(sourceProject.dependencies);
+                const targetDeps = Object.keys(targetProject.dependencies);
+                const commonDeps = sourceDeps.filter(dep => targetDeps.includes(dep));
+                totalScore += commonDeps.length / sourceDeps.length;
+            }
+            // Compare tags
+            if (considerTags && sourceProject.tags.length > 0) {
+                totalFactors++;
+                const commonTags = sourceProject.tags.filter(tag => targetProject.tags.includes(tag));
+                totalScore += commonTags.length / sourceProject.tags.length;
+            }
+            // Calculate final similarity score
+            const similarityScore = totalFactors > 0 ? totalScore / totalFactors : 0;
+            // Add to results if above threshold
+            if (similarityScore >= minSimilarityScore) {
+                results.push({
+                    project: targetProject,
+                    similarityScore,
+                });
+            }
+        }
+        // Sort by similarity score (highest first)
+        return results.sort((a, b) => b.similarityScore - a.similarityScore);
+    }
+    /**
+     * Subscribe to project context events
+     */
+    on(event, listener) {
+        this.eventEmitter.on(event, listener);
+    }
+    /**
+     * Unsubscribe from project context events
+     */
+    off(event, listener) {
+        this.eventEmitter.off(event, listener);
+    }
+    /**
+     * Get project files
+     * This is a simplified implementation that returns mock files
+     * In a real implementation, this would scan the project directory
+     */
+    getProjectFiles(projectId) {
+        const project = this.getProject(projectId);
+        if (!project) {
+            return [];
+        }
+        // This is a mock implementation
+        // In a real implementation, this would scan the project directory
+        // and return the actual files
+        // Create mock files based on project information
+        const mockFiles = [];
+        // Add a mock package.json file
+        if (project.languages.includes('javascript') || project.languages.includes('typescript')) {
+            mockFiles.push({
+                path: `${project.rootPath}/package.json`,
+                content: JSON.stringify({
+                    name: project.name,
+                    description: project.description,
+                    dependencies: project.dependencies,
+                }, null, 2),
+            });
+        }
+        // Add mock source files based on primary language
+        if (project.primaryLanguage === 'javascript') {
+            mockFiles.push({
+                path: `${project.rootPath}/src/index.js`,
+                content: `/**
+ * Main entry point for ${project.name}
+ */
+
+const express = require('express');
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Hello, world!');
+});
+
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
+});
+`,
+            });
+            mockFiles.push({
+                path: `${project.rootPath}/src/utils.js`,
+                content: `/**
+ * Utility functions for ${project.name}
+ */
+
+/**
+ * Format a date
+ */
+function formatDate(date) {
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Generate a random ID
+ */
+function generateId() {
+  return Math.random().toString(36).substring(2, 15);
+}
+
+module.exports = {
+  formatDate,
+  generateId
+};
+`,
+            });
+        }
+        else if (project.primaryLanguage === 'typescript') {
+            mockFiles.push({
+                path: `${project.rootPath}/src/index.ts`,
+                content: `/**
+ * Main entry point for ${project.name}
+ */
+
+import express from 'express';
+
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Hello, world!');
+});
+
+app.listen(3000, () => {
+  console.log('Server started on port 3000');
+});
+`,
+            });
+            mockFiles.push({
+                path: `${project.rootPath}/src/utils.ts`,
+                content: `/**
+ * Utility functions for ${project.name}
+ */
+
+/**
+ * Format a date
+ */
+export function formatDate(date: Date): string {
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Generate a random ID
+ */
+export function generateId(): string {
+  return Math.random().toString(36).substring(2, 15);
+}
+`,
+            });
+            mockFiles.push({
+                path: `${project.rootPath}/src/types.ts`,
+                content: `/**
+ * Types for ${project.name}
+ */
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  createdAt: Date;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+`,
+            });
+        }
+        else if (project.primaryLanguage === 'python') {
+            mockFiles.push({
+                path: `${project.rootPath}/src/main.py`,
+                content: `"""
+Main entry point for ${project.name}
+"""
+
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello():
+    return 'Hello, world!'
+
+if __name__ == '__main__':
+    app.run(debug=True)
+`,
+            });
+            mockFiles.push({
+                path: `${project.rootPath}/src/utils.py`,
+                content: `"""
+Utility functions for ${project.name}
+"""
+
+import datetime
+import random
+import string
+
+def format_date(date):
+    """Format a date"""
+    return date.strftime('%Y-%m-%d')
+
+def generate_id(length=10):
+    """Generate a random ID"""
+    return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+`,
+            });
+        }
+        return mockFiles;
+    }
+}

@@ -1,0 +1,29 @@
+/**
+ * Security Module
+ *
+ * Provides security and access control capabilities for the Unified Quantum Database.
+ *
+ * @version 1.0.0
+ */
+// Core
+import { SecurityEngine } from './SecurityEngine';
+// Authentication
+import { AuthManager } from './auth/AuthManager';
+// Access Control
+import { AccessControlManager } from './access/AccessControlManager';
+// Encryption
+import { EncryptionManager } from './encryption/EncryptionManager';
+// Audit
+import { AuditLogger } from './audit/AuditLogger';
+// Export all components
+export { 
+// Core
+SecurityEngine, 
+// Authentication
+AuthManager, 
+// Access Control
+AccessControlManager, 
+// Encryption
+EncryptionManager, 
+// Audit
+AuditLogger, };

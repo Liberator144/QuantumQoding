@@ -1,0 +1,8 @@
+/**
+ * User Types
+ *
+ * This module provides type definitions for user management.
+ *
+ * @version 1.0.0
+ */
+export {};

@@ -1,0 +1,95 @@
+/**
+ * Types for Predictive Knowledge Recommendation
+ * Enables proactive recommendation of knowledge entities based on developer context
+ */
+import { KnowledgeType } from '../types';
+/**
+ * Types of recommendation triggers
+ */
+export var RecommendationTrigger;
+(function (RecommendationTrigger) {
+    /** Triggered when editing a file */
+    RecommendationTrigger["FILE_EDIT"] = "file_edit";
+    /** Triggered when creating a new file */
+    RecommendationTrigger["FILE_CREATE"] = "file_create";
+    /** Triggered when viewing a file */
+    RecommendationTrigger["FILE_VIEW"] = "file_view";
+    /** Triggered when running a command */
+    RecommendationTrigger["COMMAND_RUN"] = "command_run";
+    /** Triggered when encountering an error */
+    RecommendationTrigger["ERROR_ENCOUNTER"] = "error_encounter";
+    /** Triggered when searching for something */
+    RecommendationTrigger["SEARCH"] = "search";
+    /** Triggered periodically based on recent activity */
+    RecommendationTrigger["PERIODIC"] = "periodic";
+    /** Triggered manually by the user */
+    RecommendationTrigger["MANUAL"] = "manual";
+    /** Custom trigger */
+    RecommendationTrigger["CUSTOM"] = "custom";
+})(RecommendationTrigger || (RecommendationTrigger = {}));
+/**
+ * Types of recommendation contexts
+ */
+export var RecommendationContext;
+(function (RecommendationContext) {
+    /** Code editing context */
+    RecommendationContext["CODE_EDITING"] = "code_editing";
+    /** Debugging context */
+    RecommendationContext["DEBUGGING"] = "debugging";
+    /** Architecture design context */
+    RecommendationContext["ARCHITECTURE"] = "architecture";
+    /** Testing context */
+    RecommendationContext["TESTING"] = "testing";
+    /** Documentation context */
+    RecommendationContext["DOCUMENTATION"] = "documentation";
+    /** Performance optimization context */
+    RecommendationContext["PERFORMANCE"] = "performance";
+    /** Security context */
+    RecommendationContext["SECURITY"] = "security";
+    /** General development context */
+    RecommendationContext["GENERAL"] = "general";
+})(RecommendationContext || (RecommendationContext = {}));
+/**
+ * Recommendation relevance level
+ */
+export var RelevanceLevel;
+(function (RelevanceLevel) {
+    /** Critical relevance - immediate attention recommended */
+    RelevanceLevel["CRITICAL"] = "critical";
+    /** High relevance - strongly recommended */
+    RelevanceLevel["HIGH"] = "high";
+    /** Medium relevance - recommended */
+    RelevanceLevel["MEDIUM"] = "medium";
+    /** Low relevance - might be useful */
+    RelevanceLevel["LOW"] = "low";
+})(RelevanceLevel || (RelevanceLevel = {}));
+/**
+ * Default recommendation configuration
+ */
+export const DEFAULT_RECOMMENDATION_CONFIG = {
+    enabled: true,
+    minRelevanceScore: 0.7,
+    maxRecommendations: 5,
+    autoShow: true,
+    trackFeedback: true,
+    learnFromFeedback: true,
+    enabledTriggers: [
+        RecommendationTrigger.FILE_EDIT,
+        RecommendationTrigger.ERROR_ENCOUNTER,
+        RecommendationTrigger.SEARCH,
+        RecommendationTrigger.MANUAL,
+    ],
+    enabledContexts: [
+        RecommendationContext.CODE_EDITING,
+        RecommendationContext.DEBUGGING,
+        RecommendationContext.PERFORMANCE,
+        RecommendationContext.SECURITY,
+    ],
+    enabledKnowledgeTypes: [
+        KnowledgeType.CODE_PATTERN,
+        KnowledgeType.BEST_PRACTICE,
+        KnowledgeType.SOLUTION,
+    ],
+    periodicInterval: 30,
+    useAI: true,
+};

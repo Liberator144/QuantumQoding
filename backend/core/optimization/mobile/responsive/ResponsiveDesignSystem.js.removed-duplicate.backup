@@ -1,0 +1,211 @@
+"use strict";
+/**
+ * Responsive Design System
+ *
+ * This module provides a responsive design system for
+ * optimizing the UI for mobile devices.
+ *
+ * @version 1.0.0
+ */
+const { EventEmitter } = require('events');
+const { TouchOptimizer } = require('./TouchOptimizer');
+const { ContentAdapter } = require('./ContentAdapter');
+const { MediaQueryManager } = require('./MediaQueryManager');
+const { LayoutManager } = require('./LayoutManager');
+/**
+ * Responsive Design System
+ * Main class for managing responsive design
+ */
+class ResponsiveDesignSystem extends EventEmitter {
+    /**
+     * Create a new ResponsiveDesignSystem instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        super();
+        this.options = {
+            breakpoints: {
+                xs: 0, // Extra small devices (portrait phones)
+                sm: 576, // Small devices (landscape phones)
+                md: 768, // Medium devices (tablets)
+                lg: 992, // Large devices (desktops)
+                xl: 1200, // Extra large devices (large desktops)
+                xxl: 1400, // Extra extra large devices
+            },
+            enableAutoResize: true,
+            enableOrientationChange: true,
+            enableTouchOptimization: true,
+            enableContentAdaptation: true,
+            debugMode: false,
+            ...options,
+        };
+        // Initialize components
+        this.layoutManager = new LayoutManager({
+            ...this.options,
+            debugMode: this.options.debugMode,
+        });
+        this.touchOptimizer = new TouchOptimizer({
+            ...this.options,
+            debugMode: this.options.debugMode,
+        });
+        this.contentAdapter = new ContentAdapter({
+            ...this.options,
+            debugMode: this.options.debugMode,
+        });
+        this.mediaQueryManager = new MediaQueryManager({
+            ...this.options,
+            debugMode: this.options.debugMode,
+        });
+        // Connect event handlers
+        this._connectEventHandlers();
+        // Initialize state
+        this.currentBreakpoint = null;
+        this.isInitialized = false;
+        // Log initialization
+        this.log('Responsive Design System created');
+    }
+    /**
+     * Connect event handlers
+     * @private
+     */
+    _connectEventHandlers() {
+        this.layoutManager.on('layout:updated', (breakpoint, layout) => {
+            this.emit('layout:updated', breakpoint, layout);
+        });
+        this.touchOptimizer.on('touch:optimized', (element, optimizations) => {
+            this.emit('touch:optimized', element, optimizations);
+        });
+        this.contentAdapter.on('content:adapted', (element, adaptations) => {
+            this.emit('content:adapted', element, adaptations);
+        });
+        this.mediaQueryManager.on('breakpoint:changed', (breakpoint, width) => {
+            this.currentBreakpoint = breakpoint;
+            this.emit('breakpoint:changed', breakpoint, width);
+        });
+    }
+    /**
+     * Initialize the responsive design system
+     * @returns {Promise<void>}
+     */
+    async initialize() {
+        if (this.isInitialized) {
+            return;
+        }
+        try {
+            this.log('Initializing Responsive Design System');
+            // Initialize media query manager
+            await this.mediaQueryManager.initialize();
+            // Initialize layout manager
+            await this.layoutManager.initialize();
+            // Initialize touch optimizer
+            if (this.options.enableTouchOptimization) {
+                await this.touchOptimizer.initialize();
+            }
+            // Initialize content adapter
+            if (this.options.enableContentAdaptation) {
+                await this.contentAdapter.initialize();
+            }
+            this.isInitialized = true;
+            this.log('Responsive Design System initialized');
+            this.emit('system:initialized');
+        }
+        catch (error) {
+            this.log(`Error initializing Responsive Design System: ${error.message}`);
+            this.emit('system:error', error);
+            throw error;
+        }
+    }
+    /**
+     * Apply responsive design to an element
+     * @param {HTMLElement} element - Element to apply responsive design to
+     * @param {Object} options - Responsive options
+     * @returns {Promise<Object>} Applied responsive design
+     */
+    async applyResponsiveDesign(element, options = {}) {
+        try {
+            // Check if system is initialized
+            if (!this.isInitialized) {
+                await this.initialize();
+            }
+            this.log(`Applying responsive design to element`);
+            const result = {
+                element,
+                layout: null,
+                touch: null,
+                content: null,
+            };
+            // Apply layout
+            result.layout = await this.layoutManager.applyLayout(element, options.layout);
+            // Apply touch optimizations
+            if (this.options.enableTouchOptimization) {
+                result.touch = await this.touchOptimizer.optimizeForTouch(element, options.touch);
+            }
+            // Apply content adaptations
+            if (this.options.enableContentAdaptation) {
+                result.content = await this.contentAdapter.adaptContent(element, options.content);
+            }
+            this.log('Responsive design applied successfully');
+            this.emit('design:applied', element, result);
+            return result;
+        }
+        catch (error) {
+            this.log(`Error applying responsive design: ${error.message}`);
+            this.emit('design:error', error, element);
+            throw error;
+        }
+    }
+    /**
+     * Get current breakpoint
+     * @returns {string} Current breakpoint
+     */
+    getCurrentBreakpoint() {
+        return this.currentBreakpoint;
+    }
+    /**
+     * Check if current breakpoint is mobile
+     * @returns {boolean} Whether current breakpoint is mobile
+     */
+    isMobile() {
+        return this.currentBreakpoint === 'xs' || this.currentBreakpoint === 'sm';
+    }
+    /**
+     * Check if current breakpoint is tablet
+     * @returns {boolean} Whether current breakpoint is tablet
+     */
+    isTablet() {
+        return this.currentBreakpoint === 'md';
+    }
+    /**
+     * Check if current breakpoint is desktop
+     * @returns {boolean} Whether current breakpoint is desktop
+     */
+    isDesktop() {
+        return (this.currentBreakpoint === 'lg' ||
+            this.currentBreakpoint === 'xl' ||
+            this.currentBreakpoint === 'xxl');
+    }
+    /**
+     * Get system state
+     * @returns {Object} System state
+     */
+    getState() {
+        return {
+            initialized: this.isInitialized,
+            currentBreakpoint: this.currentBreakpoint,
+            isMobile: this.isMobile(),
+            isTablet: this.isTablet(),
+            isDesktop: this.isDesktop(),
+        };
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.options.debugMode) {
+            console.log(`[ResponsiveDesignSystem] ${message}`);
+        }
+    }
+}
+module.exports = { ResponsiveDesignSystem };

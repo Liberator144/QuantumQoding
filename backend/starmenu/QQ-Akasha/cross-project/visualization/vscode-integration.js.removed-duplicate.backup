@@ -1,0 +1,229 @@
+/**
+ * VS Code Integration for Knowledge Graph Visualization
+ * Integrates visualization with VS Code
+ */
+import { VisualizationEvent, } from './visualization-manager';
+/**
+ * VS Code message types
+ */
+export var VSCodeMessageType;
+(function (VSCodeMessageType) {
+    VSCodeMessageType["LOAD_GRAPH"] = "load-graph";
+    VSCodeMessageType["APPLY_FILTER"] = "apply-filter";
+    VSCodeMessageType["UPDATE_OPTIONS"] = "update-options";
+    VSCodeMessageType["CHANGE_LAYOUT"] = "change-layout";
+    VSCodeMessageType["HANDLE_EVENT"] = "handle-event";
+    VSCodeMessageType["EXPORT_VISUALIZATION"] = "export-visualization";
+    VSCodeMessageType["OPEN_KNOWLEDGE"] = "open-knowledge";
+    VSCodeMessageType["SHOW_DETAILS"] = "show-details";
+})(VSCodeMessageType || (VSCodeMessageType = {}));
+/**
+ * Integrates visualization with VS Code
+ */
+export class VSCodeIntegration {
+    constructor(visualizationManager, vscode) {
+        this.visualizationManager = visualizationManager;
+        this.vscode = vscode;
+        // Set up event listeners
+        this.setupEventListeners();
+        // Set up message handler
+        this.setupMessageHandler();
+    }
+    /**
+     * Set up event listeners
+     */
+    setupEventListeners() {
+        // Listen for visualization events
+        this.visualizationManager.on(VisualizationEvent.GRAPH_LOADED, this.handleGraphLoaded.bind(this));
+        this.visualizationManager.on(VisualizationEvent.GRAPH_FILTERED, this.handleGraphFiltered.bind(this));
+        this.visualizationManager.on(VisualizationEvent.GRAPH_LAYOUT_CHANGED, this.handleGraphLayoutChanged.bind(this));
+        this.visualizationManager.on(VisualizationEvent.NODE_SELECTED, this.handleNodeSelected.bind(this));
+        this.visualizationManager.on(VisualizationEvent.EDGE_SELECTED, this.handleEdgeSelected.bind(this));
+        this.visualizationManager.on(VisualizationEvent.SELECTION_CHANGED, this.handleSelectionChanged.bind(this));
+        this.visualizationManager.on(VisualizationEvent.HOVER_CHANGED, this.handleHoverChanged.bind(this));
+        this.visualizationManager.on(VisualizationEvent.EXPORT_COMPLETED, this.handleExportCompleted.bind(this));
+    }
+    /**
+     * Set up message handler
+     */
+    setupMessageHandler() {
+        this.vscode.onmessage = event => {
+            const message = event.data;
+            switch (message.type) {
+                case VSCodeMessageType.LOAD_GRAPH:
+                    this.handleLoadGraphMessage(message.payload);
+                    break;
+                case VSCodeMessageType.APPLY_FILTER:
+                    this.handleApplyFilterMessage(message.payload);
+                    break;
+                case VSCodeMessageType.UPDATE_OPTIONS:
+                    this.handleUpdateOptionsMessage(message.payload);
+                    break;
+                case VSCodeMessageType.CHANGE_LAYOUT:
+                    this.handleChangeLayoutMessage(message.payload);
+                    break;
+                case VSCodeMessageType.HANDLE_EVENT:
+                    this.handleEventMessage(message.payload);
+                    break;
+                case VSCodeMessageType.EXPORT_VISUALIZATION:
+                    this.handleExportVisualizationMessage(message.payload);
+                    break;
+                case VSCodeMessageType.OPEN_KNOWLEDGE:
+                    this.handleOpenKnowledgeMessage(message.payload);
+                    break;
+                case VSCodeMessageType.SHOW_DETAILS:
+                    this.handleShowDetailsMessage(message.payload);
+                    break;
+            }
+        };
+    }
+    /**
+     * Handle graph loaded event
+     */
+    handleGraphLoaded(data) {
+        this.sendMessage(VisualizationEvent.GRAPH_LOADED, data);
+    }
+    /**
+     * Handle graph filtered event
+     */
+    handleGraphFiltered(data) {
+        this.sendMessage(VisualizationEvent.GRAPH_FILTERED, data);
+    }
+    /**
+     * Handle graph layout changed event
+     */
+    handleGraphLayoutChanged(data) {
+        this.sendMessage(VisualizationEvent.GRAPH_LAYOUT_CHANGED, data);
+    }
+    /**
+     * Handle node selected event
+     */
+    handleNodeSelected(data) {
+        this.sendMessage(VisualizationEvent.NODE_SELECTED, data);
+    }
+    /**
+     * Handle edge selected event
+     */
+    handleEdgeSelected(data) {
+        this.sendMessage(VisualizationEvent.EDGE_SELECTED, data);
+    }
+    /**
+     * Handle selection changed event
+     */
+    handleSelectionChanged(data) {
+        this.sendMessage(VisualizationEvent.SELECTION_CHANGED, data);
+    }
+    /**
+     * Handle hover changed event
+     */
+    handleHoverChanged(data) {
+        this.sendMessage(VisualizationEvent.HOVER_CHANGED, data);
+    }
+    /**
+     * Handle export completed event
+     */
+    handleExportCompleted(data) {
+        this.sendMessage(VisualizationEvent.EXPORT_COMPLETED, data);
+    }
+    /**
+     * Handle load graph message
+     */
+    handleLoadGraphMessage(payload) {
+        const { graph, filter } = payload;
+        // Convert JSON graph to KnowledgeGraph
+        const knowledgeGraph = this.jsonToKnowledgeGraph(graph);
+        // Load graph
+        this.visualizationManager.loadGraph(knowledgeGraph, filter);
+    }
+    /**
+     * Handle apply filter message
+     */
+    handleApplyFilterMessage(payload) {
+        const filter = payload;
+        // Apply filter
+        this.visualizationManager.applyFilter(filter);
+    }
+    /**
+     * Handle update options message
+     */
+    handleUpdateOptionsMessage(payload) {
+        const options = payload;
+        // Update options
+        this.visualizationManager.updateOptions(options);
+    }
+    /**
+     * Handle change layout message
+     */
+    handleChangeLayoutMessage(payload) {
+        const { algorithm } = payload;
+        // Change layout
+        this.visualizationManager.changeLayout(algorithm);
+    }
+    /**
+     * Handle event message
+     */
+    handleEventMessage(payload) {
+        const event = payload;
+        // Handle event
+        this.visualizationManager.handleEvent(event);
+    }
+    /**
+     * Handle export visualization message
+     */
+    handleExportVisualizationMessage(payload) {
+        const { format, options } = payload;
+        // Export visualization
+        this.visualizationManager.exportVisualization(format, options);
+    }
+    /**
+     * Handle open knowledge message
+     */
+    handleOpenKnowledgeMessage(payload) {
+        const { nodeId } = payload;
+        // This would open the knowledge in the editor
+        // For demonstration purposes, we just send a message back
+        this.sendMessage('knowledge-opened', { nodeId });
+    }
+    /**
+     * Handle show details message
+     */
+    handleShowDetailsMessage(payload) {
+        const { nodeId, edgeId } = payload;
+        // This would show details in a panel
+        // For demonstration purposes, we just send a message back
+        this.sendMessage('details-shown', { nodeId, edgeId });
+    }
+    /**
+     * Send message to VS Code extension
+     */
+    sendMessage(type, payload) {
+        this.vscode.postMessage({
+            type,
+            payload,
+        });
+    }
+    /**
+     * Convert JSON to KnowledgeGraph
+     */
+    jsonToKnowledgeGraph(json) {
+        // This is a simplified implementation
+        // A real implementation would properly reconstruct the graph
+        const graph = {
+            id: json.id,
+            name: json.name,
+            description: json.description,
+            nodes: new Map(),
+            relationships: new Map(),
+            metadata: json.metadata,
+        };
+        // Add nodes
+        for (const node of json.nodes) {
+            graph.nodes.set(node.id, node);
+        }
+        // Add relationships
+        for (const relationship of json.relationships) {
+            graph.relationships.set(relationship.id, relationship);
+        }
+        return graph;
+    }
+}

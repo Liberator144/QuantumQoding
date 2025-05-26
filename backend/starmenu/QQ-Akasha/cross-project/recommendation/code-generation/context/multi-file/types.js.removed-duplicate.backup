@@ -1,0 +1,4 @@
+/**
+ * Types for multi-file context analysis
+ */
+export {};

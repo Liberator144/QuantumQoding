@@ -1,0 +1,35 @@
+/**
+ * Visualization Module
+ *
+ * Provides visualization utilities for the Unified Quantum Database.
+ *
+ * @version 1.0.0
+ */
+// Core
+import { VisualizationEngine } from './VisualizationEngine';
+// Renderers
+import { BaseRenderer } from './charts/BaseRenderer';
+import { PatternHeatMapRenderer } from './charts/PatternHeatMapRenderer';
+import { QueryRelationshipGraphRenderer } from './charts/QueryRelationshipGraphRenderer';
+import { TimeSeriesRenderer } from './charts/TimeSeriesRenderer';
+import { StarSystemRenderer } from './charts/StarSystemRenderer';
+import { GalaxyRenderer } from './charts/GalaxyRenderer';
+import { PlanetarySystemRenderer } from './charts/PlanetarySystemRenderer';
+import { QuantumParticleRenderer, QuantumEffectType } from './charts/QuantumParticleRenderer';
+// Utilities
+import { colorUtils } from './utils/colorUtils';
+import { PerformanceOptimizer, OptimizationLevel } from './utils/PerformanceOptimizer';
+import { LODManager } from './utils/LODManager';
+import * as utils from './utils';
+// Cosmic Visualization
+import * as cosmic from './cosmic';
+// Export all components
+export { 
+// Core
+VisualizationEngine, 
+// Renderers
+BaseRenderer, PatternHeatMapRenderer, QueryRelationshipGraphRenderer, TimeSeriesRenderer, StarSystemRenderer, GalaxyRenderer, PlanetarySystemRenderer, QuantumParticleRenderer, QuantumEffectType, 
+// Utilities
+colorUtils, PerformanceOptimizer, OptimizationLevel, LODManager, utils, 
+// Cosmic Visualization
+cosmic, };

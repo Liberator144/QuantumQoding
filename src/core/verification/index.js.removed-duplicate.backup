@@ -1,0 +1,7 @@
+/**
+ * Verification Module
+ *
+ * This module exports the verification framework for the QQ-Verse project,
+ * ensuring quantum coherence across all operational dimensions.
+ */
+export * from './verification-framework';

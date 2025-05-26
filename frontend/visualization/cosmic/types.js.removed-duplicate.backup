@@ -1,0 +1,99 @@
+/**
+ * Cosmic Visualization Types
+ *
+ * Type definitions for cosmic visualization components.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Cosmic object type
+ */
+export var CosmicObjectType;
+(function (CosmicObjectType) {
+    /** Galaxy */
+    CosmicObjectType["GALAXY"] = "galaxy";
+    /** Star cluster */
+    CosmicObjectType["STAR_CLUSTER"] = "star_cluster";
+    /** Star system */
+    CosmicObjectType["STAR_SYSTEM"] = "star_system";
+    /** Star */
+    CosmicObjectType["STAR"] = "star";
+    /** Planet */
+    CosmicObjectType["PLANET"] = "planet";
+    /** Moon */
+    CosmicObjectType["MOON"] = "moon";
+    /** Asteroid */
+    CosmicObjectType["ASTEROID"] = "asteroid";
+    /** Comet */
+    CosmicObjectType["COMET"] = "comet";
+    /** Nebula */
+    CosmicObjectType["NEBULA"] = "nebula";
+    /** Black hole */
+    CosmicObjectType["BLACK_HOLE"] = "black_hole";
+    /** Wormhole */
+    CosmicObjectType["WORMHOLE"] = "wormhole";
+    /** Custom cosmic object */
+    CosmicObjectType["CUSTOM"] = "custom";
+})(CosmicObjectType || (CosmicObjectType = {}));
+/**
+ * Cosmic object style
+ */
+export var CosmicObjectStyle;
+(function (CosmicObjectStyle) {
+    /** Standard style */
+    CosmicObjectStyle["STANDARD"] = "standard";
+    /** Quantum style */
+    CosmicObjectStyle["QUANTUM"] = "quantum";
+    /** Nebula style */
+    CosmicObjectStyle["NEBULA"] = "nebula";
+    /** Spiral galaxy style */
+    CosmicObjectStyle["SPIRAL_GALAXY"] = "spiral_galaxy";
+    /** Elliptical galaxy style */
+    CosmicObjectStyle["ELLIPTICAL_GALAXY"] = "elliptical_galaxy";
+    /** Irregular galaxy style */
+    CosmicObjectStyle["IRREGULAR_GALAXY"] = "irregular_galaxy";
+    /** Rocky style */
+    CosmicObjectStyle["ROCKY"] = "rocky";
+    /** Gas style */
+    CosmicObjectStyle["GAS"] = "gas";
+    /** Ice style */
+    CosmicObjectStyle["ICE"] = "ice";
+    /** Oceanic style */
+    CosmicObjectStyle["OCEANIC"] = "oceanic";
+    /** Lava style */
+    CosmicObjectStyle["LAVA"] = "lava";
+    /** Custom style */
+    CosmicObjectStyle["CUSTOM"] = "custom";
+})(CosmicObjectStyle || (CosmicObjectStyle = {}));
+/**
+ * Orbit type
+ */
+export var OrbitType;
+(function (OrbitType) {
+    /** Inner orbit */
+    OrbitType["INNER"] = "inner";
+    /** Middle orbit */
+    OrbitType["MIDDLE"] = "middle";
+    /** Outer orbit */
+    OrbitType["OUTER"] = "outer";
+    /** Custom orbit */
+    OrbitType["CUSTOM"] = "custom";
+})(OrbitType || (OrbitType = {}));
+/**
+ * Galaxy type
+ */
+export var GalaxyType;
+(function (GalaxyType) {
+    /** Spiral galaxy */
+    GalaxyType["SPIRAL"] = "spiral";
+    /** Elliptical galaxy */
+    GalaxyType["ELLIPTICAL"] = "elliptical";
+    /** Irregular galaxy */
+    GalaxyType["IRREGULAR"] = "irregular";
+    /** Lenticular galaxy */
+    GalaxyType["LENTICULAR"] = "lenticular";
+    /** Ring galaxy */
+    GalaxyType["RING"] = "ring";
+    /** Custom galaxy */
+    GalaxyType["CUSTOM"] = "custom";
+})(GalaxyType || (GalaxyType = {}));

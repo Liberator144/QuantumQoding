@@ -1,0 +1,13 @@
+/**
+ * Database Metadata
+ *
+ * This module exports database metadata managers for the QQ-Verse project.
+ *
+ * @version 1.0.0
+ */
+// Metadata manager
+export { MetadataManager, MetadataType } from './MetadataManager';
+export { default as MetadataManagerInstance } from './MetadataManager';
+// Relationship manager
+export { RelationshipManager, RelationshipType, RelationshipDirection } from './RelationshipManager';
+export { default as RelationshipManagerInstance } from './RelationshipManager';

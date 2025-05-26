@@ -1,0 +1,144 @@
+"use strict";
+/**
+ * Mobile Module
+ *
+ * This module exports all mobile optimization components.
+ *
+ * @version 1.0.0
+ */
+const responsive = require('./responsive');
+/**
+ * Mobile Optimization System
+ * Main class for mobile optimization
+ */
+class MobileOptimizationSystem {
+    /**
+     * Create a new MobileOptimizationSystem instance
+     * @param {Object} options - Configuration options
+     */
+    constructor(options = {}) {
+        this.options = {
+            // Enable responsive design
+            enableResponsiveDesign: true,
+            // Enable touch interactions
+            enableTouchInteractions: true,
+            // Debug mode
+            debugMode: false,
+            // Responsive design options
+            responsiveDesign: {},
+            // Touch interaction options
+            touchInteraction: {},
+            ...options,
+        };
+        // Initialize components
+        this.responsiveDesignSystem = this.options.enableResponsiveDesign
+            ? responsive.createResponsiveDesignSystem({
+                ...this.options.responsiveDesign,
+                debugMode: this.options.debugMode,
+            })
+            : null;
+        this.touchInteractionSystem = this.options.enableTouchInteractions
+            ? responsive.createTouchInteractionSystem({
+                ...this.options.touchInteraction,
+                debugMode: this.options.debugMode,
+            })
+            : null;
+        // Initialize state
+        this.isInitialized = false;
+        // Log initialization
+        this.log('Mobile Optimization System created');
+    }
+    /**
+     * Initialize the mobile optimization system
+     * @returns {Promise<void>}
+     */
+    async initialize() {
+        if (this.isInitialized) {
+            return;
+        }
+        try {
+            this.log('Initializing Mobile Optimization System');
+            // Initialize responsive design system
+            if (this.responsiveDesignSystem) {
+                await this.responsiveDesignSystem.initialize();
+            }
+            // Initialize touch interaction system
+            if (this.touchInteractionSystem) {
+                await this.touchInteractionSystem.initialize();
+            }
+            this.isInitialized = true;
+            this.log('Mobile Optimization System initialized');
+        }
+        catch (error) {
+            this.log(`Error initializing Mobile Optimization System: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Optimize an element for mobile
+     * @param {HTMLElement} element - Element to optimize
+     * @param {Object} options - Optimization options
+     * @returns {Promise<Object>} Optimization result
+     */
+    async optimizeElement(element, options = {}) {
+        try {
+            // Check if system is initialized
+            if (!this.isInitialized) {
+                await this.initialize();
+            }
+            this.log('Optimizing element for mobile');
+            const result = {
+                element,
+                responsive: null,
+                touch: null,
+            };
+            // Apply responsive design
+            if (this.responsiveDesignSystem) {
+                result.responsive = await this.responsiveDesignSystem.applyResponsiveDesign(element, options.responsive);
+            }
+            // Register for touch interactions
+            if (this.touchInteractionSystem) {
+                result.touch = await this.touchInteractionSystem.registerElement(element, options.touch);
+            }
+            this.log('Element optimized for mobile');
+            return result;
+        }
+        catch (error) {
+            this.log(`Error optimizing element: ${error.message}`);
+            throw error;
+        }
+    }
+    /**
+     * Get system state
+     * @returns {Object} System state
+     */
+    getState() {
+        return {
+            initialized: this.isInitialized,
+            responsiveDesign: this.responsiveDesignSystem ? this.responsiveDesignSystem.getState() : null,
+            touchInteraction: this.touchInteractionSystem ? this.touchInteractionSystem.getState() : null,
+        };
+    }
+    /**
+     * Log message if debug mode is enabled
+     * @param {string} message - Message to log
+     * @private
+     */
+    log(message) {
+        if (this.options.debugMode) {
+            console.log(`[MobileOptimizationSystem] ${message}`);
+        }
+    }
+}
+module.exports = {
+    // Main components
+    MobileOptimizationSystem,
+    // Sub-modules
+    responsive,
+    /**
+     * Create a new MobileOptimizationSystem instance
+     * @param {Object} options - Configuration options
+     * @returns {MobileOptimizationSystem} New MobileOptimizationSystem instance
+     */
+    createMobileOptimizationSystem: (options = {}) => new MobileOptimizationSystem(options),
+};

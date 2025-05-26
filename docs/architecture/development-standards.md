@@ -144,6 +144,77 @@ import { StarSystemType } from '../types';
 import starTexture from '../assets/star-texture.png';
 ```
 
+```javascript
+/**
+ * QuantumSphere component
+ * 
+ * Renders an interactive 3D sphere representing the central quantum core.
+ * 
+ * @param {number} size - The diameter of the sphere in pixels
+ * @param {string} color - The primary color of the sphere (hex or RGB)
+ * @param {number} [intensity=1] - The glow intensity (0-1)
+ * 
+ * @example
+ * <QuantumSphere size={300} color="#4f00ff" intensity={0.8} />
+ */
+export const QuantumSphere = ({ size, color, intensity = 1 }) => {
+  // Implementation
+};
+```
+
+## State Management
+
+Follow these guidelines for state management:
+
+1. Use local component state for UI-specific state
+2. Use context for shared state across components
+3. Use custom hooks to encapsulate complex state logic
+
+## Testing Standards
+
+Each component should have corresponding tests:
+
+1. Basic rendering tests
+2. Interaction tests
+3. Edge cases and error handling
+
+Example test structure:
+
+```javascript
+describe('QuantumSphere', () => {
+  it('renders correctly with default props', () => {
+    // Test implementation
+  });
+  
+  it('changes appearance based on size prop', () => {
+    // Test implementation
+  });
+  
+  it('handles interaction correctly', () => {
+    // Test implementation
+  });
+});
+```
+
+## Performance Considerations
+
+1. Memoize expensive calculations
+2. Use `React.memo` for pure components
+3. Virtualize long lists
+4. Optimize re-renders
+
+## Accessibility Standards
+
+All components should follow WCAG 2.1 AA standards:
+
+1. Include proper ARIA attributes
+2. Ensure proper contrast ratios
+3. Support keyboard navigation
+4. Provide meaningful alt text for images
+
+## Conclusion
+
+Following these standards will ensure the QQ-Verse project remains maintainable, scalable, and consistent as it evolves. These guidelines should be referred to during development, code reviews, and onboarding of new team members.
 ## Component Documentation
 
 Each component should include JSDoc comments:

@@ -1,0 +1,431 @@
+/**
+ * Query Relationship Graph Renderer
+ *
+ * Renders a graph visualization of relationships between queries, patterns, fields, and operators.
+ *
+ * @version 1.0.0
+ */
+import { BaseRenderer } from './BaseRenderer';
+/**
+ * Query Relationship Graph Renderer
+ */
+class QueryRelationshipGraphRenderer extends BaseRenderer {
+    /**
+     * Create a new QueryRelationshipGraphRenderer instance
+     * @param options - Renderer options
+     */
+    constructor(options = {}) {
+        super({
+            // Default node size
+            nodeSize: {
+                query: 10,
+                pattern: 8,
+                field: 6,
+                operator: 4,
+            },
+            // Default link strength
+            linkStrength: 0.3,
+            // Default charge strength
+            chargeStrength: -100,
+            // Default distance
+            distance: 100,
+            // Default animation duration
+            animationDuration: 500,
+            // Default tooltip enabled
+            tooltipEnabled: true,
+            // Default legend enabled
+            legendEnabled: true,
+            // Default node colors
+            nodeColors: {
+                query: '#3366CC',
+                pattern: '#DC3912',
+                field: '#FF9900',
+                operator: '#109618',
+            },
+            // Merge with provided options
+            ...options,
+        });
+        // Set renderer name
+        this.name = 'queryRelationshipGraph';
+    }
+    /**
+     * Initialize the renderer
+     * @param options - Initialization options
+     */
+    initialize(options = {}) {
+        // Merge options
+        this.options = {
+            ...this.options,
+            ...options,
+        };
+        this.log('Query Relationship Graph Renderer initialized');
+    }
+    /**
+     * Render the visualization
+     * @param element - DOM element to render into
+     * @param data - Visualization data
+     * @param options - Render options
+     */
+    render(element, data, options = {}) {
+        // Merge options
+        this.options = {
+            ...this.options,
+            ...options,
+        };
+        // Check data
+        if (!data || !data.nodes || !data.links) {
+            throw new Error('Valid graph data is required');
+        }
+        // Store last data
+        this.lastData = data;
+        // Clear element
+        element.innerHTML = '';
+        // Create container
+        const container = document.createElement('div');
+        container.className = 'quantum-query-relationship-graph';
+        container.style.position = 'relative';
+        container.style.width = '100%';
+        container.style.height = '100%';
+        container.style.overflow = 'hidden';
+        // Apply theme
+        this._applyTheme(container);
+        // Create SVG element
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('width', '100%');
+        svg.setAttribute('height', '100%');
+        svg.style.overflow = 'visible';
+        // Add SVG to container
+        container.appendChild(svg);
+        // Process data
+        const processedData = this._processData(data);
+        // Create links
+        const linksGroup = this._createLinks(svg, processedData);
+        // Create nodes
+        const nodesGroup = this._createNodes(svg, processedData);
+        // Create legend
+        if (this.options.legendEnabled) {
+            this._createLegend(svg, processedData);
+        }
+        // Create tooltip
+        let tooltip = null;
+        if (this.options.tooltipEnabled) {
+            tooltip = this._createTooltip(container);
+        }
+        // Add event listeners
+        if (tooltip) {
+            this._addEventListeners(svg, tooltip, processedData);
+        }
+        // Add to element
+        element.appendChild(container);
+        // Initialize force simulation
+        this._initializeForceSimulation(processedData, nodesGroup, linksGroup);
+        this.log('Query Relationship Graph rendered');
+    }
+    /**
+     * Process data for visualization
+     * @param data - Raw data
+     * @returns Processed data
+     * @private
+     */
+    _processData(data) {
+        // Clone data to avoid modifying original
+        const nodes = [...data.nodes];
+        const links = [...data.links];
+        // Ensure nodes have required properties
+        nodes.forEach(node => {
+            // Ensure node has type
+            if (!node.type) {
+                node.type = 'query';
+            }
+            // Ensure node has id
+            if (!node.id) {
+                node.id = `node-${Math.random().toString(36).substring(2, 15)}`;
+            }
+            // Ensure node has label
+            if (!node.label) {
+                node.label = node.id;
+            }
+        });
+        // Ensure links have required properties
+        links.forEach(link => {
+            // Ensure link has source and target
+            if (!link.source || !link.target) {
+                throw new Error('Link must have source and target');
+            }
+            // Ensure link has value
+            if (!link.value) {
+                link.value = 1;
+            }
+        });
+        return {
+            nodes,
+            links,
+        };
+    }
+    /**
+     * Create links for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @returns Links group
+     * @private
+     */
+    _createLinks(svg, data) {
+        // Create group for links
+        const linksGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        linksGroup.setAttribute('class', 'links');
+        // Create links
+        data.links.forEach(link => {
+            // Create line
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('stroke', '#999');
+            line.setAttribute('stroke-opacity', '0.6');
+            line.setAttribute('stroke-width', Math.sqrt(link.value).toString());
+            // Add to group
+            linksGroup.appendChild(line);
+        });
+        // Add to SVG
+        svg.appendChild(linksGroup);
+        return linksGroup;
+    }
+    /**
+     * Create nodes for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @returns Nodes group
+     * @private
+     */
+    _createNodes(svg, data) {
+        // Create group for nodes
+        const nodesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        nodesGroup.setAttribute('class', 'nodes');
+        // Get node sizes and colors
+        const nodeSize = this.options.nodeSize;
+        const nodeColors = this.options.nodeColors;
+        // Create nodes
+        data.nodes.forEach(node => {
+            // Create group for node
+            const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            nodeGroup.setAttribute('class', 'node');
+            nodeGroup.setAttribute('data-id', node.id);
+            nodeGroup.setAttribute('data-type', node.type);
+            nodeGroup.setAttribute('data-label', node.label);
+            // Create circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('r', (nodeSize[node.type] || 5).toString());
+            circle.setAttribute('fill', nodeColors[node.type] || '#999');
+            // Add to group
+            nodeGroup.appendChild(circle);
+            // Add to nodes group
+            nodesGroup.appendChild(nodeGroup);
+        });
+        // Add to SVG
+        svg.appendChild(nodesGroup);
+        return nodesGroup;
+    }
+    /**
+     * Create legend for the visualization
+     * @param svg - SVG element
+     * @param data - Processed data
+     * @private
+     */
+    _createLegend(svg, data) {
+        // Create group for legend
+        const legendGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        legendGroup.setAttribute('class', 'legend');
+        legendGroup.setAttribute('transform', 'translate(10, 10)');
+        // Get node colors
+        const nodeColors = this.options.nodeColors;
+        // Get unique node types
+        const nodeTypes = [...new Set(data.nodes.map(node => node.type))];
+        // Create legend items
+        nodeTypes.forEach((type, index) => {
+            // Create group for item
+            const itemGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            itemGroup.setAttribute('transform', `translate(0, ${index * 20})`);
+            // Create circle
+            const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            circle.setAttribute('r', '5');
+            circle.setAttribute('cx', '5');
+            circle.setAttribute('cy', '5');
+            circle.setAttribute('fill', nodeColors[type] || '#999');
+            // Create text
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', '15');
+            text.setAttribute('y', '9');
+            text.setAttribute('font-size', '12px');
+            text.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+            // Add to group
+            itemGroup.appendChild(circle);
+            itemGroup.appendChild(text);
+            // Add to legend group
+            legendGroup.appendChild(itemGroup);
+        });
+        // Add to SVG
+        svg.appendChild(legendGroup);
+    }
+    /**
+     * Create tooltip for the visualization
+     * @param container - Container element
+     * @returns Tooltip element
+     * @private
+     */
+    _createTooltip(container) {
+        // Create tooltip
+        const tooltip = document.createElement('div');
+        tooltip.className = 'quantum-tooltip';
+        tooltip.style.position = 'absolute';
+        tooltip.style.display = 'none';
+        tooltip.style.padding = '8px';
+        tooltip.style.borderRadius = '4px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '1000';
+        // Apply theme
+        this._applyTooltipTheme(tooltip);
+        // Add to container
+        container.appendChild(tooltip);
+        return tooltip;
+    }
+    /**
+     * Add event listeners to the visualization
+     * @param svg - SVG element
+     * @param tooltip - Tooltip element
+     * @param data - Processed data
+     * @private
+     */
+    _addEventListeners(svg, tooltip, data) {
+        // Get all nodes
+        const nodes = svg.querySelectorAll('.nodes .node');
+        // Add mouse events
+        nodes.forEach(node => {
+            // Mouse enter
+            node.addEventListener('mouseenter', event => {
+                // Get data
+                const id = node.getAttribute('data-id');
+                const type = node.getAttribute('data-type');
+                const label = node.getAttribute('data-label');
+                // Find node data
+                const nodeData = data.nodes.find(n => n.id === id);
+                // Update tooltip
+                tooltip.innerHTML = `
+          <div><strong>Type:</strong> ${type}</div>
+          <div><strong>Label:</strong> ${label}</div>
+        `;
+                // Add additional properties
+                if (nodeData) {
+                    Object.entries(nodeData).forEach(([key, value]) => {
+                        if (key !== 'id' &&
+                            key !== 'type' &&
+                            key !== 'label' &&
+                            key !== 'x' &&
+                            key !== 'y' &&
+                            key !== 'vx' &&
+                            key !== 'vy') {
+                            tooltip.innerHTML += `<div><strong>${key}:</strong> ${value}</div>`;
+                        }
+                    });
+                }
+                // Show tooltip
+                tooltip.style.display = 'block';
+                // Position tooltip
+                const rect = node.getBoundingClientRect();
+                const containerRect = svg.getBoundingClientRect();
+                tooltip.style.left = `${rect.left - containerRect.left + rect.width / 2}px`;
+                tooltip.style.top = `${rect.top - containerRect.top - tooltip.offsetHeight - 5}px`;
+                // Highlight node
+                const circle = node.querySelector('circle');
+                if (circle) {
+                    circle.setAttribute('stroke', '#000');
+                    circle.setAttribute('stroke-width', '2');
+                }
+            });
+            // Mouse leave
+            node.addEventListener('mouseleave', event => {
+                // Hide tooltip
+                tooltip.style.display = 'none';
+                // Remove highlight
+                const circle = node.querySelector('circle');
+                if (circle) {
+                    circle.setAttribute('stroke', 'none');
+                }
+            });
+        });
+    }
+    /**
+     * Initialize force simulation
+     * @param data - Processed data
+     * @param nodesGroup - Nodes group
+     * @param linksGroup - Links group
+     * @private
+     */
+    _initializeForceSimulation(data, nodesGroup, linksGroup) {
+        // Check if d3 is available
+        if (typeof d3 === 'undefined') {
+            this.log('D3 is not available, skipping force simulation');
+            return;
+        }
+        // Get nodes and links elements
+        const nodeElements = nodesGroup.querySelectorAll('.node');
+        const linkElements = linksGroup.querySelectorAll('line');
+        // Create simulation
+        const simulation = d3
+            .forceSimulation(data.nodes)
+            .force('link', d3
+            .forceLink(data.links)
+            .id((d) => d.id)
+            .distance(this.options.distance))
+            .force('charge', d3.forceManyBody().strength(this.options.chargeStrength))
+            .force('center', d3.forceCenter(nodesGroup.parentNode ? nodesGroup.parentNode.clientWidth / 2 : 0, nodesGroup.parentNode ? nodesGroup.parentNode.clientHeight / 2 : 0));
+        // Update positions on tick
+        simulation.on('tick', () => {
+            // Update links
+            linkElements.forEach((link, i) => {
+                const source = data.links[i].source;
+                const target = data.links[i].target;
+                link.setAttribute('x1', source.x);
+                link.setAttribute('y1', source.y);
+                link.setAttribute('x2', target.x);
+                link.setAttribute('y2', target.y);
+            });
+            // Update nodes
+            nodeElements.forEach((node, i) => {
+                node.setAttribute('transform', `translate(${data.nodes[i].x}, ${data.nodes[i].y})`);
+            });
+        });
+    }
+    /**
+     * Apply theme to the visualization
+     * @param container - Container element
+     * @private
+     */
+    _applyTheme(container) {
+        // Apply theme based on options
+        if (this.options.theme === 'dark') {
+            container.style.backgroundColor = '#1a1a1a';
+            container.style.color = '#ffffff';
+        }
+        else {
+            container.style.backgroundColor = '#ffffff';
+            container.style.color = '#333333';
+        }
+    }
+    /**
+     * Apply theme to the tooltip
+     * @param tooltip - Tooltip element
+     * @private
+     */
+    _applyTooltipTheme(tooltip) {
+        // Apply theme based on options
+        if (this.options.theme === 'dark') {
+            tooltip.style.backgroundColor = '#333333';
+            tooltip.style.color = '#ffffff';
+            tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.5)';
+        }
+        else {
+            tooltip.style.backgroundColor = '#ffffff';
+            tooltip.style.color = '#333333';
+            tooltip.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+        }
+    }
+}
+export { QueryRelationshipGraphRenderer };

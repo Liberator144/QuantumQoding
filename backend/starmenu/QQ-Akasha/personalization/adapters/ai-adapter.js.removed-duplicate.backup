@@ -1,0 +1,98 @@
+/**
+ * AI Adapter for Personalization System
+ * Adapts AI responses based on user preferences
+ */
+import { InteractionType, PreferenceCategory } from '../types';
+/**
+ * Adapter for personalizing AI interactions
+ */
+export class AIAdapter {
+    constructor(personalizationManager) {
+        this.personalizationManager = personalizationManager;
+    }
+    /**
+     * Personalize an AI request
+     */
+    async personalizeRequest(request) {
+        // Track the interaction
+        await this.personalizationManager.trackInteraction(request.userId, InteractionType.QUERY, {
+            query: request.content,
+            requestType: request.requestType,
+            projectContext: request.projectContext,
+            filePath: request.filePath,
+        });
+        // Get user preferences
+        const preferences = await this.personalizationManager.getAllPreferences(request.userId);
+        // Apply preferences to request
+        const personalizedRequest = { ...request };
+        // Add preference context to the request
+        personalizedRequest.additionalContext = {
+            ...personalizedRequest.additionalContext,
+            userPreferences: this.extractRelevantPreferences(preferences, request.requestType),
+        };
+        return personalizedRequest;
+    }
+    /**
+     * Personalize an AI response
+     */
+    async personalizeResponse(response, request) {
+        // Determine content type based on response type
+        let contentType;
+        switch (response.responseType) {
+            case 'code':
+                contentType = 'code';
+                break;
+            case 'documentation':
+                contentType = 'documentation';
+                break;
+            case 'visualization':
+                contentType = 'visualization';
+                break;
+            default:
+                contentType = 'response';
+        }
+        // Personalize the content
+        const personalizedContent = await this.personalizationManager.personalizeContent(request.userId, response.content, contentType);
+        // Track the interaction
+        await this.personalizationManager.trackInteraction(request.userId, InteractionType.FEEDBACK, {
+            responseType: response.responseType,
+            contentLength: response.content.length,
+            projectContext: request.projectContext,
+            filePath: request.filePath,
+        });
+        return {
+            ...response,
+            content: personalizedContent,
+        };
+    }
+    /**
+     * Extract relevant preferences for a request type
+     */
+    extractRelevantPreferences(preferences, requestType) {
+        const relevantPreferences = {};
+        // Filter preferences based on request type
+        let categories = [];
+        switch (requestType) {
+            case 'code-generation':
+                categories = [PreferenceCategory.CODE_STYLE, PreferenceCategory.RESPONSE_STYLE];
+                break;
+            case 'documentation-generation':
+                categories = [PreferenceCategory.DOCUMENTATION_STYLE, PreferenceCategory.RESPONSE_STYLE];
+                break;
+            case 'visualization':
+                categories = [PreferenceCategory.VISUALIZATION_STYLE];
+                break;
+            default:
+                categories = [PreferenceCategory.RESPONSE_STYLE, PreferenceCategory.CONTENT_FORMAT];
+        }
+        // Extract preferences in the relevant categories
+        for (const category of categories) {
+            relevantPreferences[category] = {};
+            const categoryPrefs = preferences.filter(p => p.category === category && p.confidence >= 0.6);
+            for (const pref of categoryPrefs) {
+                relevantPreferences[category][pref.key] = pref.value;
+            }
+        }
+        return relevantPreferences;
+    }
+}

@@ -1,0 +1,427 @@
+#!/usr/bin/env node
+"use strict";
+/**
+ * Context-Specific Linting CLI
+ *
+ * Command-line interface for context-aware linting.
+ *
+ * @version 1.0.0
+ */
+const fs = require('fs');
+const path = require('path');
+const { program } = require('commander');
+const chalk = require('chalk');
+const { ContextLinter } = require('../context-linting');
+const { MLContextDetector } = require('../context-detection/ml/MLContextDetector');
+// Set up CLI
+program
+    .name('context-lint')
+    .description('Context-aware linting tool for the Quantum-Unified Database')
+    .version('1.0.0');
+// Add commands
+program
+    .command('detect <path>')
+    .description('Detect the context of a file or directory')
+    .option('-d, --debug', 'Enable debug mode')
+    .option('-v, --verbose', 'Enable verbose output')
+    .option('-o, --output <file>', 'Output file for results')
+    .option('-f, --format <format>', 'Output format (json, yaml, text)', 'text')
+    .action(async (targetPath, options) => {
+    try {
+        // Create context detector
+        const detector = new MLContextDetector({
+            debugMode: options.debug,
+            baseDir: process.cwd(),
+        });
+        // Detect context
+        const result = await detector.detectContext(targetPath);
+        // Display result
+        displayDetectionResult(result, options);
+        // Output result to file if specified
+        if (options.output) {
+            outputResult(result, options.output, options.format);
+        }
+    }
+    catch (error) {
+        console.error(chalk.red(`Error: ${error.message}`));
+        process.exit(1);
+    }
+});
+program
+    .command('lint <path>')
+    .description('Lint a file or directory with context-specific rules')
+    .option('-d, --debug', 'Enable debug mode')
+    .option('-v, --verbose', 'Enable verbose output')
+    .option('-o, --output <file>', 'Output file for results')
+    .option('-f, --format <format>', 'Output format (json, yaml, text)', 'text')
+    .option('-c, --context <context>', 'Force a specific context')
+    .option('-a, --auto-fix', 'Automatically fix issues')
+    .action(async (targetPath, options) => {
+    try {
+        // Create context linter
+        const linter = new ContextLinter({
+            debugMode: options.debug,
+            baseDir: process.cwd(),
+        });
+        // Lint with context-specific rules
+        const result = await linter.lint(targetPath, {
+            forceContext: options.context,
+            autoFix: options.autoFix,
+        });
+        // Display result
+        displayLintResult(result, options);
+        // Output result to file if specified
+        if (options.output) {
+            outputResult(result, options.output, options.format);
+        }
+        // Exit with error code if there are linting errors
+        const errorCount = countLintErrors(result);
+        if (errorCount > 0) {
+            process.exit(1);
+        }
+    }
+    catch (error) {
+        console.error(chalk.red(`Error: ${error.message}`));
+        process.exit(1);
+    }
+});
+program
+    .command('fix <path>')
+    .description('Fix linting issues with context-specific rules')
+    .option('-d, --debug', 'Enable debug mode')
+    .option('-v, --verbose', 'Enable verbose output')
+    .option('-c, --context <context>', 'Force a specific context')
+    .action(async (targetPath, options) => {
+    try {
+        // Create context linter
+        const linter = new ContextLinter({
+            debugMode: options.debug,
+            baseDir: process.cwd(),
+        });
+        // Lint with context-specific rules and auto-fix
+        const result = await linter.lint(targetPath, {
+            forceContext: options.context,
+            autoFix: true,
+        });
+        // Display result
+        displayLintResult(result, options);
+        // Exit with error code if there are linting errors
+        const errorCount = countLintErrors(result);
+        if (errorCount > 0) {
+            process.exit(1);
+        }
+    }
+    catch (error) {
+        console.error(chalk.red(`Error: ${error.message}`));
+        process.exit(1);
+    }
+});
+program
+    .command('rules [context]')
+    .description('Show linting rules for a specific context')
+    .option('-d, --debug', 'Enable debug mode')
+    .option('-v, --verbose', 'Enable verbose output')
+    .option('-o, --output <file>', 'Output file for results')
+    .option('-f, --format <format>', 'Output format (json, yaml, text)', 'text')
+    .action(async (context, options) => {
+    try {
+        // Create context linter
+        const linter = new ContextLinter({
+            debugMode: options.debug,
+            baseDir: process.cwd(),
+        });
+        // Get rules for context
+        const rules = context ? linter.config.contextRules[context] : linter.config.contextRules;
+        if (!rules && context) {
+            console.error(chalk.red(`Error: Context '${context}' not found`));
+            process.exit(1);
+        }
+        // Display rules
+        displayRules(rules, context, options);
+        // Output rules to file if specified
+        if (options.output) {
+            outputResult(rules, options.output, options.format);
+        }
+    }
+    catch (error) {
+        console.error(chalk.red(`Error: ${error.message}`));
+        process.exit(1);
+    }
+});
+// Parse command line arguments
+program.parse(process.argv);
+// If no arguments, show help
+if (process.argv.length === 2) {
+    program.help();
+}
+/**
+ * Display context detection result
+ * @param {Object} result - Detection result
+ * @param {Object} options - Display options
+ */
+function displayDetectionResult(result, options) {
+    console.log(chalk.bold(`Context Detection Result for: ${result.path}`));
+    console.log(chalk.cyan(`Detected Context: ${result.context}`));
+    console.log(chalk.yellow(`Confidence: ${(result.confidence * 100).toFixed(2)}%`));
+    if (options.verbose) {
+        console.log('\nContext Scores:');
+        for (const [context, score] of Object.entries(result.scores)) {
+            const scorePercent = (score * 100).toFixed(2);
+            const color = score > 0.5 ? 'green' : score > 0.2 ? 'yellow' : 'gray';
+            console.log(`  ${chalk[color](`${context}: ${scorePercent}%`)}`);
+        }
+        if (result.type === 'directory' && result.fileContexts) {
+            console.log('\nFile Contexts:');
+            for (const fileContext of result.fileContexts) {
+                console.log(`  ${path.relative(process.cwd(), fileContext.path)}: ${fileContext.context} (${(fileContext.confidence * 100).toFixed(2)}%)`);
+            }
+        }
+    }
+}
+/**
+ * Display linting result
+ * @param {Object} result - Linting result
+ * @param {Object} options - Display options
+ */
+function displayLintResult(result, options) {
+    console.log(chalk.bold(`Linting Result for: ${result.path}`));
+    console.log(chalk.cyan(`Detected Context: ${result.context.context}`));
+    console.log(chalk.yellow(`Confidence: ${(result.context.confidence * 100).toFixed(2)}%`));
+    if (result.result.fileCount) {
+        console.log(chalk.bold(`\nLinted ${result.result.fileCount} files`));
+        const errorCount = countLintErrors(result);
+        const warningCount = countLintWarnings(result);
+        console.log(`Found ${chalk.red(`${errorCount} errors`)} and ${chalk.yellow(`${warningCount} warnings`)}`);
+        if (options.verbose) {
+            for (const fileResult of result.result.fileResults) {
+                displayFileResult(fileResult, options);
+            }
+        }
+    }
+    else {
+        displayFileResult(result, options);
+    }
+}
+/**
+ * Display file linting result
+ * @param {Object} result - File linting result
+ * @param {Object} options - Display options
+ */
+function displayFileResult(result, options) {
+    const relativePath = path.relative(process.cwd(), result.path);
+    if (result.error) {
+        console.log(`\n${chalk.red(`Error linting ${relativePath}: ${result.error}`)}`);
+        return;
+    }
+    const fileResult = result.result;
+    if (!fileResult) {
+        return;
+    }
+    let errorCount = 0;
+    let warningCount = 0;
+    // Count ESLint errors and warnings
+    if (fileResult.eslint && !fileResult.eslint.error) {
+        errorCount += fileResult.eslint.errorCount || 0;
+        warningCount += fileResult.eslint.warningCount || 0;
+    }
+    // Count Prettier errors
+    if (fileResult.prettier && !fileResult.prettier.error && !fileResult.prettier.isFormatted) {
+        errorCount += 1;
+    }
+    // Count markdownlint errors
+    if (fileResult.markdownlint && !fileResult.markdownlint.error) {
+        errorCount += fileResult.markdownlint.errorCount || 0;
+    }
+    const statusColor = errorCount > 0 ? 'red' : warningCount > 0 ? 'yellow' : 'green';
+    const statusText = errorCount > 0 ? 'FAIL' : warningCount > 0 ? 'WARN' : 'PASS';
+    console.log(`\n${chalk[statusColor](statusText)} ${relativePath} (${result.context})`);
+    if (options.verbose) {
+        // Display ESLint results
+        if (fileResult.eslint) {
+            if (fileResult.eslint.error) {
+                console.log(`  ${chalk.red(`ESLint Error: ${fileResult.eslint.error}`)}`);
+            }
+            else if (fileResult.eslint.messages && fileResult.eslint.messages.length > 0) {
+                console.log(`  ${chalk.bold('ESLint Issues:')}`);
+                for (const message of fileResult.eslint.messages) {
+                    const msgColor = message.severity === 2 ? 'red' : 'yellow';
+                    console.log(`    ${chalk[msgColor](`${message.line}:${message.column} - ${message.message} (${message.ruleId})`)}`);
+                }
+            }
+        }
+        // Display Prettier results
+        if (fileResult.prettier) {
+            if (fileResult.prettier.error) {
+                console.log(`  ${chalk.red(`Prettier Error: ${fileResult.prettier.error}`)}`);
+            }
+            else if (!fileResult.prettier.isFormatted) {
+                console.log(`  ${chalk.red('Prettier: File is not properly formatted')}`);
+            }
+        }
+        // Display markdownlint results
+        if (fileResult.markdownlint) {
+            if (fileResult.markdownlint.error) {
+                console.log(`  ${chalk.red(`markdownlint Error: ${fileResult.markdownlint.error}`)}`);
+            }
+            else if (fileResult.markdownlint.messages && fileResult.markdownlint.messages.length > 0) {
+                console.log(`  ${chalk.bold('markdownlint Issues:')}`);
+                for (const message of fileResult.markdownlint.messages) {
+                    console.log(`    ${chalk.red(`${message.lineNumber}: ${message.ruleDescription} (${message.ruleNames.join(', ')})`)}`);
+                }
+            }
+        }
+    }
+}
+/**
+ * Display linting rules
+ * @param {Object} rules - Linting rules
+ * @param {string} context - Context name
+ * @param {Object} options - Display options
+ */
+function displayRules(rules, context, options) {
+    if (context) {
+        console.log(chalk.bold(`Linting Rules for Context: ${context}`));
+        // Display ESLint rules
+        if (rules.eslint && rules.eslint.rules) {
+            console.log(chalk.cyan('\nESLint Rules:'));
+            for (const [rule, value] of Object.entries(rules.eslint.rules)) {
+                console.log(`  ${rule}: ${JSON.stringify(value)}`);
+            }
+        }
+        // Display Prettier options
+        if (rules.prettier) {
+            console.log(chalk.cyan('\nPrettier Options:'));
+            for (const [option, value] of Object.entries(rules.prettier)) {
+                console.log(`  ${option}: ${JSON.stringify(value)}`);
+            }
+        }
+        // Display markdownlint options
+        if (rules.markdownlint) {
+            console.log(chalk.cyan('\nmarkdownlint Options:'));
+            for (const [option, value] of Object.entries(rules.markdownlint)) {
+                console.log(`  ${option}: ${JSON.stringify(value)}`);
+            }
+        }
+    }
+    else {
+        console.log(chalk.bold('Available Contexts:'));
+        for (const context of Object.keys(rules)) {
+            console.log(`  ${context}`);
+        }
+        console.log(chalk.yellow('\nUse `context-lint rules <context>` to see rules for a specific context'));
+    }
+}
+/**
+ * Output result to file
+ * @param {Object} result - Result to output
+ * @param {string} outputFile - Output file path
+ * @param {string} format - Output format
+ */
+function outputResult(result, outputFile, format) {
+    let output;
+    switch (format.toLowerCase()) {
+        case 'json':
+            output = JSON.stringify(result, null, 2);
+            break;
+        case 'yaml':
+            try {
+                const yaml = require('js-yaml');
+                output = yaml.dump(result);
+            }
+            catch (error) {
+                console.error(chalk.red(`Error: Could not format as YAML: ${error.message}`));
+                console.error(chalk.yellow('Falling back to JSON format'));
+                output = JSON.stringify(result, null, 2);
+            }
+            break;
+        case 'text':
+        default:
+            output = JSON.stringify(result, null, 2);
+            break;
+    }
+    fs.writeFileSync(outputFile, output);
+    console.log(chalk.green(`Output written to ${outputFile}`));
+}
+/**
+ * Count lint errors in result
+ * @param {Object} result - Linting result
+ * @returns {number} Error count
+ */
+function countLintErrors(result) {
+    let errorCount = 0;
+    if (result.result.fileCount) {
+        // Directory result
+        for (const fileResult of result.result.fileResults) {
+            if (fileResult.error) {
+                errorCount += 1;
+                continue;
+            }
+            if (!fileResult.result) {
+                continue;
+            }
+            // Count ESLint errors
+            if (fileResult.result.eslint && !fileResult.result.eslint.error) {
+                errorCount += fileResult.result.eslint.errorCount || 0;
+            }
+            // Count Prettier errors
+            if (fileResult.result.prettier &&
+                !fileResult.result.prettier.error &&
+                !fileResult.result.prettier.isFormatted) {
+                errorCount += 1;
+            }
+            // Count markdownlint errors
+            if (fileResult.result.markdownlint && !fileResult.result.markdownlint.error) {
+                errorCount += fileResult.result.markdownlint.errorCount || 0;
+            }
+        }
+    }
+    else {
+        // File result
+        const fileResult = result.result;
+        // Count ESLint errors
+        if (fileResult.eslint && !fileResult.eslint.error) {
+            errorCount += fileResult.eslint.errorCount || 0;
+        }
+        // Count Prettier errors
+        if (fileResult.prettier && !fileResult.prettier.error && !fileResult.prettier.isFormatted) {
+            errorCount += 1;
+        }
+        // Count markdownlint errors
+        if (fileResult.markdownlint && !fileResult.markdownlint.error) {
+            errorCount += fileResult.markdownlint.errorCount || 0;
+        }
+    }
+    return errorCount;
+}
+/**
+ * Count lint warnings in result
+ * @param {Object} result - Linting result
+ * @returns {number} Warning count
+ */
+function countLintWarnings(result) {
+    let warningCount = 0;
+    if (result.result.fileCount) {
+        // Directory result
+        for (const fileResult of result.result.fileResults) {
+            if (fileResult.error) {
+                continue;
+            }
+            if (!fileResult.result) {
+                continue;
+            }
+            // Count ESLint warnings
+            if (fileResult.result.eslint && !fileResult.result.eslint.error) {
+                warningCount += fileResult.result.eslint.warningCount || 0;
+            }
+        }
+    }
+    else {
+        // File result
+        const fileResult = result.result;
+        // Count ESLint warnings
+        if (fileResult.eslint && !fileResult.eslint.error) {
+            warningCount += fileResult.eslint.warningCount || 0;
+        }
+    }
+    return warningCount;
+}

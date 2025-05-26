@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Quantum Safeguard: Comprehensive JavaScript Prevention System
+echo "🔍 Quantum Safeguard: Comprehensive JavaScript contamination scan..."
+echo "🛡️  Enforcing TypeScript Sovereignty across entire codebase"
+
+# Check for ALL JavaScript files (comprehensive protection)
+JS_FILES=$(git diff --cached --name-only | grep -E '\.(js|jsx)$' | grep -v node_modules | grep -v dist | grep -v build | grep -v \.backup || true)
+
+if [ ! -z "$JS_FILES" ]; then
+  echo "❌ QUANTUM BREACH DETECTED!"
+  echo "🚨 JavaScript files found in commit:"
+  echo "$JS_FILES"
+  echo ""
+  echo "🛡️  Quantum Coherence Protocol Violation:"
+  echo "   • ALL source files must be TypeScript (.ts/.tsx)"
+  echo "   • JavaScript is FORBIDDEN in this quantum-coherent codebase"
+  echo "   • Configuration files must use TypeScript"
+  echo "   • React components must use .tsx extension"
+  echo ""
+  echo "🔧 Required Actions:"
+  echo "   1. Convert .js files to .ts (for utilities, services, etc.)"
+  echo "   2. Convert .jsx files to .tsx (for React components)"
+  echo "   3. Add proper TypeScript type annotations"
+  echo "   4. Update import statements if necessary"
+  echo ""
+  echo "📚 Documentation: docs/error-protocol/typescript_migration_plan.md"
+  exit 1
+fi
+
+echo "✅ Quantum Coherence maintained - No JavaScript contamination detected"
+echo "🚀 TypeScript Sovereignty preserved - Proceeding with commit..."

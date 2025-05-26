@@ -1,0 +1,16 @@
+/**
+ * Repository Schema
+ *
+ * Defines the schema for repositories in the unified data model.
+ *
+ * @version 1.0.0
+ */
+/**
+ * Repository visibility
+ */
+export var RepositoryVisibility;
+(function (RepositoryVisibility) {
+    RepositoryVisibility["PUBLIC"] = "public";
+    RepositoryVisibility["PRIVATE"] = "private";
+    RepositoryVisibility["INTERNAL"] = "internal";
+})(RepositoryVisibility || (RepositoryVisibility = {}));

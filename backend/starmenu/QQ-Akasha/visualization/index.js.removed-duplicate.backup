@@ -1,0 +1,6 @@
+/**
+ * Memory Visualization module exports
+ */
+export * from './types';
+export * from './graph-builder';
+export * from './renderer';

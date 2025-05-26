@@ -1,0 +1,13 @@
+/**
+ * Code generation module for generating code from templates and context
+ */
+// Templates
+export * from './templates';
+// Context
+export * from './context';
+// Language-specific processing
+export * from './language';
+// Pattern-based generation
+export * from './patterns';
+// Engine
+export * from './engine';
