@@ -80,11 +80,11 @@ export const EnhancedQuantumRouter: React.FC = () => {
     return (
         <BrowserRouter>
             <Routes>
-                {/* Hub route - no header for immersive experience */}
+                {/* Hub route - with quantum header for user settings */}
                 <Route 
                     path="/" 
                     element={
-                        <TransitionWrapper showHeader={false}>
+                        <TransitionWrapper showHeader={true}>
                             <HubScreen />
                         </TransitionWrapper>
                     } 

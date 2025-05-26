@@ -44,6 +44,7 @@ export const EnhancedStar: React.FC<EnhancedStarProps> = ({
     onNavigate
 }) => {
     const starRef = useRef<HTMLDivElement>(null);
+    const nameRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const audio = useAudio();
 
@@ -63,15 +64,33 @@ export const EnhancedStar: React.FC<EnhancedStarProps> = ({
 
     const enhancedDistance = getEnhancedDistance(node.distance, node.orbit);
 
-    // Update position for data streams
+    // Update position for effects
     useEffect(() => {
         if (starRef.current) {
             const rect = starRef.current.getBoundingClientRect();
-            setPosition({
+            const centerPos = {
                 x: rect.left + rect.width / 2,
                 y: rect.top + rect.height / 2,
-            });
+            };
+            setPosition(centerPos);
         }
+    }, []);
+
+    // Update position when window resizes
+    useEffect(() => {
+        const updatePosition = () => {
+            if (starRef.current) {
+                const rect = starRef.current.getBoundingClientRect();
+                const centerPos = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2,
+                };
+                setPosition(centerPos);
+            }
+        };
+
+        window.addEventListener('resize', updatePosition);
+        return () => window.removeEventListener('resize', updatePosition);
     }, []);
 
     // Handle star-specific interactions
@@ -129,8 +148,12 @@ export const EnhancedStar: React.FC<EnhancedStarProps> = ({
                         ease: 'linear',
                     },
                 }}
-                onMouseEnter={() => onStarHover(node.name)}
-                onMouseLeave={() => onStarHover(null)}
+                onMouseEnter={() => {
+                    onStarHover(node.name);
+                }}
+                onMouseLeave={() => {
+                    onStarHover(null);
+                }}
                 onClick={handleNavigate}
             >
                 <div className="relative flex items-center justify-center w-28 h-28">
@@ -255,9 +278,14 @@ export const EnhancedStar: React.FC<EnhancedStarProps> = ({
 
             {/* Enhanced Star Name with Independent Hover Zone */}
             <div 
+                ref={nameRef}
                 className="absolute mt-3 -translate-x-1/2 top-full left-1/2"
-                onMouseEnter={() => onInfoHover(node.name)}
-                onMouseLeave={() => onInfoHover(null)}
+                onMouseEnter={() => {
+                    onInfoHover(node.name);
+                }}
+                onMouseLeave={() => {
+                    onInfoHover(null);
+                }}
             >
                 <motion.div
                     className="relative cursor-pointer"
@@ -299,228 +327,89 @@ export const EnhancedStar: React.FC<EnhancedStarProps> = ({
                 </motion.div>
             </div>
 
-            {/* Enhanced Data Stream Connections */}
+            {/* Revolutionary Sun-like Energy Outbursts */}
             <AnimatePresence>
                 {isStarHovered && (
                     <motion.div
-                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                        className="absolute inset-0 pointer-events-none"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                     >
-                        <svg className="absolute w-full h-full">
-                            <motion.line
-                                x1={centerPosition.x - position.x}
-                                y1={centerPosition.y - position.y}
-                                x2="0"
-                                y2="0"
-                                stroke={node.color}
-                                strokeWidth="2"
-                                strokeDasharray="8,4"
-                                className="animate-pulse"
-                                initial={{ pathLength: 0 }}
-                                animate={{ pathLength: 1 }}
-                                transition={{ duration: 0.8 }}
-                            />
+                        {/* Solar Flare Effects */}
+                        {[...Array(8)].map((_, i) => {
+                            const angle = (i * 45) * Math.PI / 180;
+                            const length = 60 + Math.random() * 40;
                             
-                            {/* Enhanced Data Particles */}
-                            {[...Array(8)].map((_, i) => (
-                                <motion.circle
-                                    key={i}
-                                    r="3"
-                                    fill={node.color}
-                                    filter="blur(1px)"
+                            return (
+                                <motion.div
+                                    key={`flare-${i}`}
+                                    className="absolute"
+                                    style={{
+                                        left: '50%',
+                                        top: '50%',
+                                        width: '4px',
+                                        height: `${length}px`,
+                                        background: `linear-gradient(to top, ${node.color}, transparent)`,
+                                        transformOrigin: 'bottom center',
+                                        transform: `translate(-50%, -50%) rotate(${angle * 180 / Math.PI}deg)`,
+                                        filter: `drop-shadow(0 0 8px ${node.color})`
+                                    }}
+                                    initial={{ scaleY: 0, opacity: 0 }}
                                     animate={{
-                                        offsetDistance: ['0%', '100%'],
+                                        scaleY: [0, 1.5, 0.8, 0],
+                                        opacity: [0, 1, 0.7, 0],
                                     }}
                                     transition={{
-                                        duration: 2.5,
-                                        delay: i * 0.3,
+                                        duration: 2,
+                                        delay: i * 0.2,
                                         repeat: Infinity,
-                                        ease: 'easeInOut',
-                                    }}
-                                    style={{
-                                        offsetPath: `path("M ${centerPosition.x - position.x} ${centerPosition.y - position.y} L 0 0")`,
+                                        repeatDelay: 3,
+                                        ease: "easeInOut"
                                     }}
                                 />
-                            ))}
-                        </svg>
+                            );
+                        })}
+                        
+                        {/* Energy Burst Particles */}
+                        {[...Array(12)].map((_, i) => {
+                            const angle = (i * 30) * Math.PI / 180;
+                            const distance = 40 + Math.random() * 30;
+                            const x = Math.cos(angle) * distance;
+                            const y = Math.sin(angle) * distance;
+                            
+                            return (
+                                <motion.div
+                                    key={`burst-${i}`}
+                                    className="absolute w-2 h-2 rounded-full"
+                                    style={{
+                                        left: '50%',
+                                        top: '50%',
+                                        backgroundColor: node.color,
+                                        boxShadow: `0 0 10px ${node.color}`
+                                    }}
+                                    initial={{ x: 0, y: 0, scale: 0, opacity: 1 }}
+                                    animate={{
+                                        x: [0, x * 0.5, x],
+                                        y: [0, y * 0.5, y],
+                                        scale: [0, 1.5, 0],
+                                        opacity: [1, 0.8, 0]
+                                    }}
+                                    transition={{
+                                        duration: 1.5,
+                                        delay: i * 0.1,
+                                        repeat: Infinity,
+                                        repeatDelay: 2,
+                                        ease: "easeOut"
+                                    }}
+                                />
+                            );
+                        })}
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Enhanced Information Panel with Independent Trigger */}
-            <AnimatePresence>
-                {showInfoPanel && (
-                    <motion.div
-                        initial={{
-                            opacity: 0,
-                            scale: 0.8,
-                            y: 15,
-                        }}
-                        animate={{
-                            opacity: 1,
-                            scale: 1,
-                            y: 0,
-                        }}
-                        exit={{
-                            opacity: 0,
-                            scale: 0.8,
-                            y: 15,
-                        }}
-                        transition={{
-                            type: "spring",
-                            damping: 25,
-                            stiffness: 300
-                        }}
-                        className="absolute z-30 transform -translate-x-1/2 left-1/2 pointer-events-auto"
-                        style={{
-                            top: 'calc(100% + 3rem)',
-                            width: '320px',
-                        }}
-                        onMouseEnter={() => onInfoHover(node.name)}
-                        onMouseLeave={() => onInfoHover(null)}
-                    >
-                        <div
-                            className="relative p-5 border rounded-xl backdrop-blur-xl"
-                            style={{
-                                background: `linear-gradient(135deg, ${node.color}20, ${node.color}35, ${node.color}15)`,
-                                borderColor: `${node.color}50`,
-                                boxShadow: `0 0 30px ${node.color}25, inset 0 0 20px ${node.color}10`,
-                            }}
-                        >
-                            {/* Enhanced Background Particles */}
-                            <div className="absolute inset-0 overflow-hidden rounded-xl">
-                                {[...Array(25)].map((_, i) => (
-                                    <motion.div
-                                        key={i}
-                                        className="absolute rounded-full"
-                                        style={{
-                                            width: Math.random() * 6 + 2,
-                                            height: Math.random() * 6 + 2,
-                                            background: node.color,
-                                            left: `${Math.random() * 100}%`,
-                                            top: `${Math.random() * 100}%`,
-                                        }}
-                                        animate={{
-                                            opacity: [0.2, 0.6, 0.2],
-                                            scale: [1, 1.3, 1],
-                                            x: [0, (Math.random() - 0.5) * 20],
-                                            y: [0, (Math.random() - 0.5) * 20]
-                                        }}
-                                        transition={{
-                                            duration: 3 + Math.random() * 2,
-                                            repeat: Infinity,
-                                            ease: 'easeInOut',
-                                            delay: Math.random() * 2
-                                        }}
-                                    />
-                                ))}
-                            </div>
-
-                            <motion.div
-                                className="relative"
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                            >
-                                {/* Enhanced Title */}
-                                <h3
-                                    className="mb-3 text-xl font-bold"
-                                    style={{
-                                        color: node.color,
-                                        textShadow: `0 0 12px ${node.color}70`,
-                                    }}
-                                >
-                                    {node.name}
-                                </h3>
-
-                                {/* Enhanced Description */}
-                                <p
-                                    className="mb-4 text-sm leading-relaxed text-white/95"
-                                    style={{
-                                        textShadow: `0 0 8px ${node.color}20`,
-                                    }}
-                                >
-                                    {node.description}
-                                </p>
-
-                                {/* Enhanced Features Section */}
-                                <div className="pt-4 mt-4 border-t border-white/25">
-                                    <p className="mb-3 text-xs font-medium text-white/80">
-                                        Key Features:
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {node.features.slice(0, 4).map(feature => (
-                                            <motion.div
-                                                key={feature.name}
-                                                className="px-3 py-1.5 text-xs font-medium rounded-full"
-                                                style={{
-                                                    backgroundColor: `${node.color}25`,
-                                                    borderWidth: '1px',
-                                                    borderColor: `${node.color}50`,
-                                                    color: node.color
-                                                }}
-                                                whileHover={{
-                                                    scale: 1.05,
-                                                    backgroundColor: `${node.color}35`
-                                                }}
-                                            >
-                                                {feature.name}
-                                            </motion.div>
-                                        ))}
-                                        {node.features.length > 4 && (
-                                            <div className="px-3 py-1.5 text-xs font-medium rounded-full bg-white/15 text-white/70">
-                                                +{node.features.length - 4} more
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Enhanced Enter Button */}
-                                <div className="mt-5 text-center">
-                                    <motion.div
-                                        className="inline-block text-sm px-6 py-2.5 rounded-full cursor-pointer font-medium"
-                                        style={{
-                                            backgroundColor: `${node.color}40`,
-                                            borderWidth: '2px',
-                                            borderColor: `${node.color}70`,
-                                            color: 'white',
-                                            textShadow: `0 0 8px ${node.color}50`
-                                        }}
-                                        whileHover={{
-                                            scale: 1.08,
-                                            backgroundColor: `${node.color}60`,
-                                            boxShadow: `0 0 20px ${node.color}60`
-                                        }}
-                                        whileTap={{
-                                            scale: 0.95,
-                                        }}
-                                        onClick={handleNavigate}
-                                    >
-                                        Enter {node.name} Universe
-                                    </motion.div>
-                                </div>
-                            </motion.div>
-
-                            {/* Enhanced Connection Line */}
-                            <motion.div
-                                className="absolute w-px origin-bottom left-1/2 -top-12"
-                                initial={{
-                                    scaleY: 0,
-                                }}
-                                animate={{
-                                    scaleY: 1,
-                                }}
-                                style={{
-                                    background: `linear-gradient(to bottom, ${node.color}00, ${node.color}80, ${node.color})`,
-                                    height: '3rem',
-                                }}
-                            />
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+            {/* Panel logic now handled by QuantumSphere with FixedStarSidebar */}
         </div>
     );
 };

@@ -11,6 +11,8 @@ import { EnhancedStar } from './EnhancedStar';
 import StarSystemView from '../../cosmos/orbits/StarSystemView';
 import { useTransitionControls } from '../../utils/CoherenceHelpers/useTransitionControls';
 import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
+import { orbitalOptimizer } from './OrbitalOptimizer';
+import { FixedStarSidebar } from './FixedStarSidebar';
 // Protocol-compliant, strictly typed orbitNodes array
 const orbitNodes = [
     // Inner Orbit
@@ -18,7 +20,7 @@ const orbitNodes = [
         name: 'QQ-DataVerse',
         color: '#00ffff',
         angle: 0,
-        distance: 200,
+        distance: 280,
         orbit: 'inner',
         rotationSpeed: 100,
         description: 'GitHub integration and data analytics universe. Explore and visualize data across multiple dimensions.',
@@ -35,7 +37,7 @@ const orbitNodes = [
         name: 'QQ-MCPVerse',
         color: '#4169e1',
         angle: 120,
-        distance: 200,
+        distance: 280,
         orbit: 'inner',
         rotationSpeed: 100,
         description: 'Model-Context-Protocol management universe. Connect and configure MCP tools and services.',
@@ -51,8 +53,8 @@ const orbitNodes = [
     {
         name: 'QQ-Akasha',
         color: '#9370db',
-        angle: 210,
-        distance: 200,
+        angle: 240,
+        distance: 280,
         orbit: 'inner',
         rotationSpeed: 100,
         description: 'Quantum memory system universe. Store, analyze, and retrieve information across the cosmic consciousness.',
@@ -69,8 +71,8 @@ const orbitNodes = [
     {
         name: 'QQ-TaskVerse',
         color: '#ff4500',
-        angle: 60,
-        distance: 300,
+        angle: 30,
+        distance: 420,
         orbit: 'middle',
         rotationSpeed: 150,
         description: 'Task management universe. Organize, track, and optimize your workflows and projects.',
@@ -86,8 +88,8 @@ const orbitNodes = [
     {
         name: 'QQ-QuantumForge',
         color: '#32cd32',
-        angle: 180,
-        distance: 300,
+        angle: 150,
+        distance: 420,
         orbit: 'middle',
         rotationSpeed: 150,
         description: 'Development environment universe. Build, test, and deploy your quantum applications.',
@@ -103,8 +105,8 @@ const orbitNodes = [
     {
         name: 'QQ-NexusHub',
         color: '#ffd700',
-        angle: 300,
-        distance: 300,
+        angle: 270,
+        distance: 420,
         orbit: 'middle',
         rotationSpeed: 150,
         description: 'Integration management universe. Connect and coordinate your tools and services.',
@@ -121,8 +123,8 @@ const orbitNodes = [
     {
         name: 'QQ-EvolveCore',
         color: '#ff1493',
-        angle: 0,
-        distance: 400,
+        angle: 60,
+        distance: 560,
         orbit: 'outer',
         rotationSpeed: 200,
         description: 'System evolution engine universe. Adapt, evolve, and optimize your quantum systems.',
@@ -138,8 +140,8 @@ const orbitNodes = [
     {
         name: 'QQ-HarmonyVerse',
         color: '#00fa9a',
-        angle: 120,
-        distance: 400,
+        angle: 180,
+        distance: 560,
         orbit: 'outer',
         rotationSpeed: 200,
         description: 'Coherence maintenance universe. Ensure harmony and balance across your quantum systems.',
@@ -155,8 +157,8 @@ const orbitNodes = [
     {
         name: 'QQ-UnityPortal',
         color: '#ff8c00',
-        angle: 240,
-        distance: 400,
+        angle: 300,
+        distance: 560,
         orbit: 'outer',
         rotationSpeed: 200,
         description: 'Community ecosystem universe. Collaborate, share, and engage with the quantum community.',
@@ -177,8 +179,38 @@ const QuantumSphere = () => {
     const [hoveredStarInfo, setHoveredStarInfo] = useState(null);
     const [currentView, setCurrentView] = useState('hub');
     const [selectedStar, setSelectedStar] = useState(null);
+    
+    // Revolutionary Orbital Optimization System
+    const [optimizedNodes, setOptimizedNodes] = useState(orbitNodes);
+    const [gravitationalInfluences, setGravitationalInfluences] = useState({});
+    const [orbitalPaths, setOrbitalPaths] = useState({});
+    const [pulsingData, setPulsingData] = useState({});
+    
+    // Fixed Sidebar System
+    const [currentHoveredNode, setCurrentHoveredNode] = useState(null);
+    
     // Audio system
     const audio = useAudio();
+    
+    // Initialize orbital optimization system
+    useEffect(() => {
+        // Apply orbital optimization
+        const optimized = orbitalOptimizer.optimizeOrbitalPositions(orbitNodes);
+        setOptimizedNodes(optimized);
+        
+        // Calculate gravitational influences
+        const influences = orbitalOptimizer.calculateGravitationalInfluence(optimized);
+        setGravitationalInfluences(influences);
+        
+        // Generate orbital paths
+        const paths = orbitalOptimizer.generateOrbitalPaths();
+        setOrbitalPaths(paths);
+        
+        // Calculate synchronized pulsing
+        const pulsing = orbitalOptimizer.calculateSynchronizedPulsing(optimized);
+        setPulsingData(pulsing);
+    }, []);
+    
     // Use the transition controls hook
     const { transitionState, enterStarSystem, exitToHub, } = useTransitionControls({
         transitionDuration: 1500,
@@ -220,17 +252,33 @@ const QuantumSphere = () => {
     const returnToHub = () => {
         exitToHub();
     };
-    // Handle star hover with sound effect
+    // Handle star hover with sound effect and sidebar
     const handleStarHover = (name) => {
         if (name && !hoveredStar) {
             audio.play('hover', { volume: 0.3 });
         }
         setHoveredStar(name);
+        
+        // Update current hovered node for sidebar
+        if (name) {
+            const node = optimizedNodes.find(n => n.name === name);
+            setCurrentHoveredNode(node || null);
+        } else {
+            setCurrentHoveredNode(null);
+        }
     };
 
     // Handle info panel hover separately
     const handleInfoHover = (name) => {
         setHoveredStarInfo(name);
+        
+        // Update current hovered node for sidebar
+        if (name) {
+            const node = optimizedNodes.find(n => n.name === name);
+            setCurrentHoveredNode(node || null);
+        } else {
+            setCurrentHoveredNode(null);
+        }
     };
     return (<div className="relative w-full h-[100vh] overflow-hidden bg-[#050714]">
       <div className="absolute inset-0">
@@ -589,7 +637,86 @@ const QuantumSphere = () => {
                 </div>
               </div>
               {/* Quantum Portal Core */}
-              <div className="absolute inset-0 flex items-center justify-center">
+              <div 
+                className="absolute inset-0 flex items-center justify-center"
+                onMouseEnter={() => setHoveredStar('quantum-core')}
+                onMouseLeave={() => setHoveredStar(null)}
+              >
+                {/* Revolutionary Quantum Loading Bar */}
+                <AnimatePresence>
+                  {hoveredStar === 'quantum-core' && (
+                    <motion.div
+                      className="absolute inset-0 pointer-events-none"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <svg className="absolute inset-0 w-full h-full" style={{ transform: 'rotate(-90deg)' }}>
+                        {/* Loading Ring */}
+                        <motion.circle
+                          cx="50%"
+                          cy="50%"
+                          r="120"
+                          fill="none"
+                          stroke="url(#quantumGradient)"
+                          strokeWidth="3"
+                          strokeDasharray="754"
+                          strokeLinecap="round"
+                          initial={{ strokeDashoffset: 754 }}
+                          animate={{ strokeDashoffset: [754, 0, 754] }}
+                          transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "easeInOut"
+                          }}
+                          style={{
+                            filter: 'drop-shadow(0 0 10px #8b5cf6)'
+                          }}
+                        />
+                        
+                        {/* Spacecraft Indicator */}
+                        <motion.g
+                          initial={{ rotate: 0 }}
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 3,
+                            repeat: Infinity,
+                            ease: "linear"
+                          }}
+                          style={{ transformOrigin: '50% 50%' }}
+                        >
+                          <motion.circle
+                            cx="50%"
+                            cy="30%"
+                            r="4"
+                            fill="#8b5cf6"
+                            style={{
+                              filter: 'drop-shadow(0 0 8px #8b5cf6)'
+                            }}
+                          />
+                          <motion.polygon
+                            points="50%,26% 52%,34% 48%,34%"
+                            fill="#06b6d4"
+                            style={{
+                              transformOrigin: '50% 30%',
+                              filter: 'drop-shadow(0 0 6px #06b6d4)'
+                            }}
+                          />
+                        </motion.g>
+                        
+                        {/* Gradient Definition */}
+                        <defs>
+                          <linearGradient id="quantumGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" stopColor="#8b5cf6" />
+                            <stop offset="50%" stopColor="#06b6d4" />
+                            <stop offset="100%" stopColor="#10b981" />
+                          </linearGradient>
+                        </defs>
+                      </svg>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+                
                 <EnhancedQuantumPortalCore 
                     isLoggedIn={false} 
                     userName="" 
@@ -599,8 +726,8 @@ const QuantumSphere = () => {
                 />
               </div>
               {/* Outer glow corona */}
-              <div className="absolute inset-[-25%] rounded-full">
-                <div className="w-full h-full opacity-30" style={{
+              <div className="absolute inset-[-25%] rounded-full pointer-events-none">
+                <div className="w-full h-full opacity-30 pointer-events-none" style={{
                 background: 'radial-gradient(circle, rgba(236, 72, 153, 0.4) 0%, transparent 70%)',
                 filter: 'blur(50px)',
             }}/>
@@ -608,8 +735,38 @@ const QuantumSphere = () => {
             </div>
           </div>
           
-          {/* Enhanced Stars with Separated Hover Effects */}
-          {orbitNodes.map((node) => (
+          {/* Revolutionary Orbital Path Visualization */}
+          <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5 }}>
+            {Object.entries(orbitalPaths).map(([orbit, pathData]) => (
+              <motion.path
+                key={`orbital-path-${orbit}`}
+                d={pathData}
+                fill="none"
+                stroke={orbit === 'inner' ? '#00ffff40' : orbit === 'middle' ? '#ff450040' : '#8b5cf640'}
+                strokeWidth="1"
+                strokeDasharray="5,10"
+                className="absolute"
+                style={{
+                  transformOrigin: 'center',
+                  transform: 'translate(50%, 50%)'
+                }}
+                initial={{ opacity: 0, pathLength: 0 }}
+                animate={{ 
+                  opacity: 0.6, 
+                  pathLength: 1,
+                  strokeDashoffset: [0, -15]
+                }}
+                transition={{
+                  opacity: { duration: 1 },
+                  pathLength: { duration: 2 },
+                  strokeDashoffset: { duration: 3, repeat: Infinity, ease: "linear" }
+                }}
+              />
+            ))}
+          </svg>
+          
+          {/* Enhanced Stars with Revolutionary Orbital Optimization */}
+          {optimizedNodes.map((node) => (
             <EnhancedStar 
               key={`star-${node.name}`} 
               node={node} 
@@ -624,6 +781,12 @@ const QuantumSphere = () => {
       
       {/* Star System View */}
       {currentView === 'star-system' && selectedStar && (<StarSystemView star={selectedStar} onReturnToHub={returnToHub}/>)}
+      
+      {/* Fixed Star Sidebar - Beautiful & Non-Intrusive */}
+      <FixedStarSidebar
+        node={currentHoveredNode}
+        isVisible={!!currentHoveredNode}
+      />
       
       {/* Zoom Controls */}
       <div className="absolute flex gap-2 bottom-4 right-4">
