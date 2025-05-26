@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: ProfileScreen.js
@@ -11,7 +12,7 @@
  *
  * @version 1.0.0
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../lib/AuthContext';
 import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
@@ -61,89 +62,6 @@ const ProfileScreen = () => {
             setIsSaving(false);
         }
     };
-    return (<div className="flex items-center justify-center w-full h-full bg-gray-900">
-      <motion.div className="w-full max-w-2xl p-8 bg-gray-800 rounded-lg shadow-lg" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-3xl font-extrabold text-white">
-            Quantum Identity
-          </h2>
-          <button onClick={handleEditToggle} className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            {isEditing ? 'Cancel' : 'Edit Profile'}
-          </button>
-        </div>
-        
-        {error && (<div className="p-3 mb-4 text-sm text-red-300 bg-red-900 rounded-md">
-            {error}
-          </div>)}
-        
-        {success && (<div className="p-3 mb-4 text-sm text-green-300 bg-green-900 rounded-md">
-            {success}
-          </div>)}
-        
-        {isEditing ? (<form onSubmit={handleSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-300">
-                  Name
-                </label>
-                <input id="name" name="name" type="text" value={name} onChange={(e) => setName(e.target.value)} className="block w-full px-3 py-2 mt-1 text-white placeholder-gray-500 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-              </div>
-              
-              <div>
-                <label htmlFor="bio" className="block text-sm font-medium text-gray-300">
-                  Bio
-                </label>
-                <textarea id="bio" name="bio" rows={4} value={bio} onChange={(e) => setBio(e.target.value)} className="block w-full px-3 py-2 mt-1 text-white placeholder-gray-500 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-              </div>
-              
-              <div>
-                <button type="submit" disabled={isSaving} className="flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50">
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </form>) : (<div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-300">Profile Information</h3>
-              <div className="mt-2 space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-400">Name</p>
-                  <p className="mt-1 text-lg text-white">{user?.name || 'Not set'}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-400">Email</p>
-                  <p className="mt-1 text-lg text-white">{user?.email}</p>
-                </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-400">Bio</p>
-                  <p className="mt-1 text-lg text-white">{user?.bio || 'Not set'}</p>
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h3 className="text-lg font-medium text-gray-300">Quantum Statistics</h3>
-              <div className="grid grid-cols-3 gap-4 mt-2">
-                <div className="p-4 bg-gray-700 rounded-lg">
-                  <p className="text-sm font-medium text-gray-400">Coherence Level</p>
-                  <p className="mt-1 text-2xl font-bold text-blue-400">98%</p>
-                </div>
-                
-                <div className="p-4 bg-gray-700 rounded-lg">
-                  <p className="text-sm font-medium text-gray-400">Star Systems</p>
-                  <p className="mt-1 text-2xl font-bold text-green-400">5</p>
-                </div>
-                
-                <div className="p-4 bg-gray-700 rounded-lg">
-                  <p className="text-sm font-medium text-gray-400">Dimensional Shifts</p>
-                  <p className="mt-1 text-2xl font-bold text-purple-400">42</p>
-                </div>
-              </div>
-            </div>
-          </div>)}
-      </motion.div>
-    </div>);
+    return (_jsx("div", { className: "flex items-center justify-center w-full h-full bg-gray-900", children: _jsxs(motion.div, { className: "w-full max-w-2xl p-8 bg-gray-800 rounded-lg shadow-lg", initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5 }, children: [_jsxs("div", { className: "flex items-center justify-between mb-6", children: [_jsx("h2", { className: "text-3xl font-extrabold text-white", children: "Quantum Identity" }), _jsx("button", { onClick: handleEditToggle, className: "px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500", children: isEditing ? 'Cancel' : 'Edit Profile' })] }), error && (_jsx("div", { className: "p-3 mb-4 text-sm text-red-300 bg-red-900 rounded-md", children: error })), success && (_jsx("div", { className: "p-3 mb-4 text-sm text-green-300 bg-green-900 rounded-md", children: success })), isEditing ? (_jsx("form", { onSubmit: handleSubmit, children: _jsxs("div", { className: "space-y-4", children: [_jsxs("div", { children: [_jsx("label", { htmlFor: "name", className: "block text-sm font-medium text-gray-300", children: "Name" }), _jsx("input", { id: "name", name: "name", type: "text", value: name, onChange: (e) => setName(e.target.value), className: "block w-full px-3 py-2 mt-1 text-white placeholder-gray-500 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" })] }), _jsxs("div", { children: [_jsx("label", { htmlFor: "bio", className: "block text-sm font-medium text-gray-300", children: "Bio" }), _jsx("textarea", { id: "bio", name: "bio", rows: 4, value: bio, onChange: (e) => setBio(e.target.value), className: "block w-full px-3 py-2 mt-1 text-white placeholder-gray-500 bg-gray-700 border border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" })] }), _jsx("div", { children: _jsx("button", { type: "submit", disabled: isSaving, className: "flex justify-center w-full px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50", children: isSaving ? 'Saving...' : 'Save Changes' }) })] }) })) : (_jsxs("div", { className: "space-y-6", children: [_jsxs("div", { children: [_jsx("h3", { className: "text-lg font-medium text-gray-300", children: "Profile Information" }), _jsxs("div", { className: "mt-2 space-y-4", children: [_jsxs("div", { children: [_jsx("p", { className: "text-sm font-medium text-gray-400", children: "Name" }), _jsx("p", { className: "mt-1 text-lg text-white", children: user?.name || 'Not set' })] }), _jsxs("div", { children: [_jsx("p", { className: "text-sm font-medium text-gray-400", children: "Email" }), _jsx("p", { className: "mt-1 text-lg text-white", children: user?.email })] }), _jsxs("div", { children: [_jsx("p", { className: "text-sm font-medium text-gray-400", children: "Bio" }), _jsx("p", { className: "mt-1 text-lg text-white", children: user?.bio || 'Not set' })] })] })] }), _jsxs("div", { children: [_jsx("h3", { className: "text-lg font-medium text-gray-300", children: "Quantum Statistics" }), _jsxs("div", { className: "grid grid-cols-3 gap-4 mt-2", children: [_jsxs("div", { className: "p-4 bg-gray-700 rounded-lg", children: [_jsx("p", { className: "text-sm font-medium text-gray-400", children: "Coherence Level" }), _jsx("p", { className: "mt-1 text-2xl font-bold text-blue-400", children: "98%" })] }), _jsxs("div", { className: "p-4 bg-gray-700 rounded-lg", children: [_jsx("p", { className: "text-sm font-medium text-gray-400", children: "Star Systems" }), _jsx("p", { className: "mt-1 text-2xl font-bold text-green-400", children: "5" })] }), _jsxs("div", { className: "p-4 bg-gray-700 rounded-lg", children: [_jsx("p", { className: "text-sm font-medium text-gray-400", children: "Dimensional Shifts" }), _jsx("p", { className: "mt-1 text-2xl font-bold text-purple-400", children: "42" })] })] })] })] }))] }) }));
 };
 export default ProfileScreen;

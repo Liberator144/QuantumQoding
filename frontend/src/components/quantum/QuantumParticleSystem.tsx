@@ -1,3 +1,4 @@
+import { jsx as _jsx } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: QuantumParticleSystem.js
@@ -10,7 +11,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { VisualizationEngine } from '../../../visualization';
 import { QuantumParticleRenderer, QuantumEffectType } from '../../../visualization/charts/QuantumParticleRenderer';
 const QuantumParticleSystem = ({ effectType = QuantumEffectType.WAVE_PARTICLE_DUALITY, particleCount = 1000, particleSize = 2, particleColor = '#4fc3f7', waveAmplitude = 20, waveFrequency = 0.02, entanglementStrength = 0.8, tunnelingProbability = 0.3, width = 800, height = 600, enableAnimations = true, enableInteractions = true, theme = 'quantum', onClick, }) => {
@@ -87,11 +88,11 @@ const QuantumParticleSystem = ({ effectType = QuantumEffectType.WAVE_PARTICLE_DU
             return;
         rendererRef.current.resize(width, height);
     }, [width, height]);
-    return (<div ref={containerRef} style={{
+    return (_jsx("div", { ref: containerRef, style: {
             width: `${width}px`,
             height: `${height}px`,
             position: 'relative',
             overflow: 'hidden',
-        }} onClick={onClick}/>);
+        }, onClick: onClick }));
 };
 export default QuantumParticleSystem;

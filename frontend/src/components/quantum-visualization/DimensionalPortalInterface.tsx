@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: DimensionalPortalInterface.js
@@ -11,7 +12,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { colors } from '../../design-system';
 import { BoundaryState, BoundaryType } from '../../../backend/interdimensional/boundary/BoundaryManager';
@@ -227,21 +228,18 @@ const DimensionalPortalInterface = ({ currentDimension, availableDimensions, bou
             }
         }
     }, [currentDimension, availableDimensions, boundaries, width, height, showBoundaryDetails, animate, onDimensionSelect, onBoundarySelect]);
-    return (<div className={`dimensional-portal-interface ${className || ''}`} style={{ position: 'relative' }}>
-      <svg ref={svgRef}/>
-      <div ref={tooltipRef} style={{
-            position: 'absolute',
-            display: 'none',
-            backgroundColor: colors.background.card,
-            border: `1px solid ${colors.border.primary}`,
-            borderRadius: '4px',
-            padding: '8px',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            color: colors.text.primary,
-            fontSize: '12px',
-            maxWidth: '200px',
-        }}/>
-    </div>);
+    return (_jsxs("div", { className: `dimensional-portal-interface ${className || ''}`, style: { position: 'relative' }, children: [_jsx("svg", { ref: svgRef }), _jsx("div", { ref: tooltipRef, style: {
+                    position: 'absolute',
+                    display: 'none',
+                    backgroundColor: colors.background.card,
+                    border: `1px solid ${colors.border.primary}`,
+                    borderRadius: '4px',
+                    padding: '8px',
+                    pointerEvents: 'none',
+                    zIndex: 1000,
+                    color: colors.text.primary,
+                    fontSize: '12px',
+                    maxWidth: '200px',
+                } })] }));
 };
 export default DimensionalPortalInterface;

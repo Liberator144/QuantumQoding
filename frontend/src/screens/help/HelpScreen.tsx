@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: HelpScreen.js
@@ -11,7 +12,7 @@
  *
  * @version 1.0.0
  */
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
 /**
@@ -126,44 +127,8 @@ const HelpScreen = () => {
     const selectedTopicData = selectedTopic
         ? helpTopics.find(topic => topic.id === selectedTopic)
         : null;
-    return (<div className="flex w-full h-full bg-gray-900">
-      <motion.div className="w-full max-w-6xl p-8 mx-auto bg-gray-800 rounded-lg shadow-lg" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
-        <div className="mb-6">
-          <h2 className="text-3xl font-extrabold text-white">
-            Quantum Guidance
-          </h2>
-          <p className="mt-2 text-sm text-gray-400">
-            Help and documentation for navigating the quantum universe
-          </p>
-        </div>
-        
-        <div className="flex h-full">
-          {/* Topics sidebar */}
-          <div className="w-1/4 pr-4">
-            <h3 className="mb-4 text-lg font-medium text-gray-300">Topics</h3>
-            <ul className="space-y-2">
-              {helpTopics.map(topic => (<li key={topic.id}>
-                  <button onClick={() => handleTopicSelect(topic.id)} className={`w-full px-3 py-2 text-left rounded-md ${selectedTopic === topic.id
-                ? 'bg-blue-600 text-white'
-                : 'text-gray-300 hover:bg-gray-700'}`}>
-                    {topic.title}
-                  </button>
-                </li>))}
-            </ul>
-          </div>
-          
-          {/* Content area */}
-          <div className="w-3/4 pl-4 border-l border-gray-700">
-            {selectedTopicData ? (<div>
-                <h2 className="mb-4 text-2xl font-bold text-white">{selectedTopicData.title}</h2>
-                <div className="prose prose-invert max-w-none" dangerouslySetInnerHTML={{ __html: selectedTopicData.content }}/>
-              </div>) : (<div className="flex flex-col items-center justify-center h-full text-center">
-                <h3 className="text-xl font-medium text-gray-300">Select a topic to get started</h3>
-                <p className="mt-2 text-gray-400">Choose a topic from the sidebar to view help content</p>
-              </div>)}
-          </div>
-        </div>
-      </motion.div>
-    </div>);
+    return (_jsx("div", { className: "flex w-full h-full bg-gray-900", children: _jsxs(motion.div, { className: "w-full max-w-6xl p-8 mx-auto bg-gray-800 rounded-lg shadow-lg", initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { duration: 0.5 }, children: [_jsxs("div", { className: "mb-6", children: [_jsx("h2", { className: "text-3xl font-extrabold text-white", children: "Quantum Guidance" }), _jsx("p", { className: "mt-2 text-sm text-gray-400", children: "Help and documentation for navigating the quantum universe" })] }), _jsxs("div", { className: "flex h-full", children: [_jsxs("div", { className: "w-1/4 pr-4", children: [_jsx("h3", { className: "mb-4 text-lg font-medium text-gray-300", children: "Topics" }), _jsx("ul", { className: "space-y-2", children: helpTopics.map(topic => (_jsx("li", { children: _jsx("button", { onClick: () => handleTopicSelect(topic.id), className: `w-full px-3 py-2 text-left rounded-md ${selectedTopic === topic.id
+                                                ? 'bg-blue-600 text-white'
+                                                : 'text-gray-300 hover:bg-gray-700'}`, children: topic.title }) }, topic.id))) })] }), _jsx("div", { className: "w-3/4 pl-4 border-l border-gray-700", children: selectedTopicData ? (_jsxs("div", { children: [_jsx("h2", { className: "mb-4 text-2xl font-bold text-white", children: selectedTopicData.title }), _jsx("div", { className: "prose prose-invert max-w-none", dangerouslySetInnerHTML: { __html: selectedTopicData.content } })] })) : (_jsxs("div", { className: "flex flex-col items-center justify-center h-full text-center", children: [_jsx("h3", { className: "text-xl font-medium text-gray-300", children: "Select a topic to get started" }), _jsx("p", { className: "mt-2 text-gray-400", children: "Choose a topic from the sidebar to view help content" })] })) })] })] }) }));
 };
 export default HelpScreen;

@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: NeuralFabricVisualizer.js
@@ -11,7 +12,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { colors } from '../../design-system';
 import { NeuralNodeType, NeuralConnectionType } from '../../../backend/interdimensional/neural/NeuralFabricManager';
@@ -322,39 +323,28 @@ const NeuralFabricVisualizer = ({ fabric, width = 800, height = 600, showNodeDet
             }
         }
     }, [fabric, width, height, showNodeDetails, showConnectionDetails, showPathwayDetails, animate, enable3D, onNodeClick, onConnectionClick, onPathwayClick]);
-    return (<div className={`neural-fabric-visualizer ${className || ''}`} style={{ position: 'relative' }}>
-      <svg ref={svgRef}/>
-      <div ref={tooltipRef} style={{
-            position: 'absolute',
-            display: 'none',
-            backgroundColor: colors.background.card,
-            border: `1px solid ${colors.border.primary}`,
-            borderRadius: '4px',
-            padding: '8px',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            color: colors.text.primary,
-            fontSize: '12px',
-            maxWidth: '200px',
-        }}/>
-      {showNodeDetails && selectedNode && (<div className="node-details-panel" style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                backgroundColor: colors.background.card,
-                border: `1px solid ${colors.border.primary}`,
-                borderRadius: '4px',
-                padding: '12px',
-                width: '250px',
-                color: colors.text.primary,
-            }}>
-          <h3>Node Details</h3>
-          <p>ID: {selectedNode}</p>
-          <p>Name: {fabric.nodes.find(node => node.id === selectedNode)?.name}</p>
-          <p>Type: {fabric.nodes.find(node => node.id === selectedNode)?.type}</p>
-          <p>State: {fabric.nodes.find(node => node.id === selectedNode)?.state}</p>
-          <button onClick={() => setSelectedNode(null)}>Close</button>
-        </div>)}
-    </div>);
+    return (_jsxs("div", { className: `neural-fabric-visualizer ${className || ''}`, style: { position: 'relative' }, children: [_jsx("svg", { ref: svgRef }), _jsx("div", { ref: tooltipRef, style: {
+                    position: 'absolute',
+                    display: 'none',
+                    backgroundColor: colors.background.card,
+                    border: `1px solid ${colors.border.primary}`,
+                    borderRadius: '4px',
+                    padding: '8px',
+                    pointerEvents: 'none',
+                    zIndex: 1000,
+                    color: colors.text.primary,
+                    fontSize: '12px',
+                    maxWidth: '200px',
+                } }), showNodeDetails && selectedNode && (_jsxs("div", { className: "node-details-panel", style: {
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    backgroundColor: colors.background.card,
+                    border: `1px solid ${colors.border.primary}`,
+                    borderRadius: '4px',
+                    padding: '12px',
+                    width: '250px',
+                    color: colors.text.primary,
+                }, children: [_jsx("h3", { children: "Node Details" }), _jsxs("p", { children: ["ID: ", selectedNode] }), _jsxs("p", { children: ["Name: ", fabric.nodes.find(node => node.id === selectedNode)?.name] }), _jsxs("p", { children: ["Type: ", fabric.nodes.find(node => node.id === selectedNode)?.type] }), _jsxs("p", { children: ["State: ", fabric.nodes.find(node => node.id === selectedNode)?.state] }), _jsx("button", { onClick: () => setSelectedNode(null), children: "Close" })] }))] }));
 };
 export default NeuralFabricVisualizer;

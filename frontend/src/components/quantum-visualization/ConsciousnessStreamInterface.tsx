@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: ConsciousnessStreamInterface.js
@@ -11,7 +12,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { colors } from '../../design-system';
 /**
@@ -220,73 +221,51 @@ const ConsciousnessStreamInterface = ({ streamId, packets, width = 800, height =
             return colors.secondary.consciousness;
         }
     }, [streamId, packets, width, height, showPacketDetails, animate, showQuantumState, onPacketClick]);
-    return (<div className={`consciousness-stream-interface ${className || ''}`} style={{ position: 'relative' }}>
-      <svg ref={svgRef}/>
-      <div ref={tooltipRef} style={{
-            position: 'absolute',
-            display: 'none',
-            backgroundColor: colors.background.card,
-            border: `1px solid ${colors.border.primary}`,
-            borderRadius: '4px',
-            padding: '8px',
-            pointerEvents: 'none',
-            zIndex: 1000,
-            color: colors.text.primary,
-            fontSize: '12px',
-            maxWidth: '200px',
-        }}/>
-      {selectedPacket && (<div className="packet-details-panel" style={{
-                position: 'absolute',
-                top: 10,
-                right: 10,
-                backgroundColor: colors.background.card,
-                border: `1px solid ${colors.border.primary}`,
-                borderRadius: '4px',
-                padding: '12px',
-                width: '300px',
-                color: colors.text.primary,
-            }}>
-          <h3>Packet Details</h3>
-          <p>ID: {selectedPacket}</p>
-          <p>Time: {new Date(packets.find(p => p.header.packetId === selectedPacket)?.header.timestamp || 0).toLocaleString()}</p>
-          <p>Source: {packets.find(p => p.header.packetId === selectedPacket)?.header.sourceId}</p>
-          <p>Target: {packets.find(p => p.header.packetId === selectedPacket)?.header.targetId}</p>
-          <div>
-            <h4>Payload:</h4>
-            <pre style={{
-                maxHeight: '100px',
-                overflow: 'auto',
-                backgroundColor: colors.background.secondary,
-                padding: '8px',
-                borderRadius: '4px',
-                fontSize: '10px'
-            }}>
-              {JSON.stringify(packets.find(p => p.header.packetId === selectedPacket)?.payload.data, null, 2)}
-            </pre>
-          </div>
-          <button onClick={() => setSelectedPacket(null)}>Close</button>
-        </div>)}
-      {onPacketCreate && (<div className="create-packet-panel" style={{
-                position: 'absolute',
-                bottom: 10,
-                right: 10,
-            }}>
-          <button onClick={() => onPacketCreate({
-                header: {
-                    streamId,
-                    timestamp: Date.now(),
-                }
-            })} style={{
-                backgroundColor: colors.primary.stellar,
-                color: colors.text.primary,
-                border: 'none',
-                borderRadius: '4px',
-                padding: '8px 16px',
-                cursor: 'pointer',
-            }}>
-            Create Packet
-          </button>
-        </div>)}
-    </div>);
+    return (_jsxs("div", { className: `consciousness-stream-interface ${className || ''}`, style: { position: 'relative' }, children: [_jsx("svg", { ref: svgRef }), _jsx("div", { ref: tooltipRef, style: {
+                    position: 'absolute',
+                    display: 'none',
+                    backgroundColor: colors.background.card,
+                    border: `1px solid ${colors.border.primary}`,
+                    borderRadius: '4px',
+                    padding: '8px',
+                    pointerEvents: 'none',
+                    zIndex: 1000,
+                    color: colors.text.primary,
+                    fontSize: '12px',
+                    maxWidth: '200px',
+                } }), selectedPacket && (_jsxs("div", { className: "packet-details-panel", style: {
+                    position: 'absolute',
+                    top: 10,
+                    right: 10,
+                    backgroundColor: colors.background.card,
+                    border: `1px solid ${colors.border.primary}`,
+                    borderRadius: '4px',
+                    padding: '12px',
+                    width: '300px',
+                    color: colors.text.primary,
+                }, children: [_jsx("h3", { children: "Packet Details" }), _jsxs("p", { children: ["ID: ", selectedPacket] }), _jsxs("p", { children: ["Time: ", new Date(packets.find(p => p.header.packetId === selectedPacket)?.header.timestamp || 0).toLocaleString()] }), _jsxs("p", { children: ["Source: ", packets.find(p => p.header.packetId === selectedPacket)?.header.sourceId] }), _jsxs("p", { children: ["Target: ", packets.find(p => p.header.packetId === selectedPacket)?.header.targetId] }), _jsxs("div", { children: [_jsx("h4", { children: "Payload:" }), _jsx("pre", { style: {
+                                    maxHeight: '100px',
+                                    overflow: 'auto',
+                                    backgroundColor: colors.background.secondary,
+                                    padding: '8px',
+                                    borderRadius: '4px',
+                                    fontSize: '10px'
+                                }, children: JSON.stringify(packets.find(p => p.header.packetId === selectedPacket)?.payload.data, null, 2) })] }), _jsx("button", { onClick: () => setSelectedPacket(null), children: "Close" })] })), onPacketCreate && (_jsx("div", { className: "create-packet-panel", style: {
+                    position: 'absolute',
+                    bottom: 10,
+                    right: 10,
+                }, children: _jsx("button", { onClick: () => onPacketCreate({
+                        header: {
+                            streamId,
+                            timestamp: Date.now(),
+                        }
+                    }), style: {
+                        backgroundColor: colors.primary.stellar,
+                        color: colors.text.primary,
+                        border: 'none',
+                        borderRadius: '4px',
+                        padding: '8px 16px',
+                        cursor: 'pointer',
+                    }, children: "Create Packet" }) }))] }));
 };
 export default ConsciousnessStreamInterface;

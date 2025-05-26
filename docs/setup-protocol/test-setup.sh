@@ -57,7 +57,7 @@ required_functions=(
 )
 
 for func in "${required_functions[@]}"; do
-    if grep -q "${func}()" "$PROJECT_ROOT/setup.sh"; then
+    if grep -q "${func}()" "$PROJECT_ROOT/docs/setup-protocol/setup.sh"; then
         echo "✅ Function $func found"
     else
         echo "❌ Function $func missing"
@@ -76,7 +76,7 @@ quantum_features=(
 )
 
 for feature in "${quantum_features[@]}"; do
-    if grep -q "$feature" "$PROJECT_ROOT/setup.sh"; then
+    if grep -q "$feature" "$PROJECT_ROOT/docs/setup-protocol/setup.sh"; then
         echo "✅ Quantum feature $feature found"
     else
         echo "❌ Quantum feature $feature missing"

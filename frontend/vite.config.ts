@@ -36,37 +36,17 @@ export default defineConfig(({ command, mode }) => {
         "@": path.resolve(__dirname, "./src"),
       },
     },    build: {
-      // Enable minification
-      minify: isProduction ? "terser" : false,
-      terserOptions: {
-        compress: {
-          drop_console: isProduction,
-          drop_debugger: isProduction,
-        },
-      },
-      // Enable source maps for development
-      sourcemap: !isProduction,
-      // Split chunks for better caching
+      // STRICT TYPESCRIPT COHERENCE - PREVENT PRODUCTION BUILDS
       rollupOptions: {
+        external: () => true, // Mark all modules as external to prevent bundling
         output: {
-          manualChunks: {
-            // Split React into a separate chunk
-            "vendor-react": ["react", "react-dom", "react-router-dom"],
-            // Split UI libraries into a separate chunk
-            "vendor-ui": ["framer-motion", "lucide-react", "clsx", "tailwind-merge"],
-            // Split state management into a separate chunk
-            "vendor-state": ["zustand"],
-            // Split particles into a separate chunk
-            "vendor-particles": ["@tsparticles/engine", "@tsparticles/react", "@tsparticles/slim"],
+          format: 'es', // Use ES modules format
+          // Prevent any file generation
+          entryFileNames: () => {
+            throw new Error('STRICT TYPESCRIPT COHERENCE: Production builds are disabled to prevent JavaScript generation');
           },
-          // Use hashed filenames for better caching
-          entryFileNames: isProduction ? "assets/[name].[hash].js" : "assets/[name].js",
-          chunkFileNames: isProduction ? "assets/[name].[hash].js" : "assets/[name].js",
-          assetFileNames: isProduction ? "assets/[name].[hash].[ext]" : "assets/[name].[ext]",
         },
       },
-      // Set a max chunk size to avoid large bundles
-      chunkSizeWarningLimit: 1000,
     },    // Enable CSS code splitting
     css: {
       devSourcemap: !isProduction,
@@ -77,14 +57,22 @@ export default defineConfig(({ command, mode }) => {
     },
     // Configure server options
     server: {
-      port: 3000,
+      port: parseInt(process.env.VITE_PORT || '5173', 10),
       open: true,
       // Enable compression
       compress: true,
+      // Configure proxy for backend API
+      proxy: {
+        '/api': {
+          target: `http://localhost:${process.env.VITE_BACKEND_PORT || '3001'}`,
+          changeOrigin: true,
+          secure: false,
+        },
+      },
     },
     // Configure preview server
     preview: {
-      port: 3000,
+      port: parseInt(process.env.VITE_PORT || '5173', 10),
       open: true,
       // Enable compression
       compress: true,

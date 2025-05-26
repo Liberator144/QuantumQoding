@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: StardustCursor.js
@@ -30,34 +31,29 @@ export const StardustCursor = () => {
         window.addEventListener('mousemove', updateMousePosition);
         return () => window.removeEventListener('mousemove', updateMousePosition);
     }, []);
-    return <div className="pointer-events-none fixed inset-0 z-50">
-      {/* Cursor core */}
-      <motion.div className="fixed top-0 left-0 w-4 h-4 rounded-full mix-blend-screen" animate={{
-            x: mousePosition.x - 8,
-            y: mousePosition.y - 8
-        }} transition={{
-            duration: 0,
-            ease: 'linear'
-        }} style={{
-            background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)'
-        }}/>
-      {/* Particle trail */}
-      {particles.map((particle) => <motion.div key={particle.id} className="fixed w-2 h-2 rounded-full" initial={{
-                x: particle.x,
-                y: particle.y,
-                scale: 1,
-                opacity: 0.6
-            }} animate={{
-                x: particle.x + (Math.random() - 0.5) * 50,
-                y: particle.y + (Math.random() - 0.5) * 50,
-                scale: 0,
-                opacity: 0
-            }} transition={{
-                duration: 1,
-                ease: 'easeOut'
-            }} style={{
-                backgroundColor: particle.color,
-                filter: 'blur(2px)'
-            }}/>)}
-    </div>;
+    return _jsxs("div", { className: "pointer-events-none fixed inset-0 z-50", children: [_jsx(motion.div, { className: "fixed top-0 left-0 w-4 h-4 rounded-full mix-blend-screen", animate: {
+                    x: mousePosition.x - 8,
+                    y: mousePosition.y - 8
+                }, transition: {
+                    duration: 0,
+                    ease: 'linear'
+                }, style: {
+                    background: 'radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 100%)'
+                } }), particles.map((particle) => _jsx(motion.div, { className: "fixed w-2 h-2 rounded-full", initial: {
+                    x: particle.x,
+                    y: particle.y,
+                    scale: 1,
+                    opacity: 0.6
+                }, animate: {
+                    x: particle.x + (Math.random() - 0.5) * 50,
+                    y: particle.y + (Math.random() - 0.5) * 50,
+                    scale: 0,
+                    opacity: 0
+                }, transition: {
+                    duration: 1,
+                    ease: 'easeOut'
+                }, style: {
+                    backgroundColor: particle.color,
+                    filter: 'blur(2px)'
+                } }, particle.id))] });
 };

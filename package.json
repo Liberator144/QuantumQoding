@@ -10,7 +10,7 @@
     "lint:report": "node backend/tools/lint-report.js",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "build": "tsc",
+    "build": "echo 'STRICT TYPESCRIPT COHERENCE: Build disabled to prevent JavaScript generation' && tsc --noEmit",
     "dev": "cd frontend && npm run dev",
     "prepare": "husky install",
     "docs:enhance": "ts-node backend/tools/doc-enhancer/cli.ts",

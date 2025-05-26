@@ -12,6 +12,22 @@ dist
 dist-ssr
 *.local
 
+# STRICT TYPESCRIPT COHERENCE - NO JAVASCRIPT SOURCE FILES ALLOWED
+# Exclude JavaScript source files but allow build outputs
+src/**/*.js
+src/**/*.jsx
+backend/**/*.js
+backend/**/*.jsx
+frontend/src/**/*.js
+frontend/src/**/*.jsx
+frontend/visualization/**/*.js
+frontend/visualization/**/*.jsx
+# Allow essential config files only
+!*.config.js
+!*.config.mjs
+!vite.config.js
+!postcss.config.mjs
+
 # Ignore environment files
 backend/.env
 

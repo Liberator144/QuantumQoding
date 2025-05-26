@@ -12,6 +12,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { createServer } from 'http';
+import net from 'net';
 
 // Create Express app
 const app = express();
@@ -19,8 +20,23 @@ const app = express();
 // Create HTTP server
 const httpServer = createServer(app);
 
+// Port detection utility
+async function findAvailablePort(startPort: number): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.listen(startPort, () => {
+      const port = (server.address() as net.AddressInfo)?.port;
+      server.close(() => resolve(port));
+    });
+    server.on('error', () => {
+      // Port is in use, try next one
+      findAvailablePort(startPort + 1).then(resolve).catch(reject);
+    });
+  });
+}
+
 // Basic configuration
-const PORT = process.env.PORT || 3001;
+const DEFAULT_PORT = parseInt(process.env.BACKEND_PORT || process.env.PORT || '3001', 10);
 const CORS_ORIGINS = process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:5173'];
 
 // Apply middleware
@@ -97,6 +113,11 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 // Start server
 async function startServer() {
   try {
+    const PORT = await findAvailablePort(DEFAULT_PORT);
+    if (PORT !== DEFAULT_PORT) {
+      console.log(`⚠️  Port ${DEFAULT_PORT} was in use, using port ${PORT} instead`);
+    }
+    
     httpServer.listen(PORT, () => {
       console.log('🚀 QQ-Verse Backend Server running on port', PORT);
       console.log('🌐 Health check: http://localhost:' + PORT + '/api/health');

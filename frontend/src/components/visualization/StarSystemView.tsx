@@ -1,3 +1,4 @@
+import { jsx as _jsx } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: StarSystemView.js
@@ -10,7 +11,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { VisualizationEngine, StarSystemRenderer } from '../../../visualization';
 /**
  * Star System View Component
@@ -76,11 +77,11 @@ const StarSystemView = ({ system, width = 800, height = 600, showLabels = true, 
             return;
         rendererRef.current.resize(width, height);
     }, [width, height]);
-    return (<div ref={containerRef} style={{
+    return (_jsx("div", { ref: containerRef, style: {
             width: `${width}px`,
             height: `${height}px`,
             position: 'relative',
             overflow: 'hidden',
-        }}/>);
+        } }));
 };
 export default StarSystemView;

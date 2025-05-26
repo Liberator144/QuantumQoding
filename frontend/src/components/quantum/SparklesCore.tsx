@@ -1,3 +1,4 @@
+import { jsx as _jsx } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: SparklesCore.js
@@ -29,10 +30,9 @@ export const SparklesCore = (props) => {
             });
         }
     };
-    return <motion.div initial={{
+    return _jsx(motion.div, { initial: {
             opacity: 0
-        }} animate={controls} className={className}>
-      {init && <Particles id={id || generatedId} className="h-full w-full" particlesLoaded={particlesLoaded} options={{
+        }, animate: controls, className: className, children: init && _jsx(Particles, { id: id || generatedId, className: "h-full w-full", particlesLoaded: particlesLoaded, options: {
                 background: {
                     color: {
                         value: background || 'transparent'
@@ -78,6 +78,5 @@ export const SparklesCore = (props) => {
                         }
                     }
                 }
-            }}/>}
-    </motion.div>;
+            } }) });
 };

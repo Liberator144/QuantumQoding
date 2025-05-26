@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: VirtualRenderingDemo.js
@@ -10,7 +11,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { VirtualRenderer, BufferZoneManager, OcclusionCullingSystem, OcclusionCullingMethod, } from '../../../visualization/utils';
@@ -234,21 +235,11 @@ const VirtualRenderingDemo = ({ width = 800, height = 600, objectCount = 1000, e
         directionalLight.position.set(1, 1, 1);
         sceneRef.current.add(directionalLight);
     };
-    return (<div className="relative">
-      {/* Renderer container */}
-      <div ref={containerRef} style={{
-            width: `${width}px`,
-            height: `${height}px`,
-            position: 'relative',
-            overflow: 'hidden',
-        }}/>
-      
-      {/* Stats overlay */}
-      <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs">
-        <div>FPS: {fps}</div>
-        <div>Visible Objects: {visibleObjects}</div>
-        <div>Culled Objects: {culledObjects}</div>
-      </div>
-    </div>);
+    return (_jsxs("div", { className: "relative", children: [_jsx("div", { ref: containerRef, style: {
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                } }), _jsxs("div", { className: "absolute top-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs", children: [_jsxs("div", { children: ["FPS: ", fps] }), _jsxs("div", { children: ["Visible Objects: ", visibleObjects] }), _jsxs("div", { children: ["Culled Objects: ", culledObjects] })] })] }));
 };
 export default VirtualRenderingDemo;

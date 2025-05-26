@@ -1,9 +1,0 @@
-/**
- * Base Schema Interface
- *
- * Defines the common properties that all entities in the unified data model must have.
- * This ensures consistency across different data sources and enables seamless integration.
- *
- * @version 1.0.0
- */
-export {};

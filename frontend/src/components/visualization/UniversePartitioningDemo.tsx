@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: UniversePartitioningDemo.js
@@ -10,7 +11,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { UniversePartitioner, SectorType, } from '../../../visualization/utils';
@@ -171,36 +172,14 @@ const UniversePartitioningDemo = ({ width = 800, height = 600, sectorSize = 200,
                 return 'Unknown';
         }
     };
-    return (<div className="relative">
-      {/* Renderer container */}
-      <div ref={containerRef} style={{
-            width: `${width}px`,
-            height: `${height}px`,
-            position: 'relative',
-            overflow: 'hidden',
-        }}/>      
-      {/* Stats overlay */}
-      <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs">
-        <div>FPS: {fps}</div>
-        <div>Active Sectors: {activeSectors}</div>
-        <div>Total Sectors: {totalSectors}</div>
-        <div>
-          Current Sector: 
-          <span style={{
-            color: getSectorTypeColor(currentSectorType),
-            marginLeft: '4px',
-        }}>
-            {getSectorTypeName(currentSectorType)}
-          </span>
-        </div>
-      </div>
-      
-      {/* Instructions */}
-      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs">
-        <div>Use mouse to rotate camera</div>
-        <div>Use scroll wheel to zoom in/out</div>
-        <div>Move around to explore different sectors</div>
-      </div>
-    </div>);
+    return (_jsxs("div", { className: "relative", children: [_jsx("div", { ref: containerRef, style: {
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                } }), _jsxs("div", { className: "absolute top-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs", children: [_jsxs("div", { children: ["FPS: ", fps] }), _jsxs("div", { children: ["Active Sectors: ", activeSectors] }), _jsxs("div", { children: ["Total Sectors: ", totalSectors] }), _jsxs("div", { children: ["Current Sector:", _jsx("span", { style: {
+                                    color: getSectorTypeColor(currentSectorType),
+                                    marginLeft: '4px',
+                                }, children: getSectorTypeName(currentSectorType) })] })] }), _jsxs("div", { className: "absolute bottom-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs", children: [_jsx("div", { children: "Use mouse to rotate camera" }), _jsx("div", { children: "Use scroll wheel to zoom in/out" }), _jsx("div", { children: "Move around to explore different sectors" })] })] }));
 };
 export default UniversePartitioningDemo;

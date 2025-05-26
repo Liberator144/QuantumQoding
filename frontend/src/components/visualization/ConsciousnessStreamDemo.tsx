@@ -1,3 +1,4 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: ConsciousnessStreamDemo.js
@@ -10,7 +11,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 import { ConsciousnessStreamTester, ConsciousnessStreamMonitor, ConsciousnessEventType, } from '../../../visualization/utils';
@@ -383,48 +384,17 @@ const ConsciousnessStreamDemo = ({ width = 800, height = 600, enableAutomaticTes
             return '#ff0000'; // Red
         }
     };
-    return (<div className="relative">
-      {/* Renderer container */}
-      <div ref={containerRef} style={{
-            width: `${width}px`,
-            height: `${height}px`,
-            position: 'relative',
-            overflow: 'hidden',
-        }}/>
-      
-      {/* Stats overlay */}
-      <div className="absolute top-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs">
-        <div>FPS: {fps}</div>
-        <div>
-          Continuity Score: 
-          <span style={{
-            color: getContinuityScoreColor(continuityScore),
-            marginLeft: '4px',
-        }}>
-            {continuityScore.toFixed(2)}
-          </span>
-        </div>
-        <div>Test Results: {testResults.length}</div>
-        <div>Events:</div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {Object.entries(eventCounts).map(([type, count]) => (<div key={type} className="px-1 rounded" style={{
-                backgroundColor: getEventTypeColor(type),
-                color: '#000000',
-            }}>
-              {type.split('_').pop()}: {count}
-            </div>))}
-        </div>
-      </div>
-      
-      {/* Controls */}
-      <div className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs flex gap-2">
-        <button className="px-2 py-1 bg-blue-500 rounded" onClick={runTest}>
-          Run Test
-        </button>
-        <button className="px-2 py-1 bg-green-500 rounded" onClick={createCheckpoint}>
-          Create Checkpoint
-        </button>
-      </div>
-    </div>);
+    return (_jsxs("div", { className: "relative", children: [_jsx("div", { ref: containerRef, style: {
+                    width: `${width}px`,
+                    height: `${height}px`,
+                    position: 'relative',
+                    overflow: 'hidden',
+                } }), _jsxs("div", { className: "absolute top-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs", children: [_jsxs("div", { children: ["FPS: ", fps] }), _jsxs("div", { children: ["Continuity Score:", _jsx("span", { style: {
+                                    color: getContinuityScoreColor(continuityScore),
+                                    marginLeft: '4px',
+                                }, children: continuityScore.toFixed(2) })] }), _jsxs("div", { children: ["Test Results: ", testResults.length] }), _jsx("div", { children: "Events:" }), _jsx("div", { className: "flex flex-wrap gap-1 mt-1", children: Object.entries(eventCounts).map(([type, count]) => (_jsxs("div", { className: "px-1 rounded", style: {
+                                backgroundColor: getEventTypeColor(type),
+                                color: '#000000',
+                            }, children: [type.split('_').pop(), ": ", count] }, type))) })] }), _jsxs("div", { className: "absolute bottom-2 left-2 bg-black bg-opacity-50 text-white p-2 rounded text-xs flex gap-2", children: [_jsx("button", { className: "px-2 py-1 bg-blue-500 rounded", onClick: runTest, children: "Run Test" }), _jsx("button", { className: "px-2 py-1 bg-green-500 rounded", onClick: createCheckpoint, children: "Create Checkpoint" })] })] }));
 };
 export default ConsciousnessStreamDemo;

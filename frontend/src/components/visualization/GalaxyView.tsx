@@ -1,3 +1,4 @@
+import { jsx as _jsx } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: GalaxyView.js
@@ -10,7 +11,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { VisualizationEngine, GalaxyRenderer } from '../../../visualization';
 const GalaxyView = ({ galaxy, width = 800, height = 600, showLabels = true, showConnections = true, showStarSystems = true, showNebulae = true, showBlackHoles = true, showGravitationalLensing = false, enableAnimations = true, enableInteractions = true, theme = 'quantum', onObjectClick, onObjectHover, }) => {
     // Refs
@@ -92,11 +93,11 @@ const GalaxyView = ({ galaxy, width = 800, height = 600, showLabels = true, show
             return;
         rendererRef.current.resize(width, height);
     }, [width, height]);
-    return (<div ref={containerRef} style={{
+    return (_jsx("div", { ref: containerRef, style: {
             width: `${width}px`,
             height: `${height}px`,
             position: 'relative',
             overflow: 'hidden',
-        }}/>);
+        } }));
 };
 export default GalaxyView;

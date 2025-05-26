@@ -1,3 +1,4 @@
+import { jsx as _jsx } from "react/jsx-runtime";
 /**
  * TypeScript Migration
  * Migrated from: PlanetarySystemView.js
@@ -10,7 +11,7 @@
  *
  * @version 1.0.0
  */
-import React, { useEffect, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { VisualizationEngine } from '../../../visualization';
 import { PlanetarySystemRenderer } from '../../../visualization/charts/PlanetarySystemRenderer';
 const PlanetarySystemView = ({ system, width = 800, height = 600, showLabels = true, showOrbits = true, showFeatures = true, showPlanetDetails = true, enableAnimations = true, enableInteractions = true, enablePhysics = true, theme = 'quantum', onPlanetClick, onPlanetHover, onFeatureClick, onFeatureHover, }) => {
@@ -116,11 +117,11 @@ const PlanetarySystemView = ({ system, width = 800, height = 600, showLabels = t
             return;
         rendererRef.current.resize(width, height);
     }, [width, height]);
-    return (<div ref={containerRef} style={{
+    return (_jsx("div", { ref: containerRef, style: {
             width: `${width}px`,
             height: `${height}px`,
             position: 'relative',
             overflow: 'hidden',
-        }}/>);
+        } }));
 };
 export default PlanetarySystemView;

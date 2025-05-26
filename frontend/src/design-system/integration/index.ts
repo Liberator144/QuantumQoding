@@ -1,12 +1,11 @@
 /**
  * Design System Integration Module
- * 
+ *
  * This module exports components for integrating the design system
  * into the QQ-Verse project.
- * 
+ *
  * @version 1.0.0
  */
-
 export { DesignSystemProvider, useDesignSystem } from './DesignSystemProvider';
 export { default as ThemeToggle } from './ThemeToggle';
 export { default as QuantumButton } from './QuantumButton';

@@ -1,8 +1,0 @@
-/**
- * Neural Types
- *
- * This module provides type definitions for neural fabric management.
- *
- * @version 1.0.0
- */
-export {};

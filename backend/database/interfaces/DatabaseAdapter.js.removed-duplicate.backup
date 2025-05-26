@@ -1,9 +1,0 @@
-/**
- * Database Adapter Interface
- *
- * Defines the interface that all database adapters must implement.
- * This ensures consistency across different data sources and enables seamless integration.
- *
- * @version 1.0.0
- */
-export {};

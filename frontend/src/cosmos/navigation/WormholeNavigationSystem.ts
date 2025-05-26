@@ -1,0 +1,277 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+/**
+ * TypeScript Migration
+ * Migrated from: WormholeNavigationSystem.js
+ * @version 2.0.0
+ */
+/**
+ * Wormhole Navigation System
+ *
+ * This component manages transitions between different visualization levels
+ * using wormhole-like animations and effects.
+ *
+ * @version 1.0.0
+ */
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { WormholeTransition } from '../transitions/WormholeTransition';
+import { UITransition } from '../transitions/UITransition';
+import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
+/**
+ * Visualization level
+ */
+export var VisualizationLevel;
+(function (VisualizationLevel) {
+    /** Universe level */
+    VisualizationLevel["UNIVERSE"] = "universe";
+    /** Galaxy level */
+    VisualizationLevel["GALAXY"] = "galaxy";
+    /** Star system level */
+    VisualizationLevel["STAR_SYSTEM"] = "star_system";
+    /** Planetary system level */
+    VisualizationLevel["PLANETARY_SYSTEM"] = "planetary_system";
+    /** Planet level */
+    VisualizationLevel["PLANET"] = "planet";
+})(VisualizationLevel || (VisualizationLevel = {}));
+const WormholeNavigationSystem = ({ currentLevel, currentEntityId, currentEntityName, currentEntityColor = '#4fc3f7', children, showControls = true, showPath = true, showHistory = true, maxHistoryItems = 10, onNavigationChange, data, }) => {
+    // Audio hooks
+    const audio = useAudio();
+    // State
+    const [transitionState, setTransitionState] = useState('none');
+    const [transitionProgress, setTransitionProgress] = useState(0);
+    const [navigationHistory, setNavigationHistory] = useState([]);
+    const [targetLevel, setTargetLevel] = useState(null);
+    const [targetEntityId, setTargetEntityId] = useState(null);
+    const [targetEntityName, setTargetEntityName] = useState(null);
+    const [targetEntityColor, setTargetEntityColor] = useState(null);
+    const [targetData, setTargetData] = useState(null);
+    const [isNavigating, setIsNavigating] = useState(false);
+    const [showNavigationUI, setShowNavigationUI] = useState(false);
+    // Refs
+    const previousLevelRef = useRef(null);
+    const previousEntityIdRef = useRef(null);
+    // Add current location to history on mount
+    useEffect(() => {
+        if (navigationHistory.length === 0) {
+            setNavigationHistory([
+                {
+                    level: currentLevel,
+                    entityId: currentEntityId,
+                    entityName: currentEntityName,
+                    entityColor: currentEntityColor,
+                    timestamp: Date.now(),
+                    data,
+                },
+            ]);
+        }
+    }, []);
+    // Update history when location changes without transition
+    useEffect(() => {
+        if (!isNavigating &&
+            (previousLevelRef.current !== currentLevel || previousEntityIdRef.current !== currentEntityId)) {
+            // Add to history
+            addToHistory(currentLevel, currentEntityId, currentEntityName, currentEntityColor, data);
+            // Update refs
+            previousLevelRef.current = currentLevel;
+            previousEntityIdRef.current = currentEntityId;
+        }
+    }, [currentLevel, currentEntityId, currentEntityName, currentEntityColor, isNavigating, data]);
+    /**
+     * Add to navigation history
+     */
+    const addToHistory = useCallback((level, entityId, entityName, entityColor, customData) => {
+        setNavigationHistory((prevHistory) => {
+            // Create new history item
+            const newItem = {
+                level,
+                entityId,
+                entityName,
+                entityColor,
+                timestamp: Date.now(),
+                data: customData,
+            };
+            // Check if this is the same as the last item
+            const lastItem = prevHistory[prevHistory.length - 1];
+            if (lastItem && lastItem.level === level && lastItem.entityId === entityId) {
+                return prevHistory;
+            }
+            // Add to history and limit size
+            const newHistory = [...prevHistory, newItem];
+            if (newHistory.length > maxHistoryItems) {
+                return newHistory.slice(newHistory.length - maxHistoryItems);
+            }
+            return newHistory;
+        });
+    }, [maxHistoryItems]);
+    /**
+     * Navigate to a specific level and entity
+     */
+    const navigateTo = useCallback((level, entityId, entityName, entityColor, customData) => {
+        // Don't navigate if already navigating
+        if (isNavigating)
+            return;
+        // Don't navigate if already at the target
+        if (level === currentLevel && entityId === currentEntityId)
+            return;
+        // Set target
+        setTargetLevel(level);
+        setTargetEntityId(entityId);
+        setTargetEntityName(entityName);
+        setTargetEntityColor(entityColor || '#4fc3f7');
+        setTargetData(customData);
+        // Start transition
+        setIsNavigating(true);
+        setTransitionState('exiting');
+        // Play sound
+        audio.play('navigation-start', { volume: 0.5 });
+    }, [isNavigating, currentLevel, currentEntityId, audio]);
+    /**
+     * Navigate back in history
+     */
+    const navigateBack = useCallback(() => {
+        // Don't navigate if already navigating
+        if (isNavigating)
+            return;
+        // Don't navigate if history is empty
+        if (navigationHistory.length <= 1)
+            return;
+        // Get previous item
+        const previousItem = navigationHistory[navigationHistory.length - 2];
+        // Navigate to previous item
+        navigateTo(previousItem.level, previousItem.entityId, previousItem.entityName, previousItem.entityColor, previousItem.data);
+        // Remove current item from history
+        setNavigationHistory((prevHistory) => prevHistory.slice(0, prevHistory.length - 1));
+        // Play sound
+        audio.play('navigation-back', { volume: 0.5 });
+    }, [isNavigating, navigationHistory, navigateTo, audio]);
+    /**
+     * Handle transition progress
+     */
+    const handleTransitionProgress = useCallback((progress) => {
+        setTransitionProgress(progress);
+        // Show navigation UI when transition is halfway complete
+        if (progress > 0.5 && transitionState === 'exiting' && !showNavigationUI) {
+            setShowNavigationUI(true);
+        }
+        else if (progress > 0.5 && transitionState === 'entering' && showNavigationUI) {
+            setShowNavigationUI(false);
+        }
+    }, [transitionState, showNavigationUI]);
+    /**
+     * Handle transition complete
+     */
+    const handleTransitionComplete = useCallback(() => {
+        if (transitionState === 'exiting') {
+            // Switch to entering state
+            setTransitionState('entering');
+            // Notify parent of navigation change
+            if (onNavigationChange && targetLevel && targetEntityId) {
+                onNavigationChange(targetLevel, targetEntityId, targetData);
+            }
+            // Add to history
+            if (targetLevel && targetEntityId && targetEntityName) {
+                addToHistory(targetLevel, targetEntityId, targetEntityName, targetEntityColor || undefined, targetData);
+            }
+            // Update refs
+            previousLevelRef.current = targetLevel;
+            previousEntityIdRef.current = targetEntityId;
+        }
+        else if (transitionState === 'entering') {
+            // Reset transition state
+            setTransitionState('none');
+            setIsNavigating(false);
+            setShowNavigationUI(false);
+            // Clear targets
+            setTargetLevel(null);
+            setTargetEntityId(null);
+            setTargetEntityName(null);
+            setTargetEntityColor(null);
+            setTargetData(null);
+            // Play sound
+            audio.play('navigation-complete', { volume: 0.5 });
+        }
+    }, [
+        transitionState,
+        onNavigationChange,
+        targetLevel,
+        targetEntityId,
+        targetEntityName,
+        targetEntityColor,
+        targetData,
+        addToHistory,
+        audio,
+    ]);
+    /**
+     * Get level name
+     */
+    const getLevelName = useCallback((level) => {
+        switch (level) {
+            case VisualizationLevel.UNIVERSE:
+                return 'Universe';
+            case VisualizationLevel.GALAXY:
+                return 'Galaxy';
+            case VisualizationLevel.STAR_SYSTEM:
+                return 'Star System';
+            case VisualizationLevel.PLANETARY_SYSTEM:
+                return 'Planetary System';
+            case VisualizationLevel.PLANET:
+                return 'Planet';
+            default:
+                return 'Unknown';
+        }
+    }, []);
+    /**
+     * Get level color
+     */
+    const getLevelColor = useCallback((level) => {
+        switch (level) {
+            case VisualizationLevel.UNIVERSE:
+                return '#9c27b0'; // Purple
+            case VisualizationLevel.GALAXY:
+                return '#673ab7'; // Deep Purple
+            case VisualizationLevel.STAR_SYSTEM:
+                return '#3f51b5'; // Indigo
+            case VisualizationLevel.PLANETARY_SYSTEM:
+                return '#2196f3'; // Blue
+            case VisualizationLevel.PLANET:
+                return '#03a9f4'; // Light Blue
+            default:
+                return '#4fc3f7';
+        }
+    }, []);
+    /**
+     * Render navigation controls
+     */
+    const renderNavigationControls = () => {
+        if (!showControls)
+            return null;
+        return (_jsx("div", { className: "absolute bottom-4 left-4 z-50", children: _jsxs(UITransition, { show: !isNavigating || showNavigationUI, preset: "glide", direction: "left", className: "flex items-center space-x-2", children: [_jsx("button", { className: "p-2 rounded-full bg-black bg-opacity-50 backdrop-blur-sm text-white hover:bg-opacity-70 transition-colors", onClick: navigateBack, disabled: navigationHistory.length <= 1 || isNavigating, title: "Navigate Back", children: _jsx("svg", { xmlns: "http://www.w3.org/2000/svg", className: "h-5 w-5", viewBox: "0 0 20 20", fill: "currentColor", children: _jsx("path", { fillRule: "evenodd", d: "M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z", clipRule: "evenodd" }) }) }), _jsxs("div", { className: "px-3 py-1.5 rounded-lg bg-black bg-opacity-50 backdrop-blur-sm text-white", children: [_jsx("div", { className: "text-xs opacity-70", children: getLevelName(currentLevel) }), _jsx("div", { className: "text-sm font-medium", children: currentEntityName })] })] }) }));
+    };
+    /**
+     * Render path visualization
+     */
+    const renderPathVisualization = () => {
+        if (!showPath || navigationHistory.length <= 1)
+            return null;
+        return (_jsx("div", { className: "absolute top-4 left-1/2 transform -translate-x-1/2 z-50", children: _jsxs(UITransition, { show: !isNavigating || showNavigationUI, preset: "glide", direction: "down", className: "px-4 py-2 rounded-lg bg-black bg-opacity-50 backdrop-blur-sm text-white", children: ["          ", _jsx("div", { className: "flex items-center space-x-2", children: navigationHistory.map((item, index) => (_jsxs(React.Fragment, { children: [_jsxs("div", { className: "flex items-center cursor-pointer hover:opacity-80 transition-opacity", onClick: () => {
+                                        if (index < navigationHistory.length - 1) {
+                                            navigateTo(item.level, item.entityId, item.entityName, item.entityColor, item.data);
+                                        }
+                                    }, children: [_jsx("div", { className: "w-3 h-3 rounded-full mr-1", style: { backgroundColor: item.entityColor || getLevelColor(item.level) } }), _jsx("div", { className: `text-xs ${index === navigationHistory.length - 1 ? 'font-medium' : ''}`, children: item.entityName })] }), index < navigationHistory.length - 1 && (_jsx("div", { className: "text-white opacity-50", children: "\u2192" }))] }, `${item.level}-${item.entityId}-${item.timestamp}`))) })] }) }));
+    };
+    /**
+     * Render history
+     */
+    const renderHistory = () => {
+        if (!showHistory)
+            return null;
+        return (_jsx("div", { className: "absolute top-4 right-4 z-50", children: _jsxs(UITransition, { show: !isNavigating || showNavigationUI, preset: "glide", direction: "right", className: "p-2 rounded-lg bg-black bg-opacity-50 backdrop-blur-sm text-white", children: [_jsx("div", { className: "text-xs font-medium mb-1", children: "Navigation History" }), _jsx("div", { className: "space-y-1 max-h-40 overflow-y-auto", children: navigationHistory.map((item, index) => (_jsxs("div", { className: "flex items-center text-xs cursor-pointer hover:bg-white hover:bg-opacity-10 rounded px-1 py-0.5 transition-colors", onClick: () => {
+                                if (index < navigationHistory.length - 1) {
+                                    navigateTo(item.level, item.entityId, item.entityName, item.entityColor, item.data);
+                                }
+                            }, children: ["                ", _jsx("div", { className: "w-2 h-2 rounded-full mr-1 flex-shrink-0", style: { backgroundColor: item.entityColor || getLevelColor(item.level) } }), _jsxs("div", { className: "flex flex-col", children: [_jsx("div", { className: "opacity-70", children: getLevelName(item.level) }), _jsx("div", { className: index === navigationHistory.length - 1 ? 'font-medium' : '', children: item.entityName })] })] }, `history-${item.level}-${item.entityId}-${item.timestamp}`))) })] }) }));
+    };
+    return (_jsxs("div", { className: "relative w-full h-full", children: [_jsx("div", { className: "w-full h-full", children: children }), _jsx(WormholeTransition, { transitionState: transitionState, selectedColor: transitionState === 'exiting'
+                    ? currentEntityColor
+                    : targetEntityColor || currentEntityColor, showUITransitions: true, cameraMode: "quantum", transitionDuration: 1.5, useShake: true, onTransitionProgress: handleTransitionProgress, onTransitionComplete: handleTransitionComplete }), renderNavigationControls(), renderPathVisualization(), renderHistory()] }));
+};
+export default WormholeNavigationSystem;
