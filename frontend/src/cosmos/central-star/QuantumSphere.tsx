@@ -6,8 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SparklesCore } from '../../components/quantum/SparklesCore';
-import { QuantumPortalCore } from '../../core/authentication/QuantumPortalCore';
-import Star from './Star';
+import { EnhancedQuantumPortalCore } from '../../core/authentication/EnhancedQuantumPortalCore';
+import { EnhancedStar } from './EnhancedStar';
 import StarSystemView from '../../cosmos/orbits/StarSystemView';
 import { useTransitionControls } from '../../utils/CoherenceHelpers/useTransitionControls';
 import { useAudio } from '../../utils/CoherenceHelpers/useAudio';
@@ -174,6 +174,7 @@ const orbitNodes = [
 const QuantumSphere = () => {
     const [scale, setScale] = useState(1);
     const [hoveredStar, setHoveredStar] = useState(null);
+    const [hoveredStarInfo, setHoveredStarInfo] = useState(null);
     const [currentView, setCurrentView] = useState('hub');
     const [selectedStar, setSelectedStar] = useState(null);
     // Audio system
@@ -225,6 +226,11 @@ const QuantumSphere = () => {
             audio.play('hover', { volume: 0.3 });
         }
         setHoveredStar(name);
+    };
+
+    // Handle info panel hover separately
+    const handleInfoHover = (name) => {
+        setHoveredStarInfo(name);
     };
     return (<div className="relative w-full h-[100vh] overflow-hidden bg-[#050714]">
       <div className="absolute inset-0">
@@ -584,9 +590,13 @@ const QuantumSphere = () => {
               </div>
               {/* Quantum Portal Core */}
               <div className="absolute inset-0 flex items-center justify-center">
-                <QuantumPortalCore isLoggedIn={false} userName="" onLogin={(username, password) => {
-                console.log('Login attempt:', username, password);
-            }}/>
+                <EnhancedQuantumPortalCore 
+                    isLoggedIn={false} 
+                    userName="" 
+                    onLogin={(username, password) => {
+                        console.log('Login attempt:', username, password);
+                    }}
+                />
               </div>
               {/* Outer glow corona */}
               <div className="absolute inset-[-25%] rounded-full">
@@ -598,8 +608,18 @@ const QuantumSphere = () => {
             </div>
           </div>
           
-          {/* Stars */}
-          {orbitNodes.map((node) => (<Star key={`star-${node.name}`} node={node} isHovered={hoveredStar === node.name} onHover={handleStarHover} onNavigate={navigateToStarSystem}/>))}
+          {/* Enhanced Stars with Separated Hover Effects */}
+          {orbitNodes.map((node) => (
+            <EnhancedStar 
+              key={`star-${node.name}`} 
+              node={node} 
+              isStarHovered={hoveredStar === node.name}
+              isInfoHovered={hoveredStarInfo === node.name}
+              onStarHover={handleStarHover}
+              onInfoHover={handleInfoHover}
+              onNavigate={navigateToStarSystem}
+            />
+          ))}
         </motion.div>)}
       
       {/* Star System View */}

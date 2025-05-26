@@ -9,8 +9,8 @@
 import React, { Suspense, lazy, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { routes } from './routes';
-import { RouteTransition } from './RouteTransition';
-import { PrivateRoute } from './PrivateRoute';
+import { RouteTransition } from './RouteTransition.tsx';
+import { PrivateRoute } from './PrivateRoute.tsx';
 
 // Lazy load screens
 const HubScreen = lazy(() => import('../screens/hub/HubScreen'));

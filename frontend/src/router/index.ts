@@ -8,10 +8,10 @@
  * @version 1.0.0
  */
 // Export main router components
-export { QuantumRouter } from './QuantumRouter';
-export { RouteTransition } from './RouteTransition';
-export { PrivateRoute } from './PrivateRoute';
-export { StarSystemRoute } from './StarSystemRoute';
+export { QuantumRouter } from './QuantumRouter.tsx';
+export { RouteTransition } from './RouteTransition.tsx';
+export { PrivateRoute } from './PrivateRoute.tsx';
+export { StarSystemRoute } from './StarSystemRoute.tsx';
 // Export route definitions
 export { routes } from './routes';
 // Export hooks

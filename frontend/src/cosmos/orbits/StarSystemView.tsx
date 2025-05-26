@@ -6,7 +6,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  */
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import FeaturePlanet from '../planets/FeaturePlanet';
+import FeaturePlanet from '../planets/FeaturePlanet.tsx';
 import { SparklesCore } from '../../components/quantum/SparklesCore';
 export const StarSystemView = ({ star, onReturnToHub }) => {
     const [hoveredPlanet, setHoveredPlanet] = useState(null);

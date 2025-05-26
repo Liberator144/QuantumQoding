@@ -9,7 +9,7 @@
  * - transitions: Components that handle transitions between cosmic views
  */
 // Central Star components
-export { default as QuantumSphere } from './central-star/QuantumSphere';
+export { default as QuantumSphere } from './central-star/QuantumSphere.tsx';
 export { StarBackground } from './central-star/StarBackground';
 // This structure allows for clean imports like:
 // import { QuantumSphere, StarBackground } from './cosmos';
