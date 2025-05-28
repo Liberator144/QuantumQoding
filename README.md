@@ -108,20 +108,21 @@ Core logic is separated from UI components:
 
 ## Getting Started
 
-1. Install dependencies:
-   ```
-   npm install
-   ```
+### ⚡ Quick Setup (5 minutes)
+```bash
+git clone https://github.com/your-org/QuantumQoding.git
+cd QuantumQoding
+npm run setup
+npm run dev
+```
 
-2. Start the development server:
-   ```
-   npm run dev
-   ```
+**Access Points**: Frontend (http://localhost:5173) | Backend (http://localhost:3001)
 
-3. Build for production:
-   ```
-   npm run build
-   ```
+### 📚 Complete Setup & Learning
+- **[Quick Start Guide](./docs/quick-start/setup.md)** - 5-minute setup
+- **[Master Setup Guide](./docs/guides/setup-master.md)** - Complete installation guide
+- **[First Tutorial](./docs/tutorials/01-first-quantum-experience.md)** - Hands-on learning
+- **[Documentation Hub](./docs/README.md)** - All documentation
 
 ## Documentation
 
