@@ -1,20 +1,20 @@
 /**
  * 🚀 QUANTUM UI TEST SUITE - REVOLUTIONARY 200 IQ TESTING SYSTEM 🚀
- * 
+ *
  * The most advanced UI/UX testing system ever created for quantum applications.
  * This component tests EVERY aspect of the user interface with unprecedented precision.
- * 
+ *
  * @version 1.0.0 - BREAKTHROUGH EDITION
  */
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Monitor, 
-  Zap, 
-  Eye, 
-  MousePointer, 
-  Smartphone, 
-  Tablet, 
+import {
+  Monitor,
+  Zap,
+  Eye,
+  MousePointer,
+  Smartphone,
+  Tablet,
   Laptop,
   CheckCircle,
   XCircle,
@@ -27,7 +27,7 @@ import {
 // Import all components for testing
 import { Header } from '../layout/Header';
 import { StardustCursor } from '../quantum/StardustCursor';
-import { QuantumSphere } from '../../cosmos/central-star/QuantumSphere';
+import QuantumSphere from '../../cosmos/central-star/QuantumSphere';
 import { StarBackground } from '../../cosmos/central-star/StarBackground';
 
 interface UITestResult {
@@ -61,7 +61,7 @@ const QuantumUITestSuite: React.FC = () => {
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
   const [deviceSimulation, setDeviceSimulation] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [realTimeMonitoring, setRealTimeMonitoring] = useState(false);
-  
+
   const testContainerRef = useRef<HTMLDivElement>(null);
   const performanceObserverRef = useRef<PerformanceObserver | null>(null);
 
@@ -160,7 +160,7 @@ const QuantumUITestSuite: React.FC = () => {
             }
           });
         });
-        
+
         observer.observe({ entryTypes: ['measure', 'navigation', 'paint'] });
         performanceObserverRef.current = observer;
 
@@ -246,22 +246,22 @@ const QuantumUITestSuite: React.FC = () => {
     switch (testName) {
       case 'Header Component Render':
         return testComponentRender('Header', () => <Header />);
-      
+
       case 'StardustCursor Animation':
         return testComponentRender('StardustCursor', () => <StardustCursor />);
-      
+
       case 'QuantumSphere 3D Render':
         return testComponentRender('QuantumSphere', () => <QuantumSphere />);
-      
+
       case 'StarBackground Performance':
         return testComponentRender('StarBackground', () => <StarBackground />);
-      
+
       case 'Quantum Visualization Components':
         return testQuantumVisualizationComponents();
-      
+
       case 'Layout Responsiveness':
         return testLayoutResponsiveness();
-      
+
       default:
         return {
           category: 'Component Rendering',
@@ -276,7 +276,7 @@ const QuantumUITestSuite: React.FC = () => {
   const testComponentRender = async (componentName: string, ComponentFactory: () => JSX.Element): Promise<UITestResult> => {
     try {
       const renderStart = performance.now();
-      
+
       // Create test container
       const testDiv = document.createElement('div');
       testDiv.style.position = 'absolute';
@@ -287,20 +287,20 @@ const QuantumUITestSuite: React.FC = () => {
       // Render component
       const { createRoot } = await import('react-dom/client');
       const root = createRoot(testDiv);
-      
+
       await new Promise<void>((resolve, reject) => {
         try {
           root.render(<ComponentFactory />);
           setTimeout(() => {
             const renderTime = performance.now() - renderStart;
-            
+
             // Check if component rendered successfully
             const hasContent = testDiv.children.length > 0;
-            
+
             // Cleanup
             root.unmount();
             document.body.removeChild(testDiv);
-            
+
             if (hasContent) {
               resolve();
             } else {
@@ -338,7 +338,7 @@ const QuantumUITestSuite: React.FC = () => {
   const runInteractionTest = async (testName: string): Promise<UITestResult> => {
     // Simulate interaction tests
     await new Promise(resolve => setTimeout(resolve, 200));
-    
+
     return {
       category: 'Interactive Features',
       testName,
@@ -354,7 +354,7 @@ const QuantumUITestSuite: React.FC = () => {
   const runAnimationTest = async (testName: string): Promise<UITestResult> => {
     // Simulate animation tests
     await new Promise(resolve => setTimeout(resolve, 300));
-    
+
     return {
       category: 'Animation & Effects',
       testName,
@@ -369,12 +369,12 @@ const QuantumUITestSuite: React.FC = () => {
   // 🚀 PERFORMANCE TEST IMPLEMENTATIONS
   const runPerformanceTest = async (testName: string): Promise<UITestResult> => {
     const startTime = performance.now();
-    
+
     // Simulate performance tests
     await new Promise(resolve => setTimeout(resolve, 150));
-    
+
     const duration = performance.now() - startTime;
-    
+
     return {
       category: 'Performance',
       testName,
@@ -390,7 +390,7 @@ const QuantumUITestSuite: React.FC = () => {
   const runAccessibilityTest = async (testName: string): Promise<UITestResult> => {
     // Simulate accessibility tests
     await new Promise(resolve => setTimeout(resolve, 100));
-    
+
     return {
       category: 'Accessibility',
       testName,
@@ -403,7 +403,7 @@ const QuantumUITestSuite: React.FC = () => {
   const runResponsivenessTest = async (testName: string): Promise<UITestResult> => {
     // Simulate responsiveness tests
     await new Promise(resolve => setTimeout(resolve, 250));
-    
+
     return {
       category: 'Responsiveness',
       testName,
@@ -418,7 +418,7 @@ const QuantumUITestSuite: React.FC = () => {
       // Test if quantum visualization components can be imported
       const components = [
         'ConsciousnessStreamInterface',
-        'DimensionalPortalInterface', 
+        'DimensionalPortalInterface',
         'NeuralFabricVisualizer',
         'QuantumStateVisualizer'
       ];
@@ -502,7 +502,7 @@ const QuantumUITestSuite: React.FC = () => {
           status: 'pending',
           message: 'Running...'
         };
-        
+
         setTests(prev => [...prev, pendingTest]);
 
         // Run test
@@ -510,8 +510,8 @@ const QuantumUITestSuite: React.FC = () => {
         allTests.push(result);
 
         // Update test result
-        setTests(prev => 
-          prev.map(test => 
+        setTests(prev =>
+          prev.map(test =>
             test.category === category.name && test.testName === testName ? result : test
           )
         );
@@ -704,7 +704,7 @@ const QuantumUITestSuite: React.FC = () => {
                     ({categoryStats.completed}/{categoryStats.total} tests)
                   </span>
                 </div>
-                
+
                 {categoryStats.completed > 0 && (
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-green-400">✓ {categoryStats.success}</span>
@@ -717,7 +717,7 @@ const QuantumUITestSuite: React.FC = () => {
               <div className="grid gap-3">
                 {category.tests.map((testName) => {
                   const testResult = categoryTests.find(t => t.testName === testName);
-                  
+
                   return (
                     <div
                       key={testName}
@@ -729,7 +729,7 @@ const QuantumUITestSuite: React.FC = () => {
                         </div>
                         <span className="text-white font-medium">{testName}</span>
                       </div>
-                      
+
                       <div className="flex items-center gap-4 text-sm">
                         {testResult?.duration && (
                           <span className="text-gray-400">

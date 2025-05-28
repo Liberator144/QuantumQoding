@@ -12,7 +12,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { createServer } from 'http';
-import net from 'net';
+import { createServer as createNetServer } from 'net';
 
 // Create Express app
 const app = express();
@@ -60,7 +60,7 @@ app.get('/api/health', (_req: express.Request, res: express.Response) => {
 });
 
 // Quantum status endpoint
-app.get('/api/quantum/status', (_req: express.Request, res: express.Response) => {
+app.get('/api/quantum/status', (_req: express.default.Request, res: express.default.Response) => {
   res.json({
     status: 'operational',
     coherence: 0.95,
@@ -80,7 +80,7 @@ app.get('/api/quantum/status', (_req: express.Request, res: express.Response) =>
 });
 
 // Basic API info endpoint
-app.get('/api', (_req: express.Request, res: express.Response) => {
+app.get('/api', (_req: express.default.Request, res: express.default.Response) => {
   res.json({
     name: 'QQ-Verse Backend API',
     version: '1.0.0',
@@ -93,7 +93,7 @@ app.get('/api', (_req: express.Request, res: express.Response) => {
 });
 
 // 404 handler
-app.use('*', (req: express.Request, res: express.Response) => {
+app.use('*', (req: express.default.Request, res: express.default.Response) => {
   res.status(404).json({
     error: 'Endpoint not found',
     path: req.originalUrl,
@@ -102,7 +102,7 @@ app.use('*', (req: express.Request, res: express.Response) => {
 });
 
 // Error handler
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, _req: express.default.Request, res: express.default.Response, _next: express.default.NextFunction) => {
   console.error('Server error:', err);
   res.status(500).json({
     error: 'Internal server error',
@@ -117,7 +117,7 @@ async function startServer() {
     if (PORT !== DEFAULT_PORT) {
       console.log(`⚠️  Port ${DEFAULT_PORT} was in use, using port ${PORT} instead`);
     }
-    
+
     httpServer.listen(PORT, () => {
       console.log('🚀 QQ-Verse Backend Server running on port', PORT);
       console.log('🌐 Health check: http://localhost:' + PORT + '/api/health');
