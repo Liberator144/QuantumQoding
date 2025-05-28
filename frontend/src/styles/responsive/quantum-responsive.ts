@@ -13,7 +13,7 @@ export const QUANTUM_BREAKPOINTS = {
   lg: '1024px',   // Small desktop
   xl: '1280px',   // Large desktop
   '2xl': '1536px', // Extra large desktop
-  
+
   // Quantum-specific breakpoints
   quantum: '1920px', // Quantum display
   cosmic: '2560px'   // Ultra-wide cosmic display
@@ -59,7 +59,7 @@ export const QUANTUM_SPACING = {
     80: '20rem',      // 320px
     96: '24rem'       // 384px
   },
-  
+
   // Responsive spacing patterns
   responsive: {
     // Container padding
@@ -70,7 +70,7 @@ export const QUANTUM_SPACING = {
       lg: '3rem',  // 48px
       xl: '4rem'   // 64px
     },
-    
+
     // Section spacing
     sectionSpacing: {
       xs: '3rem',  // 48px
@@ -79,7 +79,7 @@ export const QUANTUM_SPACING = {
       lg: '6rem',  // 96px
       xl: '8rem'   // 128px
     },
-    
+
     // Component spacing
     componentSpacing: {
       xs: '0.5rem',   // 8px
@@ -97,14 +97,14 @@ export const MOBILE_INTERACTIONS = {
     comfortable: '48px',
     large: '56px'
   },
-  
+
   // Gesture zones
   gestureZones: {
     swipeThreshold: '50px',
     tapRadius: '20px',
     longPressDelay: '500ms'
   },
-  
+
   // Mobile-specific animations
   animations: {
     swipeTransition: '300ms ease-out',
@@ -133,7 +133,7 @@ export const DEVICE_OPTIMIZATION = {
       simplifiedTransitions: false
     }
   },
-  
+
   // Device-specific adaptations
   adaptations: {
     mobile: {
@@ -162,7 +162,7 @@ export const RESPONSIVE_EFFECTS = {
     tablet: 0.9,    // Slightly reduced on tablet
     desktop: 1.0    // Full animations on desktop
   },
-  
+
   // Effect complexity by device
   effectComplexity: {
     mobile: {
@@ -181,7 +181,7 @@ export const RESPONSIVE_EFFECTS = {
       gradients: 'conic'
     }
   },
-  
+
   // Performance-based effect toggles
   performanceToggles: {
     lowEnd: {
@@ -213,24 +213,24 @@ export const mediaQueries = {
   '2xl': `@media (min-width: ${QUANTUM_BREAKPOINTS['2xl']})`,
   quantum: `@media (min-width: ${QUANTUM_BREAKPOINTS.quantum})`,
   cosmic: `@media (min-width: ${QUANTUM_BREAKPOINTS.cosmic})`,
-  
+
   // Max-width queries
   maxXs: `@media (max-width: ${QUANTUM_BREAKPOINTS.xs})`,
   maxSm: `@media (max-width: ${QUANTUM_BREAKPOINTS.sm})`,
   maxMd: `@media (max-width: ${QUANTUM_BREAKPOINTS.md})`,
   maxLg: `@media (max-width: ${QUANTUM_BREAKPOINTS.lg})`,
   maxXl: `@media (max-width: ${QUANTUM_BREAKPOINTS.xl})`,
-  
+
   // Range queries
   smToMd: `@media (min-width: ${QUANTUM_BREAKPOINTS.sm}) and (max-width: ${QUANTUM_BREAKPOINTS.md})`,
   mdToLg: `@media (min-width: ${QUANTUM_BREAKPOINTS.md}) and (max-width: ${QUANTUM_BREAKPOINTS.lg})`,
   lgToXl: `@media (min-width: ${QUANTUM_BREAKPOINTS.lg}) and (max-width: ${QUANTUM_BREAKPOINTS.xl})`,
-  
+
   // Special queries
   mobile: `@media (max-width: ${QUANTUM_BREAKPOINTS.md})`,
   tablet: `@media (min-width: ${QUANTUM_BREAKPOINTS.md}) and (max-width: ${QUANTUM_BREAKPOINTS.lg})`,
   desktop: `@media (min-width: ${QUANTUM_BREAKPOINTS.lg})`,
-  
+
   // Accessibility queries
   reducedMotion: '@media (prefers-reduced-motion: reduce)',
   highContrast: '@media (prefers-contrast: high)',
@@ -251,7 +251,7 @@ export const getSpacingForBreakpoint = (breakpoint: keyof typeof QUANTUM_BREAKPO
     section: QUANTUM_SPACING.responsive.sectionSpacing,
     component: QUANTUM_SPACING.responsive.componentSpacing
   };
-  
+
   return spacingMap[type][breakpoint] || spacingMap[type].md;
 };
 
@@ -261,6 +261,81 @@ export const getAnimationScaleForDevice = (deviceType: 'mobile' | 'tablet' | 'de
 
 export const getEffectComplexityForDevice = (deviceType: 'mobile' | 'tablet' | 'desktop') => {
   return RESPONSIVE_EFFECTS.effectComplexity[deviceType];
+};
+
+// Device detection and testing utilities
+export const deviceUtils = {
+  // Detect current device type
+  getCurrentDevice(): 'mobile' | 'tablet' | 'desktop' {
+    if (typeof window === 'undefined') return 'desktop';
+
+    const width = window.innerWidth;
+    if (width < parseInt(QUANTUM_BREAKPOINTS.md)) return 'mobile';
+    if (width < parseInt(QUANTUM_BREAKPOINTS.lg)) return 'tablet';
+    return 'desktop';
+  },
+
+  // Check if device supports touch
+  isTouchDevice(): boolean {
+    return typeof window !== 'undefined' && 'ontouchstart' in window;
+  },
+
+  // Get device pixel ratio
+  getPixelRatio(): number {
+    return typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+  },
+
+  // Check if device prefers reduced motion
+  prefersReducedMotion(): boolean {
+    return typeof window !== 'undefined' &&
+           window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+
+  // Get optimal settings for current device
+  getOptimalSettings() {
+    const device = this.getCurrentDevice();
+    const isTouch = this.isTouchDevice();
+    const pixelRatio = this.getPixelRatio();
+    const reducedMotion = this.prefersReducedMotion();
+
+    return {
+      device,
+      isTouch,
+      pixelRatio,
+      reducedMotion,
+      animationScale: RESPONSIVE_EFFECTS.animationScale[device],
+      effectComplexity: RESPONSIVE_EFFECTS.effectComplexity[device],
+      spacing: {
+        container: getSpacingForBreakpoint(device as any, 'container'),
+        section: getSpacingForBreakpoint(device as any, 'section'),
+        component: getSpacingForBreakpoint(device as any, 'component')
+      }
+    };
+  }
+};
+
+// Responsive component helpers
+export const responsiveHelpers = {
+  // Create responsive CSS object
+  createResponsiveStyles(styles: Record<string, any>) {
+    const device = deviceUtils.getCurrentDevice();
+    const baseStyles = styles.base || {};
+    const deviceStyles = styles[device] || {};
+
+    return { ...baseStyles, ...deviceStyles };
+  },
+
+  // Create responsive font size
+  createResponsiveFontSize(sizes: { mobile?: string; tablet?: string; desktop?: string }) {
+    const device = deviceUtils.getCurrentDevice();
+    return sizes[device] || sizes.desktop || '1rem';
+  },
+
+  // Create responsive spacing
+  createResponsiveSpacing(type: 'container' | 'section' | 'component') {
+    const device = deviceUtils.getCurrentDevice();
+    return getSpacingForBreakpoint(device as any, type);
+  }
 };
 
 // Export types

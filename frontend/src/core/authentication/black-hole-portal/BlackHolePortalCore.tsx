@@ -35,18 +35,33 @@ const GravitationalParticles: React.FC<ParticleSystemProps> = ({
     blackHoleStrength 
 }) => {
     const mesh = useRef<THREE.Points>(null);
-    const { viewport } = useThree();
+// Generate particle positions
+const particles = useMemo(() => {
+  const positions = new Float32Array(count * 3);
+  const velocities = new Float32Array(count * 3);
+  const colors = new Float32Array(count * 3);
+  
+  // Optimize particle count based on device capabilities
+  const getOptimalParticleCount = (requestedCount: number) => {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    if (!gl) return Math.min(requestedCount, 100); // Fallback for no WebGL
     
-    // Generate particle positions
-    const particles = useMemo(() => {
-        const positions = new Float32Array(count * 3);
-        const velocities = new Float32Array(count * 3);
-        const colors = new Float32Array(count * 3);
-        
-        for (let i = 0; i < count; i++) {
-            const i3 = i * 3;
-            
-            // Random spherical distribution
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const isLowEnd = isMobile || navigator.hardwareConcurrency <= 2;
+    
+    if (isLowEnd) return Math.min(requestedCount, 200);
+    return requestedCount;
+  };
+  
+  const optimizedCount = getOptimalParticleCount(count);
+  
+  for (let i = 0; i < optimizedCount; i++) {
+    // ... existing particle generation
+  }
+  
+  return { positions, velocities, colors, actualCount: optimizedCount };
+}, [count, radius]);
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.acos(2 * Math.random() - 1);
             const r = radius * (0.5 + Math.random() * 0.5);
@@ -65,25 +80,45 @@ const GravitationalParticles: React.FC<ParticleSystemProps> = ({
             const normalizedDistance = distance / radius;
             
             colors[i3] = 1 - normalizedDistance * 0.5; // Red
-            colors[i3 + 1] = 0.5 + normalizedDistance * 0.3; // Green
-            colors[i3 + 2] = 1; // Blue
-        }
-        
-        return { positions, velocities, colors };
-    }, [count, radius]);
+// Animation loop
+useFrame((state, delta) => {
+  if (!mesh.current) return;
+  
+  // Performance monitoring
+  const startTime = performance.now();
+  
+  try {
+    const positions = mesh.current.geometry.attributes.position.array as Float32Array;
+    const colors = mesh.current.geometry.attributes.color.array as Float32Array;
     
-    // Animation loop
-    useFrame((state, delta) => {
-        if (!mesh.current) return;
-        
-        const positions = mesh.current.geometry.attributes.position.array as Float32Array;
-        const colors = mesh.current.geometry.attributes.color.array as Float32Array;
-        
-        for (let i = 0; i < count; i++) {
-            const i3 = i * 3;
-            
-            // Current position
-            const x = positions[i3];
+    // Throttle updates on poor performance
+    const shouldUpdate = startTime - (mesh.current.userData.lastUpdate || 0) > 16; // 60fps max
+    if (!shouldUpdate) return;
+    
+    for (let i = 0; i < count; i++) {
+      // ... existing animation logic
+    }
+    
+    mesh.current.geometry.attributes.position.needsUpdate = true;
+    mesh.current.geometry.attributes.color.needsUpdate = true;
+    
+    // Rotate the entire system
+    mesh.current.rotation.y += delta * 0.1;
+    
+    mesh.current.userData.lastUpdate = startTime;
+    
+    // Monitor performance
+    const endTime = performance.now();
+    const frameTime = endTime - startTime;
+    if (frameTime > 16) { // Warn if frame takes longer than 16ms
+      console.warn(`BlackHole particle animation taking ${frameTime.toFixed(2)}ms`);
+    }
+  } catch (error) {
+    console.error('Error in particle animation:', error);
+    // Disable updates on error to prevent crashes
+    return;
+  }
+});
             const y = positions[i3 + 1];
             const z = positions[i3 + 2];
             
@@ -198,39 +233,60 @@ const AccretionDisk: React.FC<{ innerRadius: number; outerRadius: number }> = ({
             />
         </mesh>
     );
-};
-
 // Main Black Hole Portal Component
 export const BlackHolePortalCore: React.FC<BlackHolePortalProps> = ({
-    isLoggedIn,
-    userName,
-    onLogin,
-    onShowAuthModal,
-    size = 400,
-    intensity = 1.0
+  isLoggedIn,
+  userName,
+  onLogin,
+  onShowAuthModal,
+  size = 400,
+  intensity = 1.0
 }) => {
-    const [isHovered, setIsHovered] = useState(false);
-    const [showAuthOptions, setShowAuthOptions] = useState(false);
-    const controls = useAnimation();
-    
-    // Handle portal interaction
-    const handlePortalClick = () => {
-        if (!isLoggedIn) {
-            setShowAuthOptions(true);
-            onShowAuthModal();
-        }
-    };
-    
-    // Authentication provider selection
-    const handleProviderSelect = (provider: 'google' | 'github' | 'supabase') => {
-        onLogin(provider);
-        setShowAuthOptions(false);
-    };
-    
-    // Portal hover effects
-    useEffect(() => {
-        if (isHovered) {
-            controls.start({
+  const [isHovered, setIsHovered] = useState(false);
+  const [showAuthOptions, setShowAuthOptions] = useState(false);
+  const controls = useAnimation();
+  const portalRef = useRef<HTMLDivElement>(null);
+  
+  // Handle portal interaction
+  const handlePortalClick = () => {
+    if (!isLoggedIn) {
+      setShowAuthOptions(true);
+      onShowAuthModal();
+    }
+  };
+  
+  // Keyboard navigation support
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handlePortalClick();
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Black Hole Portal Container */}
+      <motion.div
+        ref={portalRef}
+        className="relative cursor-pointer"
+        style={{ width: size, height: size }}
+        animate={controls}
+        onHoverStart={() => setIsHovered(true)}
+        onHoverEnd={() => setIsHovered(false)}
+        onClick={handlePortalClick}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="button"
+        aria-label={isLoggedIn ? `Welcome ${userName}` : "Click to authenticate"}
+        aria-describedby="portal-description"
+      >
+        {/* Screen reader description */}
+        <div id="portal-description" className="sr-only">
+          {isLoggedIn 
+            ? `Authentication portal showing welcome message for ${userName}`
+            : "Interactive authentication portal with 3D black hole visualization. Press Enter or Space to open authentication options."
+          }
+        </div>
                 scale: 1.1,
                 rotateY: 360,
                 transition: { duration: 2, ease: "easeInOut" }
@@ -255,29 +311,49 @@ export const BlackHolePortalCore: React.FC<BlackHolePortalProps> = ({
                 onHoverEnd={() => setIsHovered(false)}
                 onClick={handlePortalClick}
             >
-                {/* Three.js Canvas for 3D Effects */}
-                <div className="absolute inset-0 rounded-full overflow-hidden">
-                    <Canvas
-                        camera={{ position: [0, 0, 5], fov: 75 }}
-                        style={{ background: 'transparent' }}
-                    >
-                        <ambientLight intensity={0.2} />
-                        <pointLight position={[10, 10, 10]} intensity={0.5} />
-                        
-                        {/* Event Horizon */}
-                        <EventHorizon radius={1} />
-                        
-                        {/* Accretion Disk */}
-                        <AccretionDisk innerRadius={1.2} outerRadius={2.5} />
-                        
-                        {/* Gravitational Particles */}
-                        <GravitationalParticles
-                            count={1000}
-                            radius={4}
-                            blackHoleStrength={2.0 * intensity}
-                        />
-                    </Canvas>
-                </div>
+{/* Three.js Canvas for 3D Effects */}
+<div className="absolute inset-0 rounded-full overflow-hidden">
+  <ErrorBoundary
+    fallback={
+      <div className="w-full h-full flex items-center justify-center bg-gradient-radial from-purple-900/20 to-black rounded-full">
+        <div className="text-center text-white">
+          <div className="text-sm">Portal Initializing...</div>
+          <div className="text-xs text-gray-400 mt-1">Loading 3D effects</div>
+        </div>
+      </div>
+    }
+  >
+    <Canvas
+      camera={{ position: [0, 0, 5], fov: 75 }}
+      style={{ background: 'transparent' }}
+      onCreated={({ gl }) => {
+        // Configure for better performance
+        gl.powerPreference = 'high-performance';
+        gl.antialias = false; // Disable for better performance
+      }}
+      onError={(error) => {
+        console.error('Three.js Canvas error:', error);
+        // Could trigger fallback to SimpleBlackHolePortal
+      }}
+    >
+      <ambientLight intensity={0.2} />
+      <pointLight position={[10, 10, 10]} intensity={0.5} />
+      
+      {/* Event Horizon */}
+      <EventHorizon radius={1} />
+      
+      {/* Accretion Disk */}
+      <AccretionDisk innerRadius={1.2} outerRadius={2.5} />
+      
+      {/* Gravitational Particles */}
+      <GravitationalParticles
+        count={1000}
+        radius={4}
+        blackHoleStrength={2.0 * intensity}
+      />
+    </Canvas>
+  </ErrorBoundary>
+</div>
                 
                 {/* Gravitational Lensing Effect */}
                 <div className="absolute inset-0 rounded-full">

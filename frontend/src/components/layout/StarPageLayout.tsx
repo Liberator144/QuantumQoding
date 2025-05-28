@@ -65,30 +65,39 @@ export const StarPageLayout: React.FC<StarPageLayoutProps> = ({
                 {/* Content Container */}
                 <div className="relative z-10 max-w-7xl mx-auto">
                     {children}
-                </div>
+import React, { ReactNode, useMemo } from 'react';
 
-                {/* Floating Quantum Elements */}
-                {[...Array(5)].map((_, i) => (
-                    <motion.div
-                        key={`quantum-${i}`}
-                        className="absolute w-2 h-2 rounded-full opacity-30"
-                        style={{
-                            backgroundColor: starColor,
-                            left: `${20 + i * 15}%`,
-                            top: `${30 + Math.random() * 40}%`
-                        }}
+// Inside the component:
+const quantumPositions = useMemo(() => 
+    Array.from({ length: 5 }, (_, i) => ({
+        left: `${20 + i * 15}%`,
+        top: `${30 + Math.random() * 40}%`
+    })), []
+);
+
+// In the JSX:
+{[...Array(5)].map((_, i) => (
+    <motion.div
+        key={`quantum-${i}`}
+        className="absolute w-2 h-2 rounded-full opacity-30"
+        style={{
+            backgroundColor: starColor,
+           left: quantumPositions[i].left,
+           top: quantumPositions[i].top
+        }}
                         animate={{
                             y: [-20, 20, -20],
                             x: [-10, 10, -10],
                             opacity: [0.2, 0.6, 0.2],
                             scale: [0.5, 1.2, 0.5]
-                        }}
-                        transition={{
-                            duration: 6 + Math.random() * 4,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: i * 1.2
-                        }}
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+transition={{
+   duration: prefersReducedMotion ? 0 : 6 + Math.random() * 4,
+    repeat: Infinity,
+    ease: "easeInOut",
+    delay: i * 1.2
+}}
                     />
                 ))}
             </motion.main>

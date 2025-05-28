@@ -68,29 +68,38 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
             async (event, session) => {
-                console.log('Auth state changed:', event, session);
+                if (process.env.NODE_ENV === 'development') {
+                    console.log('Auth state changed:', event, session);
+                }
                 
                 setSession(session);
                 setUser(session?.user ?? null);
-                setIsLoading(false);
 
                 // Handle specific auth events
                 switch (event) {
                     case 'SIGNED_IN':
-                        console.log('User signed in:', session?.user);
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('User signed in:', session?.user);
+                        }
                         // Show success portal for new sign-ins
                         if (session?.user) {
                             setShowSuccessPortal(true);
                         }
                         break;
                     case 'SIGNED_OUT':
-                        console.log('User signed out');
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('User signed out');
+                        }
                         break;
                     case 'TOKEN_REFRESHED':
-                        console.log('Token refreshed');
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('Token refreshed');
+                        }
                         break;
                     case 'USER_UPDATED':
-                        console.log('User updated:', session?.user);
+                        if (process.env.NODE_ENV === 'development') {
+                            console.log('User updated:', session?.user);
+                        }
                         break;
                 }
             }
@@ -110,7 +119,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             const { error } = await authHelpers.signInWithProvider(provider);
             return { error };
         } catch (error) {
-            console.error(`Error signing in with ${provider}:`, error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error(`Error signing in with ${provider}:`, error);
+            }
             return { error: error as AuthError };
         } finally {
             setIsLoading(false);
@@ -133,6 +144,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const signUpWithEmail = async (email: string, password: string, metadata?: any) => {
         setIsLoading(true);
+        setAuthProvider('supabase');
         try {
             const { error } = await authHelpers.signUpWithEmail(email, password, metadata);
             return { error };
@@ -164,7 +176,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             setSession(session);
             setUser(session?.user ?? null);
         } catch (error) {
-            console.error('Error refreshing session:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('Error refreshing session:', error);
+            }
         }
     };
 

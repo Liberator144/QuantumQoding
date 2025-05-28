@@ -14,17 +14,17 @@ import { WormholeTransition } from './wormhole/WormholeTransition';
 import { useAuth } from '../../lib/supabase/AuthContext';
 
 interface EnhancedQuantumPortalCoreProps {
-    isLoggedIn: boolean;
-    userName: string;
-    onLogin: (username: string, password: string) => void;
-}
+     isLoggedIn: boolean;
+     userName: string;
+    onLogin: (email: string, password: string) => void;
+ }
 
 export const EnhancedQuantumPortalCore: React.FC<EnhancedQuantumPortalCoreProps> = ({ 
     isLoggedIn: propIsLoggedIn, 
     userName: propUserName, 
     onLogin 
 }) => {
-    const { user, isAuthenticated, signInWithProvider, signInWithEmail, isLoading: authLoading } = useAuth();
+    const { user, isAuthenticated, signInWithProvider, signInWithEmail, signUpWithEmail } = useAuth();
     const [showLoginModal, setShowLoginModal] = useState(false);
     const [loginForm, setLoginForm] = useState({ email: '', password: '' });
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -46,66 +46,51 @@ export const EnhancedQuantumPortalCore: React.FC<EnhancedQuantumPortalCoreProps>
             setShowLoginModal(true);
             return;
         }
-        
-        // Start wormhole transition
         setWormholeProvider(provider);
         setShowWormhole(true);
         setIsLoading(true);
-        
+        setAuthError(null);
+        setAuthSuccess(null);
         try {
-            console.log(`Authenticating with ${provider}...`);
-            
-            // Delay authentication to allow wormhole animation
             setTimeout(async () => {
                 const { error } = await signInWithProvider(provider);
-                
                 if (error) {
-                    console.error('Authentication failed:', error);
                     setShowWormhole(false);
-                    // Handle error (show toast, etc.)
+                    setIsLoading(false);
+                    setAuthError(error.message || 'Authentication failed. Please try again.');
                 } else {
-                    // Trigger supernova effect for successful OAuth login
                     setShowSupernova(true);
                     setTimeout(() => setShowSupernova(false), 3000);
                     setShowLoginModal(false);
-                    // Wormhole will complete and hide automatically
                 }
                 setIsLoading(false);
             }, 1000);
-            
-        } catch (error) {
-            console.error('Authentication failed:', error);
+        } catch (error: any) {
             setShowWormhole(false);
             setIsLoading(false);
+            setAuthError(error?.message || 'Authentication failed. Please try again.');
         }
     };
 
     // Handle traditional authentication with wormhole transition
     const handleTraditionalLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        
         if (!loginForm.email || (!loginForm.password && authMode !== 'reset')) {
             setAuthError('Please fill in all required fields');
             return;
         }
-
         if (authMode === 'signup' && loginForm.password !== confirmPassword) {
             setAuthError('Passwords do not match');
             return;
         }
-
-        // Start wormhole transition for Supabase
         setWormholeProvider('supabase');
         setShowWormhole(true);
         setIsLoading(true);
         setAuthError(null);
         setAuthSuccess(null);
-        
         try {
-            // Delay authentication to allow wormhole animation
             setTimeout(async () => {
                 let error = null;
-                
                 if (authMode === 'signin') {
                     const result = await signInWithEmail(loginForm.email, loginForm.password);
                     error = result.error;
@@ -119,23 +104,16 @@ export const EnhancedQuantumPortalCore: React.FC<EnhancedQuantumPortalCoreProps>
                         setAuthSuccess('Account created! Please check your email for verification.');
                     }
                 } else if (authMode === 'reset') {
-                    // For password reset, we'll use a placeholder function
-                    // In a real implementation, this would call supabase.auth.resetPasswordForEmail
                     setAuthSuccess('Password reset email sent! Check your inbox.');
                 }
-                
                 if (error) {
-                    console.error('Authentication failed:', error);
-                    setAuthError(error.message || 'Authentication failed');
+                    setAuthError(error.message || 'Authentication failed. Please try again.');
                     setShowWormhole(false);
                 } else {
-                    // Trigger supernova effect for successful login
                     if (authMode === 'signin') {
                         setShowSupernova(true);
                         setTimeout(() => setShowSupernova(false), 3000);
                     }
-                    
-                    // Close modal after successful action
                     setTimeout(() => {
                         setShowLoginModal(false);
                         setLoginForm({ email: '', password: '' });
@@ -146,10 +124,8 @@ export const EnhancedQuantumPortalCore: React.FC<EnhancedQuantumPortalCoreProps>
                 }
                 setIsLoading(false);
             }, 1000);
-            
-        } catch (error) {
-            console.error('Authentication failed:', error);
-            setAuthError('Authentication failed. Please try again.');
+        } catch (error: any) {
+            setAuthError(error?.message || 'Authentication failed. Please try again.');
             setShowWormhole(false);
             setIsLoading(false);
         }

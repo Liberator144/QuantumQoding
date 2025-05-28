@@ -12,13 +12,13 @@ export const QUANTUM_TIMING = {
   normal: 300,
   slow: 500,
   cosmic: 800,
-  
+
   // Specific interaction timings
   hover: 200,
   click: 100,
   transition: 400,
   loading: 1000,
-  
+
   // Complex animation sequences
   starFormation: 1200,
   orbitalShift: 800,
@@ -33,13 +33,13 @@ export const QUANTUM_EASING = {
   easeIn: 'cubic-bezier(0.4, 0, 1, 1)',
   easeOut: 'cubic-bezier(0, 0, 0.2, 1)',
   easeInOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  
+
   // Quantum-specific easing
   quantumBounce: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
   cosmicFlow: 'cubic-bezier(0.25, 0.46, 0.45, 0.94)',
   dimensionalShift: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)',
   orbitalMotion: 'cubic-bezier(0.645, 0.045, 0.355, 1)',
-  
+
   // Energy-based easing
   energyPulse: 'cubic-bezier(0.23, 1, 0.32, 1)',
   waveFunction: 'cubic-bezier(0.445, 0.05, 0.55, 0.95)',
@@ -56,7 +56,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.quantumBounce
     }
   },
-  
+
   buttonHover: {
     scale: 1.05,
     boxShadow: '0 0 20px rgba(255, 255, 255, 0.3)',
@@ -65,7 +65,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.energyPulse
     }
   },
-  
+
   panelHover: {
     y: -5,
     boxShadow: '0 10px 30px rgba(0, 255, 255, 0.2)',
@@ -74,7 +74,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.cosmicFlow
     }
   },
-  
+
   // Click animations
   starClick: {
     scale: [1, 0.95, 1.1],
@@ -83,7 +83,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.quantumLeap
     }
   },
-  
+
   buttonClick: {
     scale: [1, 0.98, 1.02],
     transition: {
@@ -91,7 +91,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.energyPulse
     }
   },
-  
+
   // Loading animations
   quantumSpin: {
     rotate: 360,
@@ -101,7 +101,7 @@ export const createQuantumAnimation = {
       repeat: Infinity
     }
   },
-  
+
   energyPulse: {
     scale: [1, 1.2, 1],
     opacity: [0.7, 1, 0.7],
@@ -111,7 +111,7 @@ export const createQuantumAnimation = {
       repeat: Infinity
     }
   },
-  
+
   orbitalRotation: (radius: number, duration: number = QUANTUM_TIMING.cosmic) => ({
     rotate: 360,
     transition: {
@@ -120,7 +120,7 @@ export const createQuantumAnimation = {
       repeat: Infinity
     }
   }),
-  
+
   // Transition animations
   pageTransition: {
     initial: { opacity: 0, scale: 0.95 },
@@ -131,7 +131,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.dimensionalShift
     }
   },
-  
+
   slideIn: (direction: 'left' | 'right' | 'up' | 'down' = 'up') => {
     const directions = {
       left: { x: -100 },
@@ -139,7 +139,7 @@ export const createQuantumAnimation = {
       up: { y: -100 },
       down: { y: 100 }
     };
-    
+
     return {
       initial: { ...directions[direction], opacity: 0 },
       animate: { x: 0, y: 0, opacity: 1 },
@@ -150,7 +150,7 @@ export const createQuantumAnimation = {
       }
     };
   },
-  
+
   // Complex quantum effects
   dimensionalPortal: {
     initial: { scale: 0, rotate: -180, opacity: 0 },
@@ -161,7 +161,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.quantumBounce
     }
   },
-  
+
   quantumTunnel: {
     initial: { scaleX: 0, scaleY: 1 },
     animate: { scaleX: 1, scaleY: 1 },
@@ -171,7 +171,7 @@ export const createQuantumAnimation = {
       ease: QUANTUM_EASING.dimensionalShift
     }
   },
-  
+
   energyBurst: {
     scale: [1, 1.5, 1],
     opacity: [1, 0.8, 1],
@@ -191,21 +191,51 @@ export const createQuantumAnimation = {
 export const PERFORMANCE_GUIDELINES = {
   // Use transform and opacity for best performance
   preferredProperties: ['transform', 'opacity'],
-  
+
   // Avoid animating these properties
   avoidProperties: ['width', 'height', 'top', 'left', 'margin', 'padding'],
-  
+
   // Use will-change for complex animations
   willChange: {
     transform: 'will-change: transform',
     opacity: 'will-change: opacity',
     auto: 'will-change: auto'
   },
-  
+
   // Reduce motion for accessibility
   reduceMotion: {
     duration: QUANTUM_TIMING.fast / 1000,
     ease: QUANTUM_EASING.easeOut
+  },
+
+  // Performance monitoring thresholds
+  thresholds: {
+    maxFrameTime: 16.67, // 60fps
+    maxAnimationCount: 10,
+    maxParticleCount: 200,
+    criticalFrameTime: 33.33 // 30fps
+  },
+
+  // Device-specific optimizations
+  deviceOptimizations: {
+    lowEnd: {
+      maxAnimations: 3,
+      reducedEffects: true,
+      simplifiedTransitions: true,
+      disableParticles: true
+    },
+    midRange: {
+      maxAnimations: 6,
+      reducedEffects: false,
+      simplifiedTransitions: false,
+      disableParticles: false
+    },
+    highEnd: {
+      maxAnimations: 15,
+      reducedEffects: false,
+      simplifiedTransitions: false,
+      disableParticles: false
+    }
   }
 };
 
@@ -234,3 +264,92 @@ export const ANIMATION_STATES = {
 export type AnimationState = typeof ANIMATION_STATES[keyof typeof ANIMATION_STATES];
 export type QuantumEasing = typeof QUANTUM_EASING[keyof typeof QUANTUM_EASING];
 export type QuantumTiming = typeof QUANTUM_TIMING[keyof typeof QUANTUM_TIMING];
+
+// Performance monitoring utilities
+export const animationPerformance = {
+  // Track animation frame rates
+  frameRateMonitor: {
+    lastTime: 0,
+    frameCount: 0,
+    fps: 0,
+
+    start() {
+      this.lastTime = performance.now();
+      this.frameCount = 0;
+      this.monitor();
+    },
+
+    monitor() {
+      const currentTime = performance.now();
+      this.frameCount++;
+
+      if (currentTime - this.lastTime >= 1000) {
+        this.fps = this.frameCount;
+        this.frameCount = 0;
+        this.lastTime = currentTime;
+
+        // Warn if performance is poor
+        if (this.fps < 30) {
+          console.warn('🌌 Quantum Animation Performance Warning: Low FPS detected', this.fps);
+        }
+      }
+
+      requestAnimationFrame(() => this.monitor());
+    }
+  },
+
+  // Device capability detection
+  detectDeviceCapability(): 'lowEnd' | 'midRange' | 'highEnd' {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+    if (!gl) return 'lowEnd';
+
+    const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+    const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : '';
+
+    // Simple heuristic based on common GPU patterns
+    if (renderer.includes('Intel') || renderer.includes('Mali')) return 'lowEnd';
+    if (renderer.includes('GTX') || renderer.includes('RTX') || renderer.includes('Radeon')) return 'highEnd';
+
+    return 'midRange';
+  },
+
+  // Animation optimization based on device
+  getOptimizedSettings() {
+    const capability = this.detectDeviceCapability();
+    return PERFORMANCE_GUIDELINES.deviceOptimizations[capability];
+  },
+
+  // Prefers reduced motion detection
+  prefersReducedMotion(): boolean {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  },
+
+  // Get optimized animation config
+  getOptimizedAnimation(baseAnimation: any) {
+    if (this.prefersReducedMotion()) {
+      return {
+        ...baseAnimation,
+        transition: {
+          ...baseAnimation.transition,
+          duration: PERFORMANCE_GUIDELINES.reduceMotion.duration,
+          ease: PERFORMANCE_GUIDELINES.reduceMotion.ease
+        }
+      };
+    }
+
+    const settings = this.getOptimizedSettings();
+    if (settings.simplifiedTransitions) {
+      return {
+        ...baseAnimation,
+        transition: {
+          ...baseAnimation.transition,
+          duration: (baseAnimation.transition?.duration || 0.3) * 0.7
+        }
+      };
+    }
+
+    return baseAnimation;
+  }
+};

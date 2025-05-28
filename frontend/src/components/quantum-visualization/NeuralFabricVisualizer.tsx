@@ -14,7 +14,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  */
 import { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
-import { colors } from '../../design-system';
+import { colors } from '../../styles';
 import { NeuralNodeType, NeuralConnectionType } from '../../types/backend-types';
 /**
  * Neural fabric visualizer component
