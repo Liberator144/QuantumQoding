@@ -1,0 +1,178 @@
+# 🌌 QQ-Verse Docker Compose Configuration
+# Quantum-Coherent Multi-Service Architecture
+# @version 1.0.0
+
+version: '3.8'
+
+services:
+  # ================================
+  # QQ-Verse Application
+  # ================================
+  qq-verse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: qq-verse-app
+    ports:
+      - "3000:3000"
+      - "5173:5173"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - DATABASE_URL=mongodb://mongodb:27017/qq-verse
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-quantum-coherence-secret-key}
+      - QUANTUM_COHERENCE_LEVEL=0.95
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - quantum-network
+    volumes:
+      - app-logs:/app/logs
+      - app-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ================================
+  # MongoDB Database
+  # ================================
+  mongodb:
+    image: mongo:6.0
+    container_name: qq-verse-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD:-quantum-db-password}
+      - MONGO_INITDB_DATABASE=qq-verse
+    volumes:
+      - mongodb-data:/data/db
+      - mongodb-config:/data/configdb
+      - ./backend/database/init:/docker-entrypoint-initdb.d
+    networks:
+      - quantum-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ================================
+  # Redis Cache
+  # ================================
+  redis:
+    image: redis:7-alpine
+    container_name: qq-verse-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-quantum-cache-password}
+    volumes:
+      - redis-data:/data
+    networks:
+      - quantum-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ================================
+  # Nginx Reverse Proxy
+  # ================================
+  nginx:
+    image: nginx:alpine
+    container_name: qq-verse-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - nginx-logs:/var/log/nginx
+    depends_on:
+      - qq-verse
+    networks:
+      - quantum-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ================================
+  # Monitoring & Observability
+  # ================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: qq-verse-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - quantum-network
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: qq-verse-grafana
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-quantum-admin}
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    depends_on:
+      - prometheus
+    networks:
+      - quantum-network
+    restart: unless-stopped
+
+# ================================
+# Networks
+# ================================
+networks:
+  quantum-network:
+    driver: bridge
+    name: qq-verse-network
+
+# ================================
+# Volumes
+# ================================
+volumes:
+  mongodb-data:
+    driver: local
+  mongodb-config:
+    driver: local
+  redis-data:
+    driver: local
+  app-logs:
+    driver: local
+  app-data:
+    driver: local
+  nginx-logs:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local

@@ -1,0 +1,71 @@
+# 📊 QQ-Verse Prometheus Configuration
+# Quantum-Coherent Monitoring & Metrics Collection
+# @version 1.0.0
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "rules/*.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # QQ-Verse Application Metrics
+  - job_name: 'qq-verse-app'
+    static_configs:
+      - targets: ['qq-verse:3000']
+    metrics_path: '/metrics'
+    scrape_interval: 10s
+    scrape_timeout: 5s
+
+  # Node Exporter for System Metrics
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+
+  # MongoDB Metrics
+  - job_name: 'mongodb'
+    static_configs:
+      - targets: ['mongodb-exporter:9216']
+
+  # Redis Metrics
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+
+  # Nginx Metrics
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+
+  # Prometheus Self-Monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Quantum Coherence Metrics (Custom)
+  - job_name: 'quantum-coherence'
+    static_configs:
+      - targets: ['qq-verse:3000']
+    metrics_path: '/api/v1/metrics/quantum'
+    scrape_interval: 5s
+
+  # Consciousness Stream Metrics (Custom)
+  - job_name: 'consciousness-streams'
+    static_configs:
+      - targets: ['qq-verse:3000']
+    metrics_path: '/api/v1/metrics/consciousness'
+    scrape_interval: 10s
+
+  # Neural Fabric Metrics (Custom)
+  - job_name: 'neural-fabric'
+    static_configs:
+      - targets: ['qq-verse:3000']
+    metrics_path: '/api/v1/metrics/neural-fabric'
+    scrape_interval: 15s

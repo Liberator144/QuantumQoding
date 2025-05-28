@@ -1,0 +1,90 @@
+# 🧪 QQ-Verse Development Docker Compose
+# Quantum-Coherent Development Environment
+# @version 1.0.0
+
+version: '3.8'
+
+services:
+  # ================================
+  # Development Database
+  # ================================
+  mongodb-dev:
+    image: mongo:6.0
+    container_name: qq-verse-mongodb-dev
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=dev-password
+      - MONGO_INITDB_DATABASE=qq-verse-dev
+    volumes:
+      - mongodb-dev-data:/data/db
+      - ./backend/database/init:/docker-entrypoint-initdb.d
+    networks:
+      - quantum-dev-network
+    restart: unless-stopped
+
+  # ================================
+  # Development Redis
+  # ================================
+  redis-dev:
+    image: redis:7-alpine
+    container_name: qq-verse-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - quantum-dev-network
+    restart: unless-stopped
+
+  # ================================
+  # Development Tools
+  # ================================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: qq-verse-mongo-express
+    ports:
+      - "8081:8081"
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=dev-password
+      - ME_CONFIG_MONGODB_URL=mongodb://admin:dev-password@mongodb-dev:27017/
+      - ME_CONFIG_BASICAUTH_USERNAME=admin
+      - ME_CONFIG_BASICAUTH_PASSWORD=dev-admin
+    depends_on:
+      - mongodb-dev
+    networks:
+      - quantum-dev-network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: qq-verse-redis-commander
+    ports:
+      - "8082:8081"
+    environment:
+      - REDIS_HOSTS=local:redis-dev:6379
+    depends_on:
+      - redis-dev
+    networks:
+      - quantum-dev-network
+    restart: unless-stopped
+
+# ================================
+# Development Networks
+# ================================
+networks:
+  quantum-dev-network:
+    driver: bridge
+    name: qq-verse-dev-network
+
+# ================================
+# Development Volumes
+# ================================
+volumes:
+  mongodb-dev-data:
+    driver: local
+  redis-dev-data:
+    driver: local
