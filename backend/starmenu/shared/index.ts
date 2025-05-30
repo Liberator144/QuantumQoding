@@ -12,6 +12,9 @@ export { BaseStarModule } from './BaseStarModule';
 // Export utility functions
 export * from './utils';
 
+// Export shared services
+export * from './services';
+
 // Re-export commonly used types for convenience
 export type {
   StarModule,

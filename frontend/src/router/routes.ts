@@ -11,7 +11,7 @@ export const starSystems = [
     // Inner Orbit
     {
         name: 'QQ-DataVerse',
-        path: '/data-verse',
+        path: '/dataverse',
         color: '#00ffff',
         orbit: 'inner',
         description: 'GitHub integration and data analytics universe. Explore and visualize data across multiple dimensions.',
@@ -25,16 +25,16 @@ export const starSystems = [
     },
     {
         name: 'QQ-MCPVerse',
-        path: '/mcp-verse',
+        path: '/mcpverse',
         color: '#4169e1',
         orbit: 'inner',
         description: 'Model-Context-Protocol management universe. Connect and configure MCP tools and services.',
         features: [
             { name: 'Protocol Setup', path: '/protocol-setup', description: 'Configure MCP protocols' },
-            { name: 'Context Manager', path: '/context-manager', description: 'Manage operational contexts' },
+            { name: 'Context Management', path: '/context-management', description: 'Manage operational contexts' },
             { name: 'Service Integration', path: '/service-integration', description: 'Integrate external services' },
             { name: 'Workflow Builder', path: '/workflow-builder', description: 'Create automated workflows' },
-            { name: 'API Monitoring', path: '/api-monitoring', description: 'Monitor API performance' }
+            { name: 'Monitoring', path: '/monitoring', description: 'Monitor API performance' }
         ]
     },
     {
@@ -44,11 +44,11 @@ export const starSystems = [
         orbit: 'inner',
         description: 'Quantum memory system universe. Store, analyze, and retrieve information across the cosmic consciousness.',
         features: [
-            { name: 'Memory Bank', path: '/memory-bank', description: 'Long-term knowledge storage' },
-            { name: 'Consciousness Stream', path: '/consciousness-stream', description: 'Information flow management' },
-            { name: 'Recollection Engine', path: '/recollection-engine', description: 'Advanced retrieval system' },
-            { name: 'Knowledge Graph', path: '/knowledge-graph', description: 'Visual relationship mapping' },
-            { name: 'Neural Archive', path: '/neural-archive', description: 'Neural network optimized storage' }
+            { name: 'Memory Management', path: '/memory-management', description: 'Advanced memory storage and retrieval' },
+            { name: 'Prioritization', path: '/prioritization', description: 'Intelligent memory prioritization' },
+            { name: 'Visualization', path: '/visualization', description: 'Memory network visualization' },
+            { name: 'Integration', path: '/integration', description: 'System integration management' },
+            { name: 'Analytics', path: '/analytics', description: 'Memory usage analytics' }
         ]
     },
     // Middle Orbit
@@ -128,13 +128,13 @@ export const starSystems = [
         path: '/unity-portal',
         color: '#ff8c00',
         orbit: 'outer',
-        description: 'Community ecosystem universe. Collaborate, share, and engage with the quantum community.',
+        description: 'Authentication and user management universe. Secure access and user administration.',
         features: [
-            { name: 'Community Hub', path: '/community-hub', description: 'Connect with other users' },
-            { name: 'Knowledge Exchange', path: '/knowledge-exchange', description: 'Share and discover insights' },
-            { name: 'Collaboration Space', path: '/collaboration-space', description: 'Work together on projects' },
-            { name: 'Event Horizon', path: '/event-horizon', description: 'Upcoming community events' },
-            { name: 'Resource Center', path: '/resource-center', description: 'Learning and development tools' }
+            { name: 'User Management', path: '/user-management', description: 'Manage users and access' },
+            { name: 'Authentication', path: '/authentication', description: 'Secure authentication systems' },
+            { name: 'Permissions', path: '/permissions', description: 'Role-based access control' },
+            { name: 'Session Management', path: '/session-management', description: 'Monitor user sessions' },
+            { name: 'Security Analytics', path: '/security-analytics', description: 'Security metrics and analysis' }
         ]
     }
 ];

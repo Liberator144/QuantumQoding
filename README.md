@@ -2,6 +2,16 @@
 
 QQ-Verse is a quantum-inspired application featuring a cosmic visualization interface that represents different application features as stars/planets in an interactive universe.
 
+## Task Tracking and Progress Documentation
+
+The project uses a quantum-coherent task tracking system to monitor progress and completion status across all components:
+
+- **Centralized Task Tracking**: `/docs/task-tracking/` - All high-level task planning, completion reports, and progress tracking
+- **Project-Specific Tracking**: `/backend/projects/{project-name}/` - Component-specific task PRDs and progress trackers
+- **Master Index**: `/docs/task-tracking/MASTER-INDEX.md` - Complete index of all task-related documentation
+
+For a comprehensive view of the project's current status, refer to the completion reports in the task tracking directory.
+
 ## Directory Structure
 
 The project follows a clean and modular directory structure that separates concerns while maintaining the quantum-themed organization.

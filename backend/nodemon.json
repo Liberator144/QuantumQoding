@@ -1,6 +1,9 @@
 {
-  "watch": ["**/*.ts"],
-  "ext": "ts,json",
+  "watch": ["**/*.ts", "**/*.js", "**/*.cjs"],
+  "ext": "ts,js,cjs,json",
   "ignore": ["node_modules", "dist"],
-  "exec": "node --loader ts-node/esm server/index-simple.ts"
+  "exec": "node server/index-simple.cjs",
+  "env": {
+    "NODE_ENV": "development"
+  }
 }

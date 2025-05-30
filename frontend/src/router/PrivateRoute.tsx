@@ -25,12 +25,17 @@ export const PrivateRoute: React.FC<PrivateRouteProps> = ({ children }) => {
     const { isAuthenticated } = useAuth();
     const location = useLocation();
 
-    // Redirect to login if not authenticated
-    if (!isAuthenticated) {
+    // Development bypass for testing - check for mock auth session
+    const isDevelopmentBypass = process.env.NODE_ENV === 'development' &&
+        (localStorage.getItem('quantum-dev-auth') === 'true' ||
+         localStorage.getItem('supabase.auth.token'));
+
+    // Redirect to login if not authenticated (unless development bypass is active)
+    if (!isAuthenticated && !isDevelopmentBypass) {
         return <Navigate to="/auth/login" state={{ from: location }} replace />;
     }
 
-    // Render children if authenticated
+    // Render children if authenticated or development bypass is active
     return <>{children}</>;
 };
 

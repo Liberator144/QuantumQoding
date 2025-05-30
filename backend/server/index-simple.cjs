@@ -1,19 +1,18 @@
 /**
- * Simplified Server Entry Point for Development
+ * Simplified Server Entry Point for Development (CommonJS)
  *
  * This is a simplified version of the QQ-Verse backend server for development purposes.
  * It includes basic functionality without complex database connections.
  *
- * @version 1.0.0 - Fixed ES Module Version
+ * @version 1.0.0 - CommonJS Version for Maximum Compatibility
  */
 
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import compression from 'compression';
-import { createServer } from 'http';
-import { createServer as createNetServer } from 'net';
-import type { AddressInfo } from 'net';
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const compression = require('compression');
+const { createServer } = require('http');
+const { createServer: createNetServer } = require('net');
 
 // Create Express app
 const app = express();
@@ -22,11 +21,11 @@ const app = express();
 const httpServer = createServer(app);
 
 // Port detection utility
-async function findAvailablePort(startPort: number): Promise<number> {
+async function findAvailablePort(startPort) {
   return new Promise((resolve, reject) => {
     const server = createNetServer();
     server.listen(startPort, () => {
-      const port = (server.address() as AddressInfo)?.port;
+      const port = server.address()?.port;
       if (port) {
         server.close(() => resolve(port));
       } else {
@@ -61,18 +60,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Basic health check endpoint
-app.get('/api/health', (_req: express.Request, res: express.Response) => {
+app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
-    server: 'simplified'
+    server: 'simplified-js'
   });
 });
 
 // Quantum status endpoint
-app.get('/api/quantum/status', (_req: express.Request, res: express.Response) => {
+app.get('/api/quantum/status', (req, res) => {
   res.json({
     status: 'operational',
     coherence: 0.95,
@@ -88,21 +87,21 @@ app.get('/api/quantum/status', (_req: express.Request, res: express.Response) =>
       frequency: '432 Hz',
       amplitude: 0.87
     },
-    server: 'simplified'
+    server: 'simplified-js'
   });
 });
 
 // Basic API info endpoint
-app.get('/api', (_req: express.Request, res: express.Response) => {
+app.get('/api', (req, res) => {
   res.json({
-    name: 'QQ-Verse Backend API (Simplified)',
+    name: 'QQ-Verse Backend API (Simplified JS)',
     version: '1.0.0',
-    description: 'Quantum-Coherent Backend Server - Simplified Mode',
+    description: 'Quantum-Coherent Backend Server - Simplified JavaScript Mode',
     endpoints: [
       '/api/health',
       '/api/quantum/status'
     ],
-    server: 'simplified'
+    server: 'simplified-js'
   });
 });
 
@@ -113,7 +112,7 @@ const starSystems = [
 ];
 
 starSystems.forEach(system => {
-  app.get(`/api/v1/${system}/status`, (_req: express.Request, res: express.Response) => {
+  app.get(`/api/v1/${system}/status`, (req, res) => {
     res.json({
       system,
       status: 'operational',
@@ -124,22 +123,22 @@ starSystems.forEach(system => {
 });
 
 // 404 handler
-app.use('*', (req: express.Request, res: express.Response) => {
+app.use('*', (req, res) => {
   res.status(404).json({
     error: 'Endpoint not found',
     path: req.originalUrl,
     method: req.method,
-    server: 'simplified'
+    server: 'simplified-js'
   });
 });
 
 // Error handler
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err, req, res, next) => {
   console.error('Server error:', err);
   res.status(500).json({
     error: 'Internal server error',
     message: err.message || 'Unknown error occurred',
-    server: 'simplified'
+    server: 'simplified-js'
   });
 });
 
@@ -152,11 +151,11 @@ async function startServer() {
     }
 
     httpServer.listen(PORT, () => {
-      console.log('🚀 QQ-Verse Backend Server (Simplified) running on port', PORT);
+      console.log('🚀 QQ-Verse Backend Server (Simplified JS) running on port', PORT);
       console.log('🌐 Health check: http://localhost:' + PORT + '/api/health');
       console.log('⚛️  Quantum status: http://localhost:' + PORT + '/api/quantum/status');
-      console.log('🧠 Neural Fabric: OPERATIONAL (Simplified Mode)');
-      console.log('🌊 Consciousness Stream: FLOWING (Simplified Mode)');
+      console.log('🧠 Neural Fabric: OPERATIONAL (Simplified JS Mode)');
+      console.log('🌊 Consciousness Stream: FLOWING (Simplified JS Mode)');
       console.log('🌟 Star Systems: Mock endpoints available');
     });
   } catch (error) {
@@ -185,4 +184,4 @@ process.on('SIGINT', () => {
 // Start server
 startServer();
 
-export { app, httpServer };
+module.exports = { app, httpServer };

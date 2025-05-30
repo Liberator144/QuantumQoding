@@ -1,5 +1,5 @@
 import React from 'react';
-import { EnhancedQuantumRouter } from './router/EnhancedQuantumRouter';
+import { ModularQuantumRouter } from './router/ModularQuantumRouter';
 import { AuthProvider } from './lib/supabase/AuthContext';
 import { StarBackground } from './cosmos';
 import { StardustCursor } from './components';
@@ -15,7 +15,7 @@ export function App() {
             <StarBackground />
             <div className="relative z-10">
                 <AuthProvider>
-                    <EnhancedQuantumRouter />
+                    <ModularQuantumRouter />
                 </AuthProvider>
             </div>
         </div>
