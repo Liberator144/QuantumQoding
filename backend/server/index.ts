@@ -91,7 +91,7 @@ process.on('SIGTERM', () => {
 });
 
 // Start server
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   startServer();
 }
 

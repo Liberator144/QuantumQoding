@@ -1,8 +1,8 @@
 {
-  "watch": ["**/*.ts", "**/*.js", "**/*.cjs"],
-  "ext": "ts,js,cjs,json",
+  "watch": ["**/*.ts"],
+  "ext": "ts,json",
   "ignore": ["node_modules", "dist"],
-  "exec": "node server/index-simple.cjs",
+  "exec": "npx tsx server/index.ts",
   "env": {
     "NODE_ENV": "development"
   }

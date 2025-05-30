@@ -1,13 +1,14 @@
 /**
- * Simplified Server Entry Point for Development
+ * Simplified Server Entry Point for Development (TypeScript ES Module)
  *
  * This is a simplified version of the QQ-Verse backend server for development purposes.
  * It includes basic functionality without complex database connections.
+ * STRICT TYPESCRIPT COHERENCE: Pure TypeScript implementation
  *
- * @version 1.0.0 - Fixed ES Module Version
+ * @version 2.0.0 - TypeScript-Only ES Module Version
  */
 
-import express from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -61,18 +62,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Basic health check endpoint
-app.get('/api/health', (_req: express.Request, res: express.Response) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development',
-    server: 'simplified'
+    server: 'simplified-typescript',
+    coherence: 'STRICT_TYPESCRIPT_ONLY'
   });
 });
 
 // Quantum status endpoint
-app.get('/api/quantum/status', (_req: express.Request, res: express.Response) => {
+app.get('/api/quantum/status', (_req: Request, res: Response) => {
   res.json({
     status: 'operational',
     coherence: 0.95,
@@ -88,63 +90,68 @@ app.get('/api/quantum/status', (_req: express.Request, res: express.Response) =>
       frequency: '432 Hz',
       amplitude: 0.87
     },
-    server: 'simplified'
+    server: 'simplified-typescript',
+    typeSystem: 'STRICT_TYPESCRIPT_COHERENCE'
   });
 });
 
 // Basic API info endpoint
-app.get('/api', (_req: express.Request, res: express.Response) => {
+app.get('/api', (_req: Request, res: Response) => {
   res.json({
-    name: 'QQ-Verse Backend API (Simplified)',
-    version: '1.0.0',
-    description: 'Quantum-Coherent Backend Server - Simplified Mode',
+    name: 'QQ-Verse Backend API (Simplified TypeScript)',
+    version: '2.0.0',
+    description: 'Quantum-Coherent Backend Server - Simplified TypeScript Mode',
     endpoints: [
       '/api/health',
       '/api/quantum/status'
     ],
-    server: 'simplified'
+    server: 'simplified-typescript',
+    typeSystem: 'STRICT_TYPESCRIPT_COHERENCE'
   });
 });
 
 // Mock star system endpoints for frontend testing
-const starSystems = [
+const starSystems: string[] = [
   'dataverse', 'mcpverse', 'akasha', 'taskverse', 
   'quantumforge', 'nexushub', 'evolvecore', 'harmonyverse', 'unity-portal'
 ];
 
-starSystems.forEach(system => {
-  app.get(`/api/v1/${system}/status`, (_req: express.Request, res: express.Response) => {
+starSystems.forEach((system: string) => {
+  app.get(`/api/v1/${system}/status`, (_req: Request, res: Response) => {
     res.json({
       system,
       status: 'operational',
-      features: ['mock-data', 'basic-functionality'],
-      lastUpdate: new Date().toISOString()
+      features: ['mock-data', 'basic-functionality', 'typescript-coherence'],
+      lastUpdate: new Date().toISOString(),
+      typeSystem: 'STRICT_TYPESCRIPT_COHERENCE'
     });
   });
 });
 
 // 404 handler
-app.use('*', (req: express.Request, res: express.Response) => {
+app.use('*', (req: Request, res: Response) => {
   res.status(404).json({
     error: 'Endpoint not found',
     path: req.originalUrl,
     method: req.method,
-    server: 'simplified'
+    server: 'simplified-typescript',
+    typeSystem: 'STRICT_TYPESCRIPT_COHERENCE'
   });
 });
 
 // Error handler
-app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   console.error('Server error:', err);
   res.status(500).json({
     error: 'Internal server error',
     message: err.message || 'Unknown error occurred',
-    server: 'simplified'
+    server: 'simplified-typescript',
+    typeSystem: 'STRICT_TYPESCRIPT_COHERENCE'
   });
 });
 
 // Start server
-async function startServer() {
+async function startServer(): Promise<void> {
   try {
     const PORT = await findAvailablePort(DEFAULT_PORT);
     if (PORT !== DEFAULT_PORT) {
@@ -152,12 +159,13 @@ async function startServer() {
     }
 
     httpServer.listen(PORT, () => {
-      console.log('🚀 QQ-Verse Backend Server (Simplified) running on port', PORT);
+      console.log('🚀 QQ-Verse Backend Server (Simplified TypeScript) running on port', PORT);
       console.log('🌐 Health check: http://localhost:' + PORT + '/api/health');
       console.log('⚛️  Quantum status: http://localhost:' + PORT + '/api/quantum/status');
-      console.log('🧠 Neural Fabric: OPERATIONAL (Simplified Mode)');
-      console.log('🌊 Consciousness Stream: FLOWING (Simplified Mode)');
+      console.log('🧠 Neural Fabric: OPERATIONAL (TypeScript Mode)');
+      console.log('🌊 Consciousness Stream: FLOWING (TypeScript Mode)');
       console.log('🌟 Star Systems: Mock endpoints available');
+      console.log('📝 Type System: STRICT TYPESCRIPT COHERENCE');
     });
   } catch (error) {
     console.error('Failed to start server:', error);

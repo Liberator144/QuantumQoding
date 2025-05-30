@@ -191,10 +191,10 @@ export NODE_ENV=development
 # Choose nodemon configuration based on server mode
 if [ "$SERVER_MODE" = "production" ]; then
     print_neural "🌟 Starting full production server with all features..."
-    nodemon --config nodemon.production.json > ../backend.log 2>&1 &
+    npx nodemon --config nodemon.production.json > ../backend.log 2>&1 &
 else
     print_quantum "⚡ Starting simplified server for development..."
-    nodemon > ../backend.log 2>&1 &
+    npx nodemon > ../backend.log 2>&1 &
 fi
 
 BACKEND_PID=$!
@@ -219,10 +219,10 @@ for attempt in {1..3}; do
             if [ "$SERVER_MODE" = "production" ]; then
                 print_warning "Production mode failed, trying simplified mode..."
                 SERVER_MODE="simplified"
-                nodemon > ../backend.log 2>&1 &
+                npx nodemon > ../backend.log 2>&1 &
                 BACKEND_PID=$!
             else
-                nodemon > ../backend.log 2>&1 &
+                npx nodemon > ../backend.log 2>&1 &
                 BACKEND_PID=$!
             fi
         fi
@@ -314,9 +314,9 @@ while true; do
         # Try to restart backend
         cd "$PROJECT_ROOT/backend"
         if [ "$SERVER_MODE" = "production" ]; then
-            nodemon --config nodemon.production.json > ../backend.log 2>&1 &
+            npx nodemon --config nodemon.production.json > ../backend.log 2>&1 &
         else
-            nodemon > ../backend.log 2>&1 &
+            npx nodemon > ../backend.log 2>&1 &
         fi
         BACKEND_PID=$!
         

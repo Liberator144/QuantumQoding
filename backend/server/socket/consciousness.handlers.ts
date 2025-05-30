@@ -8,149 +8,165 @@
 
 import { Server, Socket } from 'socket.io';
 import { logger } from '../utils/logger';
-import { ConsciousnessStreamManager, ConsciousnessStreamPacket } from '../../interdimensional/consciousness/ConsciousnessStreamProtocol';
+
+/**
+ * Simple consciousness stream manager for socket operations
+ */
+class SimpleConsciousnessStreamManager {
+  private streams: Map<string, any> = new Map();
+  
+  createStream(userId: string, streamType: string) {
+    const streamId = `stream-${Date.now()}-${userId}`;
+    const stream = {
+      id: streamId,
+      userId,
+      type: streamType,
+      status: 'active',
+      frequency: '432 Hz',
+      amplitude: 0.87,
+      createdAt: new Date().toISOString()
+    };
+    
+    this.streams.set(streamId, stream);
+    return stream;
+  }
+  
+  getStream(streamId: string) {
+    return this.streams.get(streamId);
+  }
+  
+  removeStream(streamId: string) {
+    return this.streams.delete(streamId);
+  }
+}
 
 // Initialize consciousness stream manager
-const consciousnessStreamManager = new ConsciousnessStreamManager();
+const consciousnessStreamManager = new SimpleConsciousnessStreamManager();
 
 /**
  * Setup consciousness stream socket handlers
  */
 export const setupConsciousnessHandlers = (io: Server, socket: Socket) => {
-  /**
-   * Subscribe to consciousness stream
-   */
-  socket.on('consciousness:subscribe', (streamId: string) => {
-    try {
-      // Join room for this consciousness stream
-      socket.join(`consciousness:${streamId}`);
-      
-      logger.info(`User subscribed to consciousness stream: ${streamId}`, {
-        socketId: socket.id,
-        userId: socket.data.user?.id,
-        streamId,
-      });
-      
-      // Send current stream state
-      const stream = consciousnessStreamManager.getStream(streamId);
-      
-      if (stream) {
-        socket.emit('consciousness:stream', stream);
-      }
-    } catch (error) {
-      logger.error('Consciousness subscribe error:', error);
-      socket.emit('consciousness:error', {
-        message: 'Failed to subscribe to consciousness stream',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+  const userId = socket.data.user?.id;
+  
+  // Consciousness stream connection
+  socket.on('consciousness:connect', (data) => {
+    logger.info(`Consciousness stream connection from user: ${userId}`, { data });
+    
+    const stream = consciousnessStreamManager.createStream(userId, data.streamType || 'primary');
+    
+    // Join consciousness stream room
+    socket.join('consciousness-stream');
+    
+    // Emit connection confirmation
+    socket.emit('consciousness:connected', {
+      status: 'connected',
+      stream,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Broadcast to other consciousness participants
+    socket.to('consciousness-stream').emit('consciousness:participant-joined', {
+      userId,
+      streamId: stream.id,
+      timestamp: new Date().toISOString()
+    });
   });
   
-  /**
-   * Unsubscribe from consciousness stream
-   */
-  socket.on('consciousness:unsubscribe', (streamId: string) => {
-    try {
-      // Leave room for this consciousness stream
-      socket.leave(`consciousness:${streamId}`);
-      
-      logger.info(`User unsubscribed from consciousness stream: ${streamId}`, {
-        socketId: socket.id,
-        userId: socket.data.user?.id,
-        streamId,
-      });
-    } catch (error) {
-      logger.error('Consciousness unsubscribe error:', error);
-      socket.emit('consciousness:error', {
-        message: 'Failed to unsubscribe from consciousness stream',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+  // Consciousness data transmission
+  socket.on('consciousness:transmit', (data) => {
+    logger.info(`Consciousness data transmission from user: ${userId}`, { 
+      dataSize: JSON.stringify(data).length 
+    });
+    
+    // Broadcast to consciousness stream network
+    socket.to('consciousness-stream').emit('consciousness:data-received', {
+      from: userId,
+      data,
+      timestamp: new Date().toISOString(),
+      frequency: '432 Hz',
+      amplitude: 0.87
+    });
+    
+    // Confirm transmission
+    socket.emit('consciousness:transmission-confirmed', {
+      status: 'transmitted',
+      recipients: socket.adapter.rooms.get('consciousness-stream')?.size || 0,
+      timestamp: new Date().toISOString()
+    });
   });
   
-  /**
-   * Send packet through consciousness stream
-   */
-  socket.on('consciousness:send', (data: { 
-    streamId: string; 
-    packet: Partial<ConsciousnessStreamPacket<any>>;
-  }) => {
-    try {
-      const { streamId, packet } = data;
-      
-      // Send packet through stream
-      const sentPacket = consciousnessStreamManager.sendPacket(streamId, packet);
-      
-      // Broadcast to all subscribers
-      io.to(`consciousness:${streamId}`).emit('consciousness:packet', sentPacket);
-      
-      logger.info(`User sent packet through consciousness stream: ${streamId}`, {
-        socketId: socket.id,
-        userId: socket.data.user?.id,
-        streamId,
-        packetId: sentPacket.header.packetId,
-      });
-    } catch (error) {
-      logger.error('Consciousness send error:', error);
-      socket.emit('consciousness:error', {
-        message: 'Failed to send packet through consciousness stream',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+  // Consciousness stream synchronization
+  socket.on('consciousness:sync', () => {
+    logger.info(`Consciousness stream sync request from user: ${userId}`);
+    
+    // Get current stream state
+    const streamState = {
+      participants: socket.adapter.rooms.get('consciousness-stream')?.size || 0,
+      frequency: '432 Hz',
+      amplitude: 0.87,
+      coherence: 0.95,
+      entanglement: 'stable',
+      timestamp: new Date().toISOString()
+    };
+    
+    socket.emit('consciousness:sync-response', streamState);
   });
   
-  /**
-   * Create consciousness stream checkpoint
-   */
-  socket.on('consciousness:checkpoint', (streamId: string) => {
-    try {
-      // Create checkpoint
-      const checkpoint = consciousnessStreamManager.createCheckpoint(streamId);
-      
-      // Emit checkpoint
-      socket.emit('consciousness:checkpoint:created', checkpoint);
-      
-      logger.info(`User created consciousness stream checkpoint: ${streamId}`, {
-        socketId: socket.id,
-        userId: socket.data.user?.id,
-        streamId,
-        checkpointId: checkpoint.id,
-      });
-    } catch (error) {
-      logger.error('Consciousness checkpoint error:', error);
-      socket.emit('consciousness:error', {
-        message: 'Failed to create consciousness stream checkpoint',
-        error: error instanceof Error ? error.message : String(error),
-      });
-    }
+  // Consciousness pattern sharing
+  socket.on('consciousness:share-pattern', (pattern) => {
+    logger.info(`Consciousness pattern sharing from user: ${userId}`, { 
+      patternType: pattern.type 
+    });
+    
+    // Broadcast pattern to consciousness network
+    socket.to('consciousness-stream').emit('consciousness:pattern-received', {
+      from: userId,
+      pattern,
+      timestamp: new Date().toISOString(),
+      coherence: 0.95
+    });
+    
+    socket.emit('consciousness:pattern-shared', {
+      status: 'shared',
+      pattern,
+      timestamp: new Date().toISOString()
+    });
   });
   
-  /**
-   * Restore consciousness stream from checkpoint
-   */
-  socket.on('consciousness:restore', (data: { streamId: string; checkpointId: string }) => {
-    try {
-      const { streamId, checkpointId } = data;
-      
-      // Restore from checkpoint
-      const restoredStream = consciousnessStreamManager.restoreFromCheckpoint(streamId, checkpointId);
-      
-      // Broadcast to all subscribers
-      io.to(`consciousness:${streamId}`).emit('consciousness:stream', restoredStream);
-      
-      logger.info(`User restored consciousness stream from checkpoint: ${streamId}`, {
-        socketId: socket.id,
-        userId: socket.data.user?.id,
-        streamId,
-        checkpointId,
-      });
-    } catch (error) {
-      logger.error('Consciousness restore error:', error);
-      socket.emit('consciousness:error', {
-        message: 'Failed to restore consciousness stream from checkpoint',
-        error: error instanceof Error ? error.message : String(error),
-      });
+  // Consciousness stream disconnection
+  socket.on('consciousness:disconnect', (streamId) => {
+    logger.info(`Consciousness stream disconnection from user: ${userId}`, { streamId });
+    
+    if (streamId) {
+      consciousnessStreamManager.removeStream(streamId);
     }
+    
+    // Leave consciousness stream room
+    socket.leave('consciousness-stream');
+    
+    // Broadcast disconnection
+    socket.to('consciousness-stream').emit('consciousness:participant-left', {
+      userId,
+      streamId,
+      timestamp: new Date().toISOString()
+    });
+    
+    socket.emit('consciousness:disconnected', {
+      status: 'disconnected',
+      streamId,
+      timestamp: new Date().toISOString()
+    });
+  });
+  
+  // Handle socket disconnection
+  socket.on('disconnect', () => {
+    // Auto-leave consciousness stream on disconnect
+    socket.to('consciousness-stream').emit('consciousness:participant-left', {
+      userId,
+      reason: 'connection-lost',
+      timestamp: new Date().toISOString()
+    });
   });
 };
 
