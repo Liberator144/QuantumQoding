@@ -1,16 +1,23 @@
 {
-  "version": "1.0.0",
-  "gateway_id": "6667D05E-05EE-45FB-8434-15BA3B4B243D",
-  "initialized": "2025-05-26T08:29:02.3NZ",
+  "version": "3.0.0",
+  "gateway_id": "gateway-1748625719",
+  "initialized": "2025-05-30T17:21:59.3NZ",
   "status": "online",
+  "backend_server": "production",
+  "api_documentation": "http://localhost:3001/api-docs",
   "dimensions": {
-    "accessible": ["primary", "development", "testing"],
+    "accessible": ["primary", "development", "testing", "production"],
     "active": "development",
     "stability": "optimal"
   },
   "quantum_tunnels": {
-    "count": 3,
+    "count": 4,
     "bandwidth": "unlimited",
     "latency": "0ms"
+  },
+  "endpoints": {
+    "health": "http://localhost:3001/health",
+    "api_health": "http://localhost:3001/api/health",
+    "root": "http://localhost:3001/"
   }
 }
