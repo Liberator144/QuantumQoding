@@ -28,7 +28,27 @@ export const setupRoutes = (app: Express) => {
   app.use('/api/v1/neural-fabric', neuralFabricRoutes);
   app.use('/api/v1/consciousness', consciousnessRoutes);
   
-  // Health check route
+  // Root route
+  app.get('/', (req, res) => {
+    res.status(200).json({
+      status: 'success',
+      message: 'Welcome to QQ-Verse Backend API',
+      version: '1.0.0',
+      endpoints: {
+        health: '/health',
+        apiHealth: '/api/health',
+        documentation: '/api-docs',
+        quantum: '/api/v1/quantum',
+        dimensional: '/api/v1/dimensional',
+        neuralFabric: '/api/v1/neural-fabric',
+        consciousness: '/api/v1/consciousness',
+        auth: '/api/v1/auth'
+      },
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // Health check routes
   app.get('/health', (req, res) => {
     res.status(200).json({
       status: 'success',
@@ -36,12 +56,12 @@ export const setupRoutes = (app: Express) => {
       timestamp: new Date().toISOString(),
     });
   });
-  
-  // 404 route
-  app.all('*', (req, res) => {
-    res.status(404).json({
-      status: 'fail',
-      message: `Can't find ${req.originalUrl} on this server!`,
+
+  app.get('/api/health', (req, res) => {
+    res.status(200).json({
+      status: 'success',
+      message: 'API is healthy',
+      timestamp: new Date().toISOString(),
     });
   });
 };

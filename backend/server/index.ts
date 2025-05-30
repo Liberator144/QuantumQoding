@@ -62,6 +62,14 @@ setupSwagger(app);
 // Setup socket handlers
 setupSocketHandlers(io);
 
+// 404 handler (must be after all other routes)
+app.all('*', (req, res) => {
+  res.status(404).json({
+    status: 'fail',
+    message: `Can't find ${req.originalUrl} on this server!`,
+  });
+});
+
 // Apply error handler
 app.use(errorHandler);
 
