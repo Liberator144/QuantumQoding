@@ -1,23 +1,19 @@
 {
-  "version": "3.0.0",
-  "gateway_id": "gateway-1748625719",
-  "initialized": "2025-05-30T17:21:59.3NZ",
-  "status": "online",
-  "backend_server": "production",
-  "api_documentation": "http://localhost:3001/api-docs",
-  "dimensions": {
-    "accessible": ["primary", "development", "testing", "production"],
-    "active": "development",
-    "stability": "optimal"
-  },
-  "quantum_tunnels": {
-    "count": 4,
-    "bandwidth": "unlimited",
-    "latency": "0ms"
-  },
-  "endpoints": {
+  "version": "5.0.0-agent",
+  "gateway_id": "agent-gateway-remote-agent-1748626491",
+  "agent_id": "remote-agent-1748626491",
+  "initialized": "2025-05-30T17:35:00.000Z",
+  "status": "agent-operational",
+  "remote_access": true,
+  "agent_endpoints": {
     "health": "http://localhost:3001/health",
     "api_health": "http://localhost:3001/api/health",
-    "root": "http://localhost:3001/"
+    "root": "http://localhost:3001/",
+    "documentation": "http://localhost:3001/api-docs"
+  },
+  "agent_capabilities": {
+    "autonomous_operation": true,
+    "error_recovery": true,
+    "self_monitoring": true
   }
 }

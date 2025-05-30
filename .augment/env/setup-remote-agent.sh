@@ -557,7 +557,9 @@ EOF
 EOF
 
     agent_success "Quantum systems initialized for agent $AGENT_ID"
-}# Verify agent access to endpoints
+}
+
+# Verify agent access to endpoints
 verify_agent_endpoints() {
     agent_sync "Verifying agent access to endpoints..."
 
