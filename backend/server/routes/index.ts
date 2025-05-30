@@ -42,7 +42,8 @@ export const setupRoutes = (app: Express) => {
         dimensional: '/api/v1/dimensional',
         neuralFabric: '/api/v1/neural-fabric',
         consciousness: '/api/v1/consciousness',
-        auth: '/api/v1/auth'
+        auth: '/api/v1/auth',
+        akasha: '/api/v1/akasha'
       },
       timestamp: new Date().toISOString(),
     });

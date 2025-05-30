@@ -14,6 +14,7 @@ import { setupNeuralFabricAPI } from './neuralFabric.api';
 import { setupConsciousnessAPI } from './consciousness.api';
 import { setupUserAPI } from './user.api';
 import { setupAuthAPI } from './auth.api';
+import { setupAkashaAPI } from '../starmenu/QQ-Akasha/api/akasha.api';
 
 /**
  * Setup API endpoints
@@ -28,6 +29,7 @@ export const setupAPI = (app: Express) => {
   setupConsciousnessAPI(app);
   setupUserAPI(app);
   setupAuthAPI(app);
+  setupAkashaAPI(app);
   
   logger.info('API endpoints setup complete');
 };

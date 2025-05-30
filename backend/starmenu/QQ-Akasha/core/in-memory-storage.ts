@@ -4,10 +4,16 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { Memory, MemoryQuery, MemoryQueryResult, MemoryStorage } from './types';
+import { Memory, MemoryQuery, MemoryQueryResult, MemoryStorage, MemoryResult } from './types';
+import { ContextRetrievalEngine } from './context-retrieval-engine';
 
 export class InMemoryStorage implements MemoryStorage {
   private memories: Map<string, Memory> = new Map();
+  private contextEngine: ContextRetrievalEngine;
+
+  constructor() {
+    this.contextEngine = new ContextRetrievalEngine(this);
+  }
 
   /**
    * Store a new memory
@@ -65,6 +71,64 @@ export class InMemoryStorage implements MemoryStorage {
   }
 
   /**
+   * Get memories that are marked as deleted (for soft delete recovery)
+   */
+  async getDeletedMemories(): Promise<Memory[]> {
+    const deletedMemories: Memory[] = [];
+
+    for (const memory of this.memories.values()) {
+      if (memory.metadata?.deleted === true) {
+        deletedMemories.push(memory);
+      }
+    }
+
+    return deletedMemories;
+  }
+
+  /**
+   * Permanently remove a soft-deleted memory
+   */
+  async permanentlyDeleteMemory(id: string): Promise<boolean> {
+    const memory = this.memories.get(id);
+
+    if (!memory || !memory.metadata?.deleted) {
+      return false;
+    }
+
+    return this.memories.delete(id);
+  }
+
+  /**
+   * Get memories that are marked as archived
+   */
+  async getArchivedMemories(): Promise<Memory[]> {
+    const archivedMemories: Memory[] = [];
+
+    for (const memory of this.memories.values()) {
+      if (memory.metadata?.archived === true) {
+        archivedMemories.push(memory);
+      }
+    }
+
+    return archivedMemories;
+  }
+
+  /**
+   * Get archived memories by tier
+   */
+  async getArchivedMemoriesByTier(tier: string): Promise<Memory[]> {
+    const archivedMemories: Memory[] = [];
+
+    for (const memory of this.memories.values()) {
+      if (memory.metadata?.archived === true && memory.metadata?.archiveTier === tier) {
+        archivedMemories.push(memory);
+      }
+    }
+
+    return archivedMemories;
+  }
+
+  /**
    * Record an access to a memory
    */
   async recordAccess(id: string): Promise<void> {
@@ -81,6 +145,25 @@ export class InMemoryStorage implements MemoryStorage {
    * Query memories based on criteria
    */
   async queryMemories(query: MemoryQuery): Promise<MemoryQueryResult> {
+    const startTime = Date.now();
+
+    // Use context-based retrieval if enabled
+    if (query.useContextualSearch) {
+      const enhancedResults = await this.contextEngine.retrieveMemories(query);
+
+      return {
+        memories: enhancedResults,
+        totalCount: enhancedResults.length,
+        enhancedResults,
+        searchMetadata: {
+          searchTime: Date.now() - startTime,
+          algorithmUsed: 'context-based',
+          contextFactors: this.getContextFactors(query),
+        },
+      };
+    }
+
+    // Fall back to basic search
     let memories = Array.from(this.memories.values());
 
     // Apply filters
@@ -181,6 +264,26 @@ export class InMemoryStorage implements MemoryStorage {
     return {
       memories,
       totalCount,
+      searchMetadata: {
+        searchTime: Date.now() - startTime,
+        algorithmUsed: 'basic',
+        contextFactors: [],
+      },
     };
+  }
+
+  /**
+   * Get context factors used in the search
+   */
+  private getContextFactors(query: MemoryQuery): string[] {
+    const factors: string[] = [];
+
+    if (query.searchTerm) factors.push('semantic-similarity');
+    if (query.context?.currentProject) factors.push('project-context');
+    if (query.context?.currentFile) factors.push('file-path-similarity');
+    if (query.tags && query.tags.length > 0) factors.push('tag-matching');
+    if (query.includeRelated) factors.push('related-memories');
+
+    return factors;
   }
 }

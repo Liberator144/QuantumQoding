@@ -94,7 +94,7 @@ export interface MemoryQuery {
   minPriority?: number;
 
   /** Sort results by field */
-  sortBy?: 'priority' | 'createdAt' | 'lastAccessedAt' | 'accessCount';
+  sortBy?: 'priority' | 'createdAt' | 'lastAccessedAt' | 'accessCount' | 'relevance';
 
   /** Sort direction */
   sortDirection?: 'asc' | 'desc';
@@ -104,6 +104,40 @@ export interface MemoryQuery {
 
   /** Pagination: offset for results */
   offset?: number;
+
+  /** Enable context-based retrieval */
+  useContextualSearch?: boolean;
+
+  /** Include related memories in results */
+  includeRelated?: boolean;
+
+  /** Maximum depth for related memory discovery */
+  maxRelatedDepth?: number;
+
+  /** Semantic similarity threshold (0-1) */
+  similarityThreshold?: number;
+
+  /** Context for semantic search */
+  context?: {
+    currentFile?: string;
+    currentProject?: string;
+    recentMemories?: string[];
+    userPreferences?: Record<string, any>;
+  };
+}
+
+/**
+ * Enhanced memory result with relevance scoring
+ */
+export interface MemoryResult extends Memory {
+  /** Relevance score for this result (0-1) */
+  relevanceScore?: number;
+
+  /** Explanation of why this memory is relevant */
+  relevanceReason?: string;
+
+  /** Related memories discovered during search */
+  relatedResults?: MemoryResult[];
 }
 
 /**
@@ -115,6 +149,16 @@ export interface MemoryQueryResult {
 
   /** Total count of memories matching the query (for pagination) */
   totalCount: number;
+
+  /** Enhanced results with relevance scoring (when using contextual search) */
+  enhancedResults?: MemoryResult[];
+
+  /** Search metadata */
+  searchMetadata?: {
+    searchTime: number;
+    algorithmUsed: string;
+    contextFactors: string[];
+  };
 }
 
 /**
@@ -138,4 +182,16 @@ export interface MemoryStorage {
 
   /** Record an access to a memory */
   recordAccess(id: string): Promise<void>;
+
+  /** Get memories that are marked as deleted (for soft delete recovery) */
+  getDeletedMemories?(): Promise<Memory[]>;
+
+  /** Permanently remove a soft-deleted memory */
+  permanentlyDeleteMemory?(id: string): Promise<boolean>;
+
+  /** Get memories that are marked as archived */
+  getArchivedMemories?(): Promise<Memory[]>;
+
+  /** Get archived memories by tier */
+  getArchivedMemoriesByTier?(tier: string): Promise<Memory[]>;
 }
